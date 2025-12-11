@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Generate StreamCall Icons</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    canvas {
+      border: 1px solid #ddd;
+      margin: 10px;
+      background: white;
+    }
+    .container {
+      text-align: center;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 20px;
+    }
+    button:hover {
+      background: #5568d3;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>StreamCall Icon Generator</h1>
+    <p>Click the button below to generate and download extension icons</p>
+    <button onclick="generateIcons()">Generate Icons</button>
+    <div id="canvases"></div>
+  </div>
+
+  <script>
+    function drawIcon(canvas, size) {
+      const ctx = canvas.getContext('2d');
+      const center = size / 2;
+      
+      // Clear canvas
+      ctx.clearRect(0, 0, size, size);
+      
+      // Create gradient background
+      const gradient = ctx.createLinearGradient(0, 0, size, size);
+      gradient.addColorStop(0, '#667eea');
+      gradient.addColorStop(1, '#764ba2');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, size, size);
+      
+      // Draw radio wave circles
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+      ctx.lineWidth = size * 0.04;
+      
+      for (let i = 1; i <= 3; i++) {
+        ctx.beginPath();
+        ctx.arc(center, center, (size * 0.15) * i, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      
+      // Draw center dot
+      ctx.fillStyle = 'white';
+      ctx.beginPath();
+      ctx.arc(center, center, size * 0.08, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Draw play icon
+      ctx.fillStyle = 'white';
+      const triangleSize = size * 0.15;
+      ctx.beginPath();
+      ctx.moveTo(center - triangleSize/2, center - triangleSize);
+      ctx.lineTo(center - triangleSize/2, center + triangleSize);
+      ctx.lineTo(center + triangleSize, center);
+      ctx.closePath();
+      ctx.fill();
+    }
+    
+    function generateIcons() {
+      const sizes = [16, 32, 48, 128];
+      const container = document.getElementById('canvases');
+      container.innerHTML = '';
+      
+      sizes.forEach(size => {
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        
+        drawIcon(canvas, size);
+        
+        const wrapper = document.createElement('div');
+        wrapper.style.display = 'inline-block';
+        wrapper.style.margin = '10px';
+        
+        const label = document.createElement('div');
+        label.textContent = `${size}x${size}`;
+        label.style.marginTop = '5px';
+        
+        const downloadBtn = document.createElement('a');
+        downloadBtn.textContent = 'Download';
+        downloadBtn.style.display = 'block';
+        downloadBtn.style.marginTop = '5px';
+        downloadBtn.style.color = '#667eea';
+        downloadBtn.style.cursor = 'pointer';
+        downloadBtn.href = canvas.toDataURL('image/png');
+        downloadBtn.download = `icon-${size}.png`;
+        
+        wrapper.appendChild(canvas);
+        wrapper.appendChild(label);
+        wrapper.appendChild(downloadBtn);
+        container.appendChild(wrapper);
+      });
+    }
+  </script>
+</body>
+</html>

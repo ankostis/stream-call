@@ -1,0 +1,210 @@
+# 🎵 StreamCall
+
+A Firefox browser extension that detects streaming media (podcasts, radio stations, live streams) on web pages and sends the stream URLs to a configurable HTTP API endpoint.
+
+## Features
+
+- 🔍 **Automatic Stream Detection** - Detects HLS, DASH, MP3, AAC, OGG, RTMP, RTSP, Icecast, Shoutcast, and more
+- 📡 **HTTP API Integration** - Send detected stream URLs to your own API endpoint
+- ⚙️ **Fully Configurable** - Set custom API endpoint, HTTP method, and headers
+- 🎯 **Clean UI** - Simple popup interface showing all detected streams
+- 📋 **Copy URLs** - Quick copy stream URLs to clipboard
+- 🔔 **Badge Notifications** - Shows number of detected streams on the extension icon
+
+## Installation
+
+### From Source (Development)
+
+1. Clone or download this repository
+2. Open Firefox and navigate to `about:debugging#/runtime/this-firefox`
+3. Click "Load Temporary Add-on"
+4. Navigate to the extension folder and select the `manifest.json` file
+5. Generate icons by opening `icons/generate-icons.html` in a browser and downloading them
+
+### For Production
+
+Package the extension:
+```bash
+cd StreamCall
+zip -r streamcall.zip * -x "*.git*" "icons/generate-icons.html"
+```
+
+Then submit to [Firefox Add-ons](https://addons.mozilla.org/).
+
+## Usage
+
+### 1. Configure the API Endpoint
+
+1. Click the StreamCall icon in your Firefox toolbar
+2. Click the "⚙️ Options" button
+3. Enter your API endpoint URL (e.g., `https://your-server.com/api/stream`)
+4. Optionally configure:
+   - HTTP method (POST, PUT, PATCH)
+   - Custom headers (JSON format)
+   - Whether to include page information
+5. Click "💾 Save Settings"
+6. Click "🧪 Test API" to verify the connection
+
+### 2. Detect Streams
+
+1. Navigate to any website with streaming media (e.g., online radio, podcast player)
+2. The extension will automatically detect streams
+3. A badge will appear on the extension icon showing the number of detected streams
+4. Click the extension icon to view all detected streams
+
+### 3. Send Streams to API
+
+1. Click the "📤 Call API" button next to any detected stream
+2. The stream URL will be sent to your configured endpoint
+3. You'll see a success or error notification
+
+## API Payload Format
+
+The extension sends the following JSON payload to your API endpoint:
+
+```json
+{
+  "streamUrl": "https://stream.example.com/audio.m3u8",
+  "timestamp": "2025-12-12T10:30:00.000Z",
+  "pageUrl": "https://www.example.com/listen",
+  "pageTitle": "Example Radio Station"
+}
+```
+
+**Note:** `pageUrl` and `pageTitle` are only included if enabled in options.
+
+## API Example (Node.js/Express)
+
+Here's a simple API server example:
+
+```javascript
+const express = require('express');
+const app = express();
+
+app.use(express.json());
+
+app.post('/api/stream', (req, res) => {
+  const { streamUrl, pageUrl, pageTitle, timestamp } = req.body;
+  
+  console.log('Stream detected:', {
+    streamUrl,
+    pageUrl,
+    pageTitle,
+    timestamp
+  });
+  
+  // Do something with the stream URL
+  // e.g., save to database, trigger recording, etc.
+  
+  res.json({ success: true, message: 'Stream received' });
+});
+
+app.listen(3000, () => {
+  console.log('API listening on port 3000');
+});
+```
+
+## Supported Stream Types
+
+- **HLS** - HTTP Live Streaming (.m3u8)
+- **DASH** - Dynamic Adaptive Streaming over HTTP (.mpd)
+- **HTTP Audio** - Direct audio files (MP3, AAC, OGG, FLAC, WAV, M4A, WMA)
+- **RTMP** - Real-Time Messaging Protocol
+- **RTSP** - Real-Time Streaming Protocol
+- **Icecast/Shoutcast** - Internet radio streaming protocols
+- **Playlist formats** - M3U, PLS, ASX
+
+## Development
+
+### Project Structure
+
+```
+StreamCall/
+├── manifest.json          # Extension manifest
+├── background.js          # Background service worker
+├── content.js            # Content script for stream detection
+├── popup.html            # Popup UI
+├── popup.js              # Popup logic
+├── options.html          # Options page UI
+├── options.js            # Options page logic
+├── icons/                # Extension icons
+│   ├── icon-16.png
+│   ├── icon-32.png
+│   ├── icon-48.png
+│   ├── icon-128.png
+│   └── generate-icons.html
+└── README.md            # This file
+```
+
+### Testing
+
+1. Open `about:debugging#/runtime/this-firefox`
+2. Load the extension
+3. Visit test sites like:
+   - BBC iPlayer Radio
+   - TuneIn Radio
+   - Any podcast website
+   - YouTube (some streams may be detected)
+
+### Debug Console
+
+- **Background script:** about:debugging > Inspect
+- **Content script:** Browser console (F12) on the webpage
+- **Popup:** Right-click extension icon > Inspect
+
+## Inspiration
+
+This extension was inspired by:
+- **stream-recorder** - For stream detection techniques
+- **stream-bypass** - For handling various streaming protocols
+
+## Permissions
+
+The extension requires the following permissions:
+
+- `storage` - To save API configuration
+- `activeTab` - To access the current tab information
+- `webRequest` - To monitor network requests for streams
+- `<all_urls>` - To detect streams on any website
+
+## Privacy
+
+StreamCall:
+- Only sends data to **your configured API endpoint**
+- Does not collect or transmit data to any third parties
+- Stores configuration locally in Firefox sync storage
+- Does not track browsing history
+
+## License
+
+MIT License - Feel free to use, modify, and distribute.
+
+## Contributing
+
+Contributions are welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
+
+## Support
+
+For issues, questions, or suggestions:
+- Open an issue on GitHub
+- Check existing issues for solutions
+
+## Changelog
+
+### Version 1.0.0 (2025-12-12)
+- Initial release
+- Stream detection for common formats
+- Configurable HTTP API integration
+- Popup interface with stream list
+- Options page for configuration
+- Copy to clipboard functionality
+- Badge notifications
+
+---
+
+Made with ❤️ for the streaming community

@@ -1,0 +1,23 @@
+# Firefox extension artifacts
+*.xpi
+*.zip
+web-ext-artifacts/
+
+# Icons (generated)
+icons/*.png
+
+# Development
+.DS_Store
+.vscode/
+*.log
+node_modules/
+
+# Temporary files
+*.tmp
+*.temp
+*~
+
+# IDE
+.idea/
+*.swp
+*.swo
