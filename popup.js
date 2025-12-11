@@ -1,5 +1,5 @@
 /**
- * StreamCall Popup Script
+ * Stream call Popup Script
  */
 
 let currentTabId = null;
@@ -12,16 +12,16 @@ async function initialize() {
     // Get current tab
     const tabs = await browser.tabs.query({ active: true, currentWindow: true });
     if (tabs.length === 0) return;
-    
+
     currentTabId = tabs[0].id;
-    
+
     // Load streams
     await loadStreams();
-    
+
     // Setup event listeners
     document.getElementById('refresh-btn').addEventListener('click', handleRefresh);
     document.getElementById('options-btn').addEventListener('click', handleOptions);
-    
+
   } catch (error) {
     console.error('Initialization error:', error);
     showNotification('Failed to initialize', 'error');
@@ -37,12 +37,12 @@ async function loadStreams() {
       type: 'GET_STREAMS',
       tabId: currentTabId
     });
-    
+
     const streams = response.streams || [];
-    
+
     // Hide loading
     document.getElementById('loading').style.display = 'none';
-    
+
     if (streams.length === 0) {
       document.getElementById('empty-state').style.display = 'block';
       document.getElementById('status').style.display = 'none';
@@ -51,10 +51,10 @@ async function loadStreams() {
       document.getElementById('status').style.display = 'block';
       document.getElementById('status').classList.add('detected');
       document.getElementById('stream-count').textContent = streams.length;
-      
+
       displayStreams(streams);
     }
-    
+
   } catch (error) {
     console.error('Failed to load streams:', error);
     document.getElementById('loading').style.display = 'none';
@@ -68,15 +68,15 @@ async function loadStreams() {
 function displayStreams(streams) {
   const container = document.getElementById('streams-container');
   container.innerHTML = '';
-  
+
   const streamsList = document.createElement('div');
   streamsList.className = 'streams-list';
-  
+
   streams.forEach((stream, index) => {
     const streamItem = createStreamItem(stream, index);
     streamsList.appendChild(streamItem);
   });
-  
+
   container.appendChild(streamsList);
 }
 
@@ -86,36 +86,36 @@ function displayStreams(streams) {
 function createStreamItem(stream, index) {
   const item = document.createElement('div');
   item.className = 'stream-item';
-  
+
   const type = document.createElement('span');
   type.className = 'stream-type';
   type.textContent = stream.type;
-  
+
   const url = document.createElement('div');
   url.className = 'stream-url';
   url.textContent = stream.url;
   url.title = stream.url;
-  
+
   const actions = document.createElement('div');
   actions.className = 'stream-actions';
-  
+
   const callBtn = document.createElement('button');
   callBtn.className = 'btn-primary';
   callBtn.textContent = '📤 Call API';
   callBtn.addEventListener('click', () => handleCallAPI(stream));
-  
+
   const copyBtn = document.createElement('button');
   copyBtn.className = 'btn-secondary';
   copyBtn.textContent = '📋 Copy';
   copyBtn.addEventListener('click', () => handleCopyUrl(stream.url));
-  
+
   actions.appendChild(callBtn);
   actions.appendChild(copyBtn);
-  
+
   item.appendChild(type);
   item.appendChild(url);
   item.appendChild(actions);
-  
+
   return item;
 }
 
@@ -133,22 +133,22 @@ async function handleCallAPI(stream) {
       }, 2000);
       return;
     }
-    
+
     showNotification('Sending stream URL to API...', 'info');
-    
+
     const response = await browser.runtime.sendMessage({
       type: 'CALL_API',
       streamUrl: stream.url,
       pageUrl: stream.pageUrl,
       pageTitle: stream.pageTitle
     });
-    
+
     if (response.success) {
       showNotification('✅ Stream URL sent successfully!', 'success');
     } else {
       showNotification(`❌ Error: ${response.error}`, 'error');
     }
-    
+
   } catch (error) {
     console.error('API call error:', error);
     showNotification('Failed to call API', 'error');
@@ -191,13 +191,13 @@ function showNotification(message, type = 'info') {
   // Remove existing notifications
   const existing = document.querySelectorAll('.notification');
   existing.forEach(el => el.remove());
-  
+
   const notification = document.createElement('div');
   notification.className = `notification ${type}`;
   notification.textContent = message;
-  
+
   document.body.appendChild(notification);
-  
+
   setTimeout(() => {
     notification.remove();
   }, 3000);

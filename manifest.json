@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "StreamCall",
-  "version": "1.0.0",
+  "name": "Stream call",
+  "version": "0.0.0",
   "description": "Detects streaming media (podcasts, radio stations) and sends stream URLs to a configurable HTTP API",
   "permissions": [
     "storage",
@@ -30,7 +30,7 @@
       "48": "icons/icon-48.png",
       "128": "icons/icon-128.png"
     },
-    "default_title": "StreamCall"
+    "default_title": "Stream call"
   },
   "options_ui": {
     "page": "options.html",

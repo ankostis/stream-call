@@ -1,4 +1,4 @@
-# 🎵 StreamCall
+# 🎵 Stream call
 
 A Firefox browser extension that detects streaming media (podcasts, radio stations, live streams) on web pages and sends the stream URLs to a configurable HTTP API endpoint.
 
@@ -15,7 +15,7 @@ A Firefox browser extension that detects streaming media (podcasts, radio statio
 
 ### From Source (Development)
 
-1. Clone or download this repository
+1. Clone or download this repository (folder slug: `stream-call`)
 2. Open Firefox and navigate to `about:debugging#/runtime/this-firefox`
 3. Click "Load Temporary Add-on"
 4. Navigate to the extension folder and select the `manifest.json` file
@@ -25,8 +25,8 @@ A Firefox browser extension that detects streaming media (podcasts, radio statio
 
 Package the extension:
 ```bash
-cd StreamCall
-zip -r streamcall.zip * -x "*.git*" "icons/generate-icons.html"
+cd stream-call
+zip -r stream-call.zip * -x "*.git*" "icons/generate-icons.html"
 ```
 
 Then submit to [Firefox Add-ons](https://addons.mozilla.org/).
@@ -35,7 +35,7 @@ Then submit to [Firefox Add-ons](https://addons.mozilla.org/).
 
 ### 1. Configure the API Endpoint
 
-1. Click the StreamCall icon in your Firefox toolbar
+1. Click the Stream call icon in your Firefox toolbar
 2. Click the "⚙️ Options" button
 3. Enter your API endpoint URL (e.g., `https://your-server.com/api/stream`)
 4. Optionally configure:
@@ -85,17 +85,17 @@ app.use(express.json());
 
 app.post('/api/stream', (req, res) => {
   const { streamUrl, pageUrl, pageTitle, timestamp } = req.body;
-  
+
   console.log('Stream detected:', {
     streamUrl,
     pageUrl,
     pageTitle,
     timestamp
   });
-  
+
   // Do something with the stream URL
   // e.g., save to database, trigger recording, etc.
-  
+
   res.json({ success: true, message: 'Stream received' });
 });
 
@@ -119,7 +119,7 @@ app.listen(3000, () => {
 ### Project Structure
 
 ```
-StreamCall/
+stream-call/
 ├── manifest.json          # Extension manifest
 ├── background.js          # Background service worker
 ├── content.js            # Content script for stream detection
@@ -169,7 +169,7 @@ The extension requires the following permissions:
 
 ## Privacy
 
-StreamCall:
+Stream call:
 - Only sends data to **your configured API endpoint**
 - Does not collect or transmit data to any third parties
 - Stores configuration locally in Firefox sync storage
