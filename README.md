@@ -16,17 +16,22 @@ A Firefox browser extension that detects streaming media (podcasts, radio statio
 ### From Source (Development)
 
 1. Clone or download this repository (folder slug: `stream-call`)
-2. Open Firefox and navigate to `about:debugging#/runtime/this-firefox`
-3. Click "Load Temporary Add-on"
-4. Navigate to the extension folder and select the `manifest.json` file
-5. Generate icons by opening `icons/generate-icons.html` in a browser and downloading them
+2. Install deps (TypeScript build):
+  ```bash
+  npm install
+  npm run build
+  ```
+3. Open Firefox and navigate to `about:debugging#/runtime/this-firefox`
+4. Click "Load Temporary Add-on"
+5. Navigate to the extension folder and select the `manifest.json` file (expects built assets in `dist/`)
+6. Generate icons by opening `icons/generate-icons.html` in a browser and downloading them (only needed if you change the icon)
 
 ### For Production
 
-Package the extension:
+Build and package (includes dist + manifest + icons):
 ```bash
-cd stream-call
-zip -r stream-call.zip * -x "*.git*" "icons/generate-icons.html"
+npm run build
+zip -r stream-call.zip manifest.json dist icons -x "icons/generate-icons.html"
 ```
 
 Then submit to [Firefox Add-ons](https://addons.mozilla.org/).
@@ -87,21 +92,31 @@ app.post('/api/stream', (req, res) => {
   const { streamUrl, pageUrl, pageTitle, timestamp } = req.body;
 
   console.log('Stream detected:', {
-    streamUrl,
-    pageUrl,
-    pageTitle,
-    timestamp
-  });
-
-  // Do something with the stream URL
-  // e.g., save to database, trigger recording, etc.
-
-  res.json({ success: true, message: 'Stream received' });
-});
-
-app.listen(3000, () => {
-  console.log('API listening on port 3000');
-});
+    stream-call/
+    ├── manifest.json          # Extension manifest (references built assets in dist/)
+    ├── src/                   # TypeScript sources
+    │   ├── background.ts      # Background service worker
+    │   ├── content.ts         # Content script for stream detection
+    │   ├── popup.ts           # Popup logic
+    │   └── options.ts         # Options page logic
+    ├── dist/                  # Built JS + copied HTML after `npm run build`
+    │   ├── background.js
+    │   ├── content.js
+    │   ├── popup.js
+    │   ├── popup.html
+    │   ├── options.js
+    │   └── options.html
+    ├── popup.html             # Source popup UI (copied to dist/ on build)
+    ├── options.html           # Source options page UI (copied to dist/ on build)
+    ├── icons/                 # Extension icons
+    │   ├── icon-16.png
+    │   ├── icon-32.png
+    │   ├── icon-48.png
+    │   ├── icon-128.png
+    │   └── generate-icons.html
+    ├── package.json           # Build scripts and dev deps
+    ├── tsconfig.json          # TypeScript config
+    └── README.md             # This file
 ```
 
 ## Supported Stream Types

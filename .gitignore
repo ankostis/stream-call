@@ -11,6 +11,7 @@ icons/*.png
 .vscode/
 *.log
 node_modules/
+dist/
 
 # Temporary files
 *.tmp
