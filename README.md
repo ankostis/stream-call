@@ -42,11 +42,12 @@ Then submit to [Firefox Add-ons](https://addons.mozilla.org/).
 
 1. Click the Stream call icon in your Firefox toolbar
 2. Click the "⚙️ Options" button
-3. Enter your API endpoint URL (e.g., `https://your-server.com/api/stream`)
+3. Either set a single API endpoint URL (e.g., `https://your-server.com/api/stream`) **or** define API patterns (JSON array) that can template the stream URL into the endpoint/body.
 4. Optionally configure:
-   - HTTP method (POST, PUT, PATCH)
-   - Custom headers (JSON format)
-   - Whether to include page information
+  - HTTP method (POST, PUT, PATCH)
+  - Custom headers (JSON format)
+  - Whether to include page information
+  - API patterns with `{{placeholders}}` for `streamUrl`, `pageUrl`, `pageTitle`, `timestamp`
 5. Click "💾 Save Settings"
 6. Click "🧪 Test API" to verify the connection
 

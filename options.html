@@ -278,6 +278,30 @@
         </p>
       </div>
 
+      <div class="form-group">
+        <label for="api-patterns">
+          API Patterns (JSON array)
+          <span class="label-description">Define multiple endpoints/bodies with {{placeholders}} (streamUrl, pageUrl, pageTitle, timestamp)</span>
+        </label>
+        <textarea
+          id="api-patterns"
+          placeholder='[
+  {
+    "id": "default-pattern",
+    "name": "Default JSON",
+    "endpointTemplate": "https://api.example.com/stream",
+    "method": "POST",
+    "headers": { "X-Example": "value" },
+    "bodyTemplate": "{\"streamUrl\":\"{{streamUrl}}\",\"timestamp\":\"{{timestamp}}\"}",
+    "includePageInfo": true
+  }
+]'
+        ></textarea>
+        <p class="help-text">
+          Use <code>{{streamUrl}}</code>, <code>{{pageUrl}}</code>, <code>{{pageTitle}}</code>, <code>{{timestamp}}</code> in endpoint or body templates. Leave empty to fall back to the single endpoint above.
+        </p>
+      </div>
+
       <div class="form-group checkbox-group">
         <label>
           <input type="checkbox" id="include-page-info" checked>

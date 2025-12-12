@@ -16,8 +16,18 @@ type StreamInfo = {
 type RuntimeMessage =
   | { type: 'STREAM_DETECTED'; url: string; streamType: string }
   | { type: 'GET_STREAMS'; tabId: number }
-  | { type: 'CALL_API'; streamUrl: string; pageUrl?: string; pageTitle?: string }
+  | { type: 'CALL_API'; streamUrl: string; pageUrl?: string; pageTitle?: string; patternId?: string }
   | { type: 'CLEAR_STREAMS'; tabId: number };
+
+type ApiPattern = {
+  id: string;
+  name: string;
+  endpointTemplate: string;
+  method?: string;
+  headers?: Record<string, string>;
+  bodyTemplate?: string;
+  includePageInfo?: boolean;
+};
 
 const tabStreams = new Map<number, StreamInfo[]>();
 
@@ -59,7 +69,12 @@ browser.runtime.onMessage.addListener((message: RuntimeMessage, sender) => {
   }
 
   if (message.type === 'CALL_API') {
-    return callStreamAPI(message.streamUrl, message.pageUrl, message.pageTitle);
+    return callStreamAPI({
+      streamUrl: message.streamUrl,
+      pageUrl: message.pageUrl,
+      pageTitle: message.pageTitle,
+      patternId: message.patternId
+    });
   }
 
   if (message.type === 'CLEAR_STREAMS') {
@@ -109,46 +124,73 @@ function updateBadge(tabId: number, count: number) {
 /**
  * Call the configured HTTP API with stream information
  */
-async function callStreamAPI(streamUrl: string, pageUrl?: string, pageTitle?: string) {
+async function callStreamAPI({
+  streamUrl,
+  pageUrl,
+  pageTitle,
+  patternId
+}: {
+  streamUrl: string;
+  pageUrl?: string;
+  pageTitle?: string;
+  patternId?: string;
+}) {
   try {
     const defaults = {
       apiEndpoint: '',
       apiMethod: 'POST',
       apiHeaders: '{}',
-      includePageInfo: true
+      includePageInfo: true,
+      apiPatterns: '[]'
     } as const;
 
     const config = (await browser.storage.sync.get(defaults)) as typeof defaults;
 
-    if (!config.apiEndpoint) {
+    const patterns = parsePatterns(config.apiPatterns);
+    const selectedPattern = patternId ? patterns.find((p) => p.id === patternId) : patterns[0];
+
+    if (!selectedPattern && !config.apiEndpoint) {
       return {
         success: false,
         error: 'API endpoint not configured. Please set it in the extension options.'
       };
     }
 
-    const payload: Record<string, unknown> = {
-      streamUrl,
-      timestamp: new Date().toISOString()
-    };
+    const requestContext = buildContext({ streamUrl, pageUrl, pageTitle });
 
-    if (config.includePageInfo) {
-      payload.pageUrl = pageUrl;
-      payload.pageTitle = pageTitle;
-    }
+    const endpoint = selectedPattern
+      ? applyTemplate(selectedPattern.endpointTemplate, requestContext)
+      : config.apiEndpoint;
+
+    const method = (selectedPattern?.method || config.apiMethod || 'POST').toUpperCase();
+
+    const includePage = selectedPattern?.includePageInfo ?? config.includePageInfo;
+    const payload: Record<string, unknown> = includePage
+      ? { ...requestContext }
+      : { streamUrl, timestamp: requestContext.timestamp };
 
     let headers: Record<string, string> = { 'Content-Type': 'application/json' };
     try {
-      const customHeaders = JSON.parse(config.apiHeaders) as Record<string, string>;
-      headers = { ...headers, ...customHeaders };
+      if (config.apiHeaders) {
+        const customHeaders = JSON.parse(config.apiHeaders) as Record<string, string>;
+        headers = { ...headers, ...customHeaders };
+      }
+      if (selectedPattern?.headers) {
+        headers = { ...headers, ...selectedPattern.headers };
+      }
     } catch (e) {
       console.warn('Invalid custom headers JSON:', e);
     }
 
-    const response = await fetch(config.apiEndpoint, {
-      method: config.apiMethod,
+    const bodyTemplate = selectedPattern?.bodyTemplate;
+    const bodyJson = bodyTemplate
+      ? applyTemplate(bodyTemplate, requestContext)
+      : JSON.stringify(payload);
+
+    const response = await fetch(endpoint, {
+      method,
       headers,
-      body: JSON.stringify(payload)
+      body: bodyJson
     });
 
     if (!response.ok) {
@@ -168,6 +210,51 @@ async function callStreamAPI(streamUrl: string, pageUrl?: string, pageTitle?: st
       success: false,
       error: error?.message ?? 'Unknown error'
     };
+  }
+}
+
+function buildContext({
+  streamUrl,
+  pageUrl,
+  pageTitle
+}: {
+  streamUrl: string;
+  pageUrl?: string;
+  pageTitle?: string;
+}) {
+  return {
+    streamUrl,
+    pageUrl,
+    pageTitle,
+    timestamp: Date.now()
+  };
+}
+
+function applyTemplate(template: string, context: Record<string, unknown>): string {
+  return template.replace(/\{\{\s*(\w+)\s*\}\}/g, (_match, key: string) => {
+    const value = context[key];
+    return value === undefined || value === null ? `{{${key}}}` : String(value);
+  });
+}
+
+function parsePatterns(raw: string): ApiPattern[] {
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((p) => ({
+        id: p.id || crypto.randomUUID(),
+        name: p.name || 'Pattern',
+        endpointTemplate: p.endpointTemplate,
+        method: p.method,
+        headers: p.headers,
+        bodyTemplate: p.bodyTemplate,
+        includePageInfo: p.includePageInfo
+      }))
+      .filter((p) => typeof p.endpointTemplate === 'string' && p.endpointTemplate.length > 0);
+  } catch (e) {
+    console.warn('Invalid apiPatterns JSON', e);
+    return [];
   }
 }
 

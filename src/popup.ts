@@ -11,7 +11,15 @@ type StreamInfo = {
   timestamp?: number;
 };
 
+type ApiPattern = {
+  id: string;
+  name: string;
+  endpointTemplate: string;
+  method?: string;
+};
+
 let currentTabId: number | null = null;
+let apiPatterns: ApiPattern[] = [];
 
 /**
  * Initialize popup
@@ -22,6 +30,7 @@ async function initialize() {
     if (tabs.length === 0) return;
 
     currentTabId = tabs[0].id ?? null;
+    await loadPatterns();
     await loadStreams();
 
     document.getElementById('refresh-btn')?.addEventListener('click', handleRefresh);
@@ -30,6 +39,12 @@ async function initialize() {
     console.error('Initialization error:', error);
     showNotification('Failed to initialize', 'error');
   }
+}
+
+async function loadPatterns() {
+  const defaults = { apiPatterns: '[]' } as const;
+  const stored = (await browser.storage.sync.get(defaults)) as typeof defaults;
+  apiPatterns = parsePatterns(stored.apiPatterns);
 }
 
 /**
@@ -115,10 +130,28 @@ function createStreamItem(stream: StreamInfo, index: number): HTMLElement {
   const actions = document.createElement('div');
   actions.className = 'stream-actions';
 
+  let patternId: string | undefined = apiPatterns[0]?.id;
+
+  if (apiPatterns.length > 0) {
+    const select = document.createElement('select');
+    select.className = 'pattern-select';
+    apiPatterns.forEach((pattern) => {
+      const option = document.createElement('option');
+      option.value = pattern.id;
+      option.textContent = pattern.name;
+      select.appendChild(option);
+    });
+    select.addEventListener('change', (e) => {
+      const target = e.target as HTMLSelectElement;
+      patternId = target.value;
+    });
+    actions.appendChild(select);
+  }
+
   const callBtn = document.createElement('button');
   callBtn.className = 'btn-primary';
   callBtn.textContent = '📤 Call API';
-  callBtn.addEventListener('click', () => handleCallAPI(stream));
+  callBtn.addEventListener('click', () => handleCallAPI(stream, patternId));
 
   const copyBtn = document.createElement('button');
   copyBtn.className = 'btn-secondary';
@@ -138,11 +171,13 @@ function createStreamItem(stream: StreamInfo, index: number): HTMLElement {
 /**
  * Handle API call
  */
-async function handleCallAPI(stream: StreamInfo) {
+async function handleCallAPI(stream: StreamInfo, patternId?: string) {
   try {
-    const config = await browser.storage.sync.get('apiEndpoint');
-    if (!config.apiEndpoint) {
-      showNotification('Please configure API endpoint in options first', 'error');
+    const config = await browser.storage.sync.get(['apiEndpoint', 'apiPatterns']);
+    const hasPatterns = (parsePatterns(config.apiPatterns || '[]').length ?? 0) > 0;
+
+    if (!hasPatterns && !config.apiEndpoint) {
+      showNotification('Please configure API endpoint or patterns in options first', 'error');
       setTimeout(() => {
         browser.runtime.openOptionsPage();
       }, 2000);
@@ -155,7 +190,8 @@ async function handleCallAPI(stream: StreamInfo) {
       type: 'CALL_API',
       streamUrl: stream.url,
       pageUrl: stream.pageUrl,
-      pageTitle: stream.pageTitle
+      pageTitle: stream.pageTitle,
+      patternId
     });
 
     if (response?.success) {
@@ -218,6 +254,23 @@ function showNotification(message: string, type: 'info' | 'success' | 'error' = 
   setTimeout(() => {
     notification.remove();
   }, 3000);
+}
+
+function parsePatterns(raw: string): ApiPattern[] {
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((p) => ({
+        id: p.id || crypto.randomUUID(),
+        name: p.name || 'Pattern',
+        endpointTemplate: p.endpointTemplate,
+        method: p.method
+      }))
+      .filter((p) => typeof p.endpointTemplate === 'string' && p.endpointTemplate.length > 0);
+  } catch (e) {
+    return [];
+  }
 }
 
 // Initialize when popup opens
