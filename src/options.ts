@@ -79,7 +79,7 @@ async function testAPI() {
   try {
     const apiPatternsRaw = (document.getElementById('api-patterns') as HTMLTextAreaElement).value.trim();
     const patterns = validatePatterns(apiPatternsRaw || '[]');
-    
+
     if (!patterns.valid || patterns.parsed.length === 0) {
       showAlert('Please add at least one valid API pattern first', 'error');
       return;

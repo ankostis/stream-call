@@ -1,15 +1,20 @@
 # 🎵 *Stream call*
 
-A Firefox browser extension that detects streaming media (podcasts, radio stations, live streams) on web pages and sends the stream URLs to a configurable HTTP API endpoint.
+A Firefox browser extension that detects streaming media (podcasts, radio
+stations, live streams) on web pages and sends the stream URLs to a configurable
+HTTP API endpoint.
 
 ## Features
 
-- 🔍 **Automatic Stream Detection** - Detects HLS, DASH, MP3, AAC, OGG, RTMP, RTSP, Icecast, Shoutcast, and more
-- 📡 **HTTP API Integration** - Send detected stream URLs to your own API endpoint
+- 🔍 **Automatic Stream Detection** - Detects HLS, DASH, MP3, AAC, OGG, RTMP,
+  RTSP, Icecast, Shoutcast, and more
+- 📡 **HTTP API Integration** - Send detected stream URLs to your own API
+  endpoint
 - ⚙️ **Fully Configurable** - Set custom API endpoint, HTTP method, and headers
 - 🎯 **Clean UI** - Simple popup interface showing all detected streams
 - 📋 **Copy URLs** - Quick copy stream URLs to clipboard
-- 🔔 **Badge Notifications** - Shows number of detected streams on the extension icon
+- 🔔 **Badge Notifications** - Shows number of detected streams on the
+  extension icon
 
 ## Installation
 
@@ -23,8 +28,10 @@ A Firefox browser extension that detects streaming media (podcasts, radio statio
   ```
 3. Open Firefox and navigate to `about:debugging#/runtime/this-firefox`
 4. Click "Load Temporary Add-on"
-5. Navigate to the extension folder and select the `manifest.json` file (expects built assets in `dist/`)
-6. Generate icons by opening `icons/generate-icons.html` in a browser and downloading them (only needed if you change the icon)
+5. Navigate to the extension folder and select the `manifest.json` file
+  (expects built assets in `dist/`)
+6. Generate icons by opening `icons/generate-icons.html` in a browser and
+  downloading them (only needed if you change the icon)
 
 ### For Production
 
@@ -86,7 +93,8 @@ Then submit to [Firefox Add-ons](https://addons.mozilla.org/).
 - **method** (optional): HTTP method (defaults to POST)
 - **headers** (optional): Custom headers object
 - **bodyTemplate** (optional): Request body template (supports placeholders)
-- **includePageInfo** (optional): Include page URL/title in context (defaults to false)
+- **includePageInfo** (optional): Include page URL/title in context (defaults
+  to false)
 
 ### 2. Detect Streams
 
@@ -105,9 +113,12 @@ Then submit to [Firefox Add-ons](https://addons.mozilla.org/).
 
 The payload sent to your API endpoint depends on your pattern configuration:
 
-- If you use `bodyTemplate`, the extension sends that template with placeholders replaced
-- If you omit `bodyTemplate` (for GET requests), placeholders in the URL are replaced
-- `pageUrl` and `pageTitle` are available when `includePageInfo: true` in the pattern
+- If you use `bodyTemplate`, the extension sends that template with placeholders
+  replaced
+- If you omit `bodyTemplate` (for GET requests), placeholders in the URL are
+  replaced
+- `pageUrl` and `pageTitle` are available when `includePageInfo: true` in the
+  pattern
 
 **Example with bodyTemplate:**
 ```json
@@ -134,7 +145,8 @@ app.post('/api/stream', (req, res) => {
 
   console.log('Stream detected:', {
     stream-call/
-    ├── manifest.json          # Extension manifest (references built assets in dist/)
+    ├── manifest.json          # Extension manifest (references built assets in
+    │                          # dist/)
     ├── src/                   # TypeScript sources
     │   ├── background.ts      # Background service worker
     │   ├── content.ts         # Content script for stream detection
@@ -148,7 +160,8 @@ app.post('/api/stream', (req, res) => {
     │   ├── options.js
     │   └── options.html
     ├── popup.html             # Source popup UI (copied to dist/ on build)
-    ├── options.html           # Source options page UI (copied to dist/ on build)
+    ├── options.html           # Source options page UI (copied to dist/ on
+    │                          # build)
     ├── icons/                 # Extension icons
     │   ├── icon-16.png
     │   ├── icon-32.png
