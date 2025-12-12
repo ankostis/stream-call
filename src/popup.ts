@@ -173,11 +173,11 @@ function createStreamItem(stream: StreamInfo, index: number): HTMLElement {
  */
 async function handleCallAPI(stream: StreamInfo, patternId?: string) {
   try {
-    const config = await browser.storage.sync.get(['apiEndpoint', 'apiPatterns']);
-    const hasPatterns = (parsePatterns(config.apiPatterns || '[]').length ?? 0) > 0;
+    const config = await browser.storage.sync.get(['apiPatterns']);
+    const patterns = parsePatterns(config.apiPatterns || '[]');
 
-    if (!hasPatterns && !config.apiEndpoint) {
-      showNotification('Please configure API endpoint or patterns in options first', 'error');
+    if (patterns.length === 0) {
+      showNotification('Please configure API patterns in options first', 'error');
       setTimeout(() => {
         browser.runtime.openOptionsPage();
       }, 2000);

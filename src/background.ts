@@ -136,56 +136,35 @@ async function callStreamAPI({
   patternId?: string;
 }) {
   try {
-    const defaults = {
-      apiEndpoint: '',
-      apiMethod: 'POST',
-      apiHeaders: '{}',
-      includePageInfo: true,
-      apiPatterns: '[]'
-    } as const;
-
+    const defaults = { apiPatterns: '[]' } as const;
     const config = (await browser.storage.sync.get(defaults)) as typeof defaults;
 
     const patterns = parsePatterns(config.apiPatterns);
     const selectedPattern = patternId ? patterns.find((p) => p.id === patternId) : patterns[0];
 
-    if (!selectedPattern && !config.apiEndpoint) {
+    if (!selectedPattern) {
       return {
         success: false,
-        error: 'API endpoint not configured. Please set it in the extension options.'
+        error: 'No API patterns configured. Please add a pattern in the extension options.'
       };
     }
 
     const requestContext = buildContext({ streamUrl, pageUrl, pageTitle });
-
-    const endpoint = selectedPattern
-      ? applyTemplate(selectedPattern.endpointTemplate, requestContext)
-      : config.apiEndpoint;
-
-    const method = (selectedPattern?.method || config.apiMethod || 'POST').toUpperCase();
-
-    const includePage = selectedPattern?.includePageInfo ?? config.includePageInfo;
-    const payload: Record<string, unknown> = includePage
-      ? { ...requestContext }
-      : { streamUrl, timestamp: requestContext.timestamp };
+    const endpoint = applyTemplate(selectedPattern.endpointTemplate, requestContext);
+    const method = (selectedPattern.method || 'POST').toUpperCase();
 
     let headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    try {
-      if (config.apiHeaders) {
-        const customHeaders = JSON.parse(config.apiHeaders) as Record<string, string>;
-        headers = { ...headers, ...customHeaders };
-      }
-      if (selectedPattern?.headers) {
-        headers = { ...headers, ...selectedPattern.headers };
-      }
-    } catch (e) {
-      console.warn('Invalid custom headers JSON:', e);
+    if (selectedPattern.headers) {
+      headers = { ...headers, ...selectedPattern.headers };
     }
 
-    const bodyTemplate = selectedPattern?.bodyTemplate;
-    const bodyJson = bodyTemplate
-      ? applyTemplate(bodyTemplate, requestContext)
-      : JSON.stringify(payload);
+    const bodyJson = selectedPattern.bodyTemplate
+      ? applyTemplate(selectedPattern.bodyTemplate, requestContext)
+      : JSON.stringify(
+          selectedPattern.includePageInfo
+            ? requestContext
+            : { streamUrl, timestamp: requestContext.timestamp }
+        );
 
     const response = await fetch(endpoint, {
       method,

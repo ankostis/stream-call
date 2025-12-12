@@ -4,21 +4,23 @@
 export {};
 
 const DEFAULT_CONFIG = {
-  apiEndpoint: '',
-  apiMethod: 'POST',
-  apiHeaders: '{}',
-  includePageInfo: true,
   apiPatterns: JSON.stringify(
     [
       {
-        id: 'default-pattern',
-        name: 'Default JSON',
+        id: 'default-json',
+        name: 'Default JSON POST',
         endpointTemplate: 'https://api.example.com/stream',
         method: 'POST',
-        headers: { 'X-Example': 'value' },
         bodyTemplate:
           '{"streamUrl":"{{streamUrl}}","timestamp":"{{timestamp}}","pageUrl":"{{pageUrl}}","pageTitle":"{{pageTitle}}"}',
         includePageInfo: true
+      },
+      {
+        id: 'url-param',
+        name: 'URL Parameter GET',
+        endpointTemplate: 'https://api.example.com/record?url={{streamUrl}}&time={{timestamp}}',
+        method: 'GET',
+        includePageInfo: false
       }
     ],
     null,
@@ -34,11 +36,6 @@ type Config = typeof DEFAULT_CONFIG;
 async function loadSettings() {
   try {
     const config = (await browser.storage.sync.get(DEFAULT_CONFIG)) as Config;
-
-    (document.getElementById('api-endpoint') as HTMLInputElement).value = config.apiEndpoint;
-    (document.getElementById('api-method') as HTMLSelectElement).value = config.apiMethod;
-    (document.getElementById('api-headers') as HTMLTextAreaElement).value = config.apiHeaders;
-    (document.getElementById('include-page-info') as HTMLInputElement).checked = config.includePageInfo;
     (document.getElementById('api-patterns') as HTMLTextAreaElement).value = config.apiPatterns;
   } catch (error) {
     console.error('Failed to load settings:', error);
@@ -51,33 +48,7 @@ async function loadSettings() {
  */
 async function saveSettings() {
   try {
-    const apiEndpoint = (document.getElementById('api-endpoint') as HTMLInputElement).value.trim();
-    const apiMethod = (document.getElementById('api-method') as HTMLSelectElement).value;
-    const apiHeaders = (document.getElementById('api-headers') as HTMLTextAreaElement).value.trim();
-    const includePageInfo = (document.getElementById('include-page-info') as HTMLInputElement).checked;
     const apiPatternsRaw = (document.getElementById('api-patterns') as HTMLTextAreaElement).value.trim();
-    const apiPatternsRaw = (document.getElementById('api-patterns') as HTMLTextAreaElement).value.trim();
-
-    if (!apiEndpoint) {
-      showAlert('Please enter an API endpoint URL', 'error');
-      return;
-    }
-
-    try {
-      new URL(apiEndpoint);
-    } catch (e) {
-      showAlert('Please enter a valid URL for the API endpoint', 'error');
-      return;
-    }
-
-    if (apiHeaders) {
-      try {
-        JSON.parse(apiHeaders);
-      } catch (e) {
-        showAlert('Invalid JSON in custom headers. Please fix the syntax.', 'error');
-        return;
-      }
-    }
 
     const validatedPatterns = validatePatterns(apiPatternsRaw || '[]');
     if (!validatedPatterns.valid) {
@@ -85,11 +56,12 @@ async function saveSettings() {
       return;
     }
 
+    if (validatedPatterns.parsed.length === 0) {
+      showAlert('Please add at least one API pattern', 'error');
+      return;
+    }
+
     await browser.storage.sync.set({
-      apiEndpoint,
-      apiMethod,
-      apiHeaders: apiHeaders || '{}',
-      includePageInfo,
       apiPatterns: validatedPatterns.formatted
     });
 
@@ -105,49 +77,39 @@ async function saveSettings() {
  */
 async function testAPI() {
   try {
-    const apiEndpoint = (document.getElementById('api-endpoint') as HTMLInputElement).value.trim();
-    const apiMethod = (document.getElementById('api-method') as HTMLSelectElement).value;
-    const apiHeaders = (document.getElementById('api-headers') as HTMLTextAreaElement).value.trim();
-    const includePageInfo = (document.getElementById('include-page-info') as HTMLInputElement).checked;
-
+    const apiPatternsRaw = (document.getElementById('api-patterns') as HTMLTextAreaElement).value.trim();
     const patterns = validatePatterns(apiPatternsRaw || '[]');
-    if (!apiEndpoint && (!patterns.valid || patterns.parsed.length === 0)) {
-      showAlert('Please enter an API endpoint URL or a pattern first', 'error');
+    
+    if (!patterns.valid || patterns.parsed.length === 0) {
+      showAlert('Please add at least one valid API pattern first', 'error');
       return;
     }
 
     showAlert('Testing API connection...', 'info');
 
+    const firstPattern = patterns.parsed[0];
     const context = {
       streamUrl: 'https://example.com/test-stream.m3u8',
       timestamp: new Date().toISOString(),
-      pageUrl: includePageInfo ? 'https://example.com/test-page' : undefined,
-      pageTitle: includePageInfo ? 'Test Page - stream-call' : undefined
+      pageUrl: firstPattern.includePageInfo ? 'https://example.com/test-page' : undefined,
+      pageTitle: firstPattern.includePageInfo ? 'Test Page - stream-call' : undefined
     } as Record<string, unknown>;
 
-    const firstPattern = patterns.valid ? patterns.parsed[0] : undefined;
-    const endpoint = firstPattern
-      ? applyTemplate(firstPattern.endpointTemplate, context)
-      : apiEndpoint;
-    const method = (firstPattern?.method || apiMethod).toUpperCase();
+    const endpoint = applyTemplate(firstPattern.endpointTemplate, context);
+    const method = (firstPattern.method || 'POST').toUpperCase();
 
     let headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (apiHeaders) {
-      try {
-        const customHeaders = JSON.parse(apiHeaders) as Record<string, string>;
-        headers = { ...headers, ...customHeaders };
-      } catch (e) {
-        showAlert('Invalid JSON in custom headers', 'error');
-        return;
-      }
-    }
-    if (firstPattern?.headers) {
+    if (firstPattern.headers) {
       headers = { ...headers, ...firstPattern.headers };
     }
 
-    const body = firstPattern?.bodyTemplate
+    const body = firstPattern.bodyTemplate
       ? applyTemplate(firstPattern.bodyTemplate, context)
-      : JSON.stringify(context);
+      : JSON.stringify(
+          firstPattern.includePageInfo
+            ? context
+            : { streamUrl: context.streamUrl, timestamp: context.timestamp }
+        );
 
     const response = await fetch(endpoint, {
       method,
@@ -171,12 +133,7 @@ async function testAPI() {
  */
 function resetSettings() {
   if (confirm('Are you sure you want to reset all settings to defaults?')) {
-    (document.getElementById('api-endpoint') as HTMLInputElement).value = DEFAULT_CONFIG.apiEndpoint;
-    (document.getElementById('api-method') as HTMLSelectElement).value = DEFAULT_CONFIG.apiMethod;
-    (document.getElementById('api-headers') as HTMLTextAreaElement).value = DEFAULT_CONFIG.apiHeaders;
-    (document.getElementById('include-page-info') as HTMLInputElement).checked = DEFAULT_CONFIG.includePageInfo;
     (document.getElementById('api-patterns') as HTMLTextAreaElement).value = DEFAULT_CONFIG.apiPatterns;
-
     showAlert('Settings reset to defaults. Click Save to apply.', 'info');
   }
 }
@@ -208,18 +165,6 @@ function initialize() {
   document.getElementById('save-btn')?.addEventListener('click', saveSettings);
   document.getElementById('test-btn')?.addEventListener('click', testAPI);
   document.getElementById('reset-btn')?.addEventListener('click', resetSettings);
-
-  (document.getElementById('api-headers') as HTMLTextAreaElement).addEventListener('blur', function () {
-    const value = this.value.trim();
-    if (value) {
-      try {
-        const parsed = JSON.parse(value);
-        this.value = JSON.stringify(parsed, null, 2);
-      } catch (e) {
-        // Invalid JSON, leave as-is
-      }
-    }
-  });
 
   (document.getElementById('api-patterns') as HTMLTextAreaElement).addEventListener('blur', function () {
     const value = this.value.trim();

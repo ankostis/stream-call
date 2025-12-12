@@ -38,18 +38,55 @@ Then submit to [Firefox Add-ons](https://addons.mozilla.org/).
 
 ## Usage
 
-### 1. Configure the API Endpoint
+### 1. Configure API Patterns
 
 1. Click the *Stream call* icon in your Firefox toolbar
 2. Click the "⚙️ Options" button
-3. Either set a single API endpoint URL (e.g., `https://your-server.com/api/stream`) **or** define API patterns (JSON array) that can template the stream URL into the endpoint/body.
-4. Optionally configure:
-  - HTTP method (POST, PUT, PATCH)
-  - Custom headers (JSON format)
-  - Whether to include page information
-  - API patterns with `{{placeholders}}` for `streamUrl`, `pageUrl`, `pageTitle`, `timestamp`
-5. Click "💾 Save Settings"
-6. Click "🧪 Test API" to verify the connection
+3. Define one or more API patterns as a JSON array
+4. Click "💾 Save Settings"
+5. Click "🧪 Test API" to verify the connection
+
+#### Simple JSON POST Example
+
+```json
+[{
+  "id": "my-api",
+  "name": "My API",
+  "endpointTemplate": "https://api.example.com/stream",
+  "method": "POST",
+  "headers": {"Authorization": "Bearer YOUR_TOKEN"},
+  "bodyTemplate": "{\"url\":\"{{streamUrl}}\",\"timestamp\":\"{{timestamp}}\"}",
+  "includePageInfo": true
+}]
+```
+
+#### URL Parameter GET Example
+
+```json
+[{
+  "id": "simple-get",
+  "name": "Simple GET",
+  "endpointTemplate": "https://api.example.com/notify?url={{streamUrl}}&page={{pageUrl}}",
+  "method": "GET"
+}]
+```
+
+#### Available Placeholders
+
+- `{{streamUrl}}` - The detected stream URL
+- `{{pageUrl}}` - The webpage URL where the stream was found
+- `{{pageTitle}}` - The webpage title
+- `{{timestamp}}` - Current timestamp in ISO format
+
+#### Pattern Fields
+
+- **id** (required): Unique identifier
+- **name** (required): Display name shown in popup
+- **endpointTemplate** (required): API URL (supports placeholders)
+- **method** (optional): HTTP method (defaults to POST)
+- **headers** (optional): Custom headers object
+- **bodyTemplate** (optional): Request body template (supports placeholders)
+- **includePageInfo** (optional): Include page URL/title in context (defaults to false)
 
 ### 2. Detect Streams
 
@@ -66,18 +103,21 @@ Then submit to [Firefox Add-ons](https://addons.mozilla.org/).
 
 ## API Payload Format
 
-The extension sends the following JSON payload to your API endpoint:
+The payload sent to your API endpoint depends on your pattern configuration:
 
+- If you use `bodyTemplate`, the extension sends that template with placeholders replaced
+- If you omit `bodyTemplate` (for GET requests), placeholders in the URL are replaced
+- `pageUrl` and `pageTitle` are available when `includePageInfo: true` in the pattern
+
+**Example with bodyTemplate:**
 ```json
 {
-  "streamUrl": "https://stream.example.com/audio.m3u8",
+  "url": "https://stream.example.com/audio.m3u8",
   "timestamp": "2025-12-12T10:30:00.000Z",
   "pageUrl": "https://www.example.com/listen",
   "pageTitle": "Example Radio Station"
 }
 ```
-
-**Note:** `pageUrl` and `pageTitle` are only included if enabled in options.
 
 ## API Example (Node.js/Express)
 

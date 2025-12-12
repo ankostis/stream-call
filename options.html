@@ -235,95 +235,64 @@
     <div id="alert" class="alert"></div>
 
     <div class="card">
-      <h2 class="card-title">API Configuration</h2>
-
-      <div class="form-group">
-        <label for="api-endpoint">
-          API Endpoint URL *
-          <span class="label-description">The HTTP endpoint that will receive stream URLs</span>
-        </label>
-        <input
-          type="url"
-          id="api-endpoint"
-          placeholder="https://api.example.com/stream"
-          required
-        >
-        <div class="example-box">
-          <strong>Example:</strong> https://your-server.com/api/stream-detected
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label for="api-method">
-          HTTP Method
-        </label>
-        <select id="api-method">
-          <option value="POST">POST</option>
-          <option value="PUT">PUT</option>
-          <option value="PATCH">PATCH</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label for="api-headers">
-          Custom Headers (JSON)
-          <span class="label-description">Optional custom headers to include in API requests</span>
-        </label>
-        <textarea
-          id="api-headers"
-          placeholder='{"Authorization": "Bearer YOUR_TOKEN", "X-Custom-Header": "value"}'
-        ></textarea>
-        <p class="help-text">
-          Enter valid JSON with header key-value pairs. Leave empty if no custom headers needed.
-        </p>
-      </div>
+      <h2 class="card-title">API Patterns</h2>
 
       <div class="form-group">
         <label for="api-patterns">
-          API Patterns (JSON array)
-          <span class="label-description">Define multiple endpoints/bodies with {{placeholders}} (streamUrl, pageUrl, pageTitle, timestamp)</span>
+          API Pattern Configuration (JSON array) *
+          <span class="label-description">Define one or more API endpoints with {{placeholders}}</span>
         </label>
         <textarea
           id="api-patterns"
           placeholder='[
   {
-    "id": "default-pattern",
-    "name": "Default JSON",
+    "id": "my-api",
+    "name": "My API",
     "endpointTemplate": "https://api.example.com/stream",
     "method": "POST",
-    "headers": { "X-Example": "value" },
     "bodyTemplate": "{\"streamUrl\":\"{{streamUrl}}\",\"timestamp\":\"{{timestamp}}\"}",
     "includePageInfo": true
   }
 ]'
         ></textarea>
         <p class="help-text">
-          Use <code>{{streamUrl}}</code>, <code>{{pageUrl}}</code>, <code>{{pageTitle}}</code>, <code>{{timestamp}}</code> in endpoint or body templates. Leave empty to fall back to the single endpoint above.
+          Available placeholders: <code>{{streamUrl}}</code>, <code>{{pageUrl}}</code>, <code>{{pageTitle}}</code>, <code>{{timestamp}}</code>
         </p>
-      </div>
-
-      <div class="form-group checkbox-group">
-        <label>
-          <input type="checkbox" id="include-page-info" checked>
-          Include page information (URL and title) in API payload
-        </label>
+        <div class="example-box">
+          <strong>Simple JSON POST:</strong>
+          <pre style="margin-top: 8px; font-size: 11px;">[{
+  "id": "json-api",
+  "name": "JSON API",
+  "endpointTemplate": "https://api.example.com/stream",
+  "method": "POST",
+  "headers": {"Authorization": "Bearer TOKEN"},
+  "bodyTemplate": "{\"url\":\"{{streamUrl}}\"}",
+  "includePageInfo": false
+}]</pre>
+        </div>
+        <div class="example-box">
+          <strong>URL Parameter GET:</strong>
+          <pre style="margin-top: 8px; font-size: 11px;">[{
+  "id": "url-param",
+  "name": "URL Param",
+  "endpointTemplate": "https://api.example.com/notify?url={{streamUrl}}&page={{pageUrl}}",
+  "method": "GET"
+}]</pre>
+        </div>
       </div>
     </div>
 
     <div class="card">
-      <h2 class="card-title">Payload Example</h2>
-      <p style="margin-bottom: 12px;">The following JSON will be sent to your API endpoint:</p>
-      <div class="code-example">
-{
-  "streamUrl": "https://stream.example.com/audio.m3u8",
-  "timestamp": "2025-12-12T10:30:00.000Z",
-  "pageUrl": "https://www.example.com/listen",
-  "pageTitle": "Example Radio Station"
-}
-      </div>
-      <p class="help-text">
-        Note: <code>pageUrl</code> and <code>pageTitle</code> are only included if the checkbox above is enabled.
-      </p>
+      <h2 class="card-title">Pattern Fields</h2>
+      <ul style="margin: 0; padding-left: 20px; line-height: 1.8;">
+        <li><strong>id</strong>: Unique identifier</li>
+        <li><strong>name</strong>: Display name shown in popup</li>
+        <li><strong>endpointTemplate</strong>: API URL (supports {{placeholders}})</li>
+        <li><strong>method</strong>: HTTP method (GET, POST, etc.) - defaults to POST</li>
+        <li><strong>headers</strong>: Custom headers object (optional)</li>
+        <li><strong>bodyTemplate</strong>: Request body (supports {{placeholders}}, optional)</li>
+        <li><strong>includePageInfo</strong>: Include page URL/title (optional, defaults to false)</li>
+      </ul>
     </div>
 
     <div class="button-group">
