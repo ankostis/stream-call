@@ -7,10 +7,13 @@
     "clean": "rm -rf dist",
     "build:ts": "tsc",
     "copy:static": "mkdir -p dist && cp popup.html options.html dist/",
-    "build": "npm run clean && npm run build:ts && npm run copy:static"
+    "build": "npm run clean && npm run build:ts && npm run copy:static",
+    "test": "tsx tests/unit/template.test.ts"
   },
   "devDependencies": {
     "@types/firefox-webext-browser": "^143.0.0",
+    "@types/node": "^22.9.0",
+    "tsx": "^4.7.2",
     "typescript": "^5.4.0"
   }
 }

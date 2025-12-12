@@ -177,7 +177,9 @@ function initialize() {
   });
 }
 
-document.addEventListener('DOMContentLoaded', initialize);
+if (typeof document !== 'undefined') {
+  document.addEventListener('DOMContentLoaded', initialize);
+}
 
 function validatePatterns(raw: string): {
   valid: boolean;

@@ -43,6 +43,40 @@ zip -r stream-call.zip manifest.json dist icons -x "icons/generate-icons.html"
 
 Then submit to [Firefox Add-ons](https://addons.mozilla.org/).
 
+## Testing
+
+### Unit-like checks (templating)
+
+- Install deps and run the TypeScript tests:
+  ```bash
+  npm install
+  npm test
+  ```
+- Covers placeholder interpolation, missing-key handling, and `url`/`json`
+  filters.
+
+### Manual/API checks (external mock: httpbin)
+
+- Use `https://httpbin.org` endpoints to validate responses without running a
+  local server.
+  - Echo body/headers/query: `https://httpbin.org/anything`
+  - Force status: `https://httpbin.org/status/500`
+  - Add latency: `https://httpbin.org/delay/3`
+- Example pattern for echo testing:
+  ```json
+  [{
+    "id": "echo-httpbin",
+    "name": "Echo httpbin",
+    "endpointTemplate": "https://httpbin.org/anything",
+    "method": "POST",
+    "headers": {"X-Test": "stream-call"},
+    "bodyTemplate": "{\"url\":\"{{streamUrl}}\",\"title\":\"{{pageTitle}}\"}",
+    "includePageInfo": true
+  }]
+  ```
+- Inspect the httpbin JSON response (`args`, `headers`, `json`, `data`) to
+  confirm placeholders are filled as expected.
+
 ## Usage
 
 ### 1. Configure API Patterns
