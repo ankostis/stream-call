@@ -61,11 +61,8 @@ async function saveSettings() {
       return;
     }
 
-    // Sanitize patterns: add |url to placeholders in query strings
-    const sanitized = sanitizePatterns(validatedPatterns.parsed);
-
     await browser.storage.sync.set({
-      apiPatterns: JSON.stringify(sanitized, null, 2)
+      apiPatterns: validatedPatterns.formatted
     });
 
     showAlert('✅ Settings saved successfully!', 'success');
@@ -256,32 +253,4 @@ function applyTemplate(
   });
 }
 
-/**
- * Ensure placeholders in endpoint query strings are URL-encoded filters.
- * Adds `|url` to {{streamUrl}}, {{pageUrl}}, {{pageTitle}} when inside a URL
- * that appears to have query parameters.
- */
-function sanitizePatterns(
-  patterns: Array<{
-    id: string;
-    name: string;
-    endpointTemplate: string;
-    method?: string;
-    headers?: Record<string, string>;
-    bodyTemplate?: string;
-    includePageInfo?: boolean;
-  }>
-) {
-  const KEYS = ['streamUrl', 'pageUrl', 'pageTitle'];
-  return patterns.map((p) => {
-    let endpoint = p.endpointTemplate;
-    if (endpoint.includes('?')) {
-      KEYS.forEach((k) => {
-        // Replace {{key}} not already filtered with |url
-        const re = new RegExp(`\\{\\{${k}(?!\\|)\\}\\}`, 'g');
-        endpoint = endpoint.replace(re, `{{${k}|url}}`);
-      });
-    }
-    return { ...p, endpointTemplate: endpoint };
-  });
-}
+export { applyTemplate };
