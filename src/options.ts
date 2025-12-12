@@ -61,8 +61,11 @@ async function saveSettings() {
       return;
     }
 
+    // Sanitize patterns: add |url to placeholders in query strings
+    const sanitized = sanitizePatterns(validatedPatterns.parsed);
+
     await browser.storage.sync.set({
-      apiPatterns: validatedPatterns.formatted
+      apiPatterns: JSON.stringify(sanitized, null, 2)
     });
 
     showAlert('✅ Settings saved successfully!', 'success');
@@ -226,9 +229,59 @@ function validatePatterns(raw: string): {
   }
 }
 
-function applyTemplate(template: string, context: Record<string, unknown>): string {
-  return template.replace(/\{\{\s*(\w+)\s*\}\}/g, (_match, key: string) => {
+function applyTemplate(
+  template: string,
+  context: Record<string, unknown>,
+  options: { onMissing?: 'leave' | 'empty' | 'throw' } = { onMissing: 'leave' }
+): string {
+  const onMissing = options.onMissing ?? 'leave';
+  const re = /\{\{(\w+)(?:\|(url|json))?\}\}/g;
+
+  const encodeJsonString = (val: unknown) => JSON.stringify(String(val));
+  const applyFilter = (val: unknown, filter?: 'url' | 'json') => {
+    if (filter === 'url') return encodeURIComponent(String(val ?? ''));
+    if (filter === 'json') return encodeJsonString(val);
+    return String(val ?? '');
+  };
+
+  return template.replace(re, (_m, key: string, filter?: 'url' | 'json') => {
     const value = context[key];
-    return value === undefined || value === null ? '' : String(value);
+    const hasValue = value !== undefined && value !== null;
+    if (!hasValue) {
+      if (onMissing === 'empty') return '';
+      if (onMissing === 'throw') throw new Error(`Missing placeholder: ${key}`);
+      return `{{${key}${filter ? '|' + filter : ''}}}`;
+    }
+    return applyFilter(value, filter);
+  });
+}
+
+/**
+ * Ensure placeholders in endpoint query strings are URL-encoded filters.
+ * Adds `|url` to {{streamUrl}}, {{pageUrl}}, {{pageTitle}} when inside a URL
+ * that appears to have query parameters.
+ */
+function sanitizePatterns(
+  patterns: Array<{
+    id: string;
+    name: string;
+    endpointTemplate: string;
+    method?: string;
+    headers?: Record<string, string>;
+    bodyTemplate?: string;
+    includePageInfo?: boolean;
+  }>
+) {
+  const KEYS = ['streamUrl', 'pageUrl', 'pageTitle'];
+  return patterns.map((p) => {
+    let endpoint = p.endpointTemplate;
+    if (endpoint.includes('?')) {
+      KEYS.forEach((k) => {
+        // Replace {{key}} not already filtered with |url
+        const re = new RegExp(`\\{\\{${k}(?!\\|)\\}\\}`, 'g');
+        endpoint = endpoint.replace(re, `{{${k}|url}}`);
+      });
+    }
+    return { ...p, endpointTemplate: endpoint };
   });
 }
