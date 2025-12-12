@@ -1,5 +1,5 @@
 /**
- * Stream call Popup Script
+ * stream-call Popup Script
  */
 export {};
 

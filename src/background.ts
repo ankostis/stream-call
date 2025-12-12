@@ -1,5 +1,5 @@
 /**
- * Stream call Background Service Worker
+ * stream-call Background Service Worker
  * Handles communication between content scripts and popup,
  * manages detected streams, and triggers API calls
  */
@@ -258,4 +258,4 @@ function parsePatterns(raw: string): ApiPattern[] {
   }
 }
 
-console.log('Stream call background service worker loaded');
+console.log('stream-call: background service worker loaded');

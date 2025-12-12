@@ -1,4 +1,4 @@
-# 🎵 Stream call
+# 🎵 *Stream call*
 
 A Firefox browser extension that detects streaming media (podcasts, radio stations, live streams) on web pages and sends the stream URLs to a configurable HTTP API endpoint.
 
@@ -40,7 +40,7 @@ Then submit to [Firefox Add-ons](https://addons.mozilla.org/).
 
 ### 1. Configure the API Endpoint
 
-1. Click the Stream call icon in your Firefox toolbar
+1. Click the *Stream call* icon in your Firefox toolbar
 2. Click the "⚙️ Options" button
 3. Either set a single API endpoint URL (e.g., `https://your-server.com/api/stream`) **or** define API patterns (JSON array) that can template the stream URL into the endpoint/body.
 4. Optionally configure:
@@ -185,7 +185,7 @@ The extension requires the following permissions:
 
 ## Privacy
 
-Stream call:
+*Stream call*:
 - Only sends data to **your configured API endpoint**
 - Does not collect or transmit data to any third parties
 - Stores configuration locally in Firefox sync storage

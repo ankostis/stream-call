@@ -1,5 +1,5 @@
 /**
- * Stream call Content Script
+ * stream-call Content Script
  * Detects streaming media on web pages
  */
 export {};
@@ -78,7 +78,7 @@ export {};
     if (detectedStreams.has(url)) return;
 
     detectedStreams.add(url);
-    console.log('[Stream call] Detected stream:', url);
+    console.log('stream-call: Detected stream:', url);
 
     browser.runtime
       .sendMessage({
@@ -87,7 +87,7 @@ export {};
         streamType: getStreamType(url)
       })
       .catch((err) => {
-        console.error('[Stream call] Failed to report stream:', err);
+        console.error('stream-call: Failed to report stream:', err);
       });
   }
 
@@ -172,19 +172,19 @@ export {};
     const anyWindow = window as any;
 
     if (anyWindow.Hls) {
-      console.log('[Stream call] HLS.js detected');
+      console.log('stream-call: HLS.js detected');
     }
 
     if (anyWindow.videojs) {
-      console.log('[Stream call] Video.js detected');
+      console.log('stream-call: Video.js detected');
     }
 
     if (anyWindow.jwplayer) {
-      console.log('[Stream call] JW Player detected');
+      console.log('stream-call: JW Player detected');
     }
 
     if (anyWindow.shaka) {
-      console.log('[Stream call] Shaka Player detected');
+      console.log('stream-call: Shaka Player detected');
     }
   }
 
@@ -198,7 +198,7 @@ export {};
   }
 
   function initialize() {
-    console.log('[Stream call] Content script initialized');
+    console.log('stream-call: Content script initialized');
 
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', () => {

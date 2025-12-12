@@ -1,5 +1,5 @@
 /**
- * Stream call Options Script
+ * stream-call Options Script
  */
 export {};
 
@@ -122,7 +122,7 @@ async function testAPI() {
       streamUrl: 'https://example.com/test-stream.m3u8',
       timestamp: new Date().toISOString(),
       pageUrl: includePageInfo ? 'https://example.com/test-page' : undefined,
-      pageTitle: includePageInfo ? 'Test Page - Stream call' : undefined
+      pageTitle: includePageInfo ? 'Test Page - stream-call' : undefined
     } as Record<string, unknown>;
 
     const firstPattern = patterns.valid ? patterns.parsed[0] : undefined;
