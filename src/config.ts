@@ -1,9 +1,9 @@
 /**
  * Configuration utilities for stream-call
- * Centralized pattern parsing, validation, and normalization
+ * Centralized endpoint parsing, validation, and normalization
  */
 
-export type ApiPattern = {
+export type ApiEndpoint = {
   name: string;
   endpointTemplate: string;
   method?: string;
@@ -13,13 +13,13 @@ export type ApiPattern = {
 };
 
 /**
- * Suggest a pattern name from an endpoint URL (extract hostname)
+ * Suggest an endpoint name from an endpoint URL (extract hostname)
  * Example: https://api.example.com/stream → api.example.com
  */
-export function suggestPatternName(endpointUrl: string): string {
+export function suggestEndpointName(endpointUrl: string): string {
   try {
     const url = new URL(endpointUrl);
-    return url.hostname || 'API Pattern';
+    return url.hostname || 'API Endpoint';
   } catch {
     // Fallback if URL is invalid
     return endpointUrl.substring(0, 30).replace(/[^a-z0-9.-]/gi, '');
@@ -27,20 +27,20 @@ export function suggestPatternName(endpointUrl: string): string {
 }
 
 /**
- * Parse raw JSON string into validated ApiPattern array
+ * Parse raw JSON string into validated ApiEndpoint array
  * Requires name field; enforces uniqueness by name
- * Throws on invalid JSON or invalid pattern structure
+ * Throws on invalid JSON or invalid endpoint structure
  */
-export function parsePatterns(raw: string): ApiPattern[] {
+export function parseEndpoints(raw: string): ApiEndpoint[] {
   const parsed = JSON.parse(raw);
   if (!Array.isArray(parsed)) {
-    throw new Error('API patterns must be a JSON array.');
+    throw new Error('API endpoints must be a JSON array.');
   }
 
   const names = new Set<string>();
   return parsed
     .map((p) => ({
-      name: p.name || suggestPatternName(p.endpointTemplate),
+      name: p.name || suggestEndpointName(p.endpointTemplate),
       endpointTemplate: p.endpointTemplate,
       method: p.method,
       headers: p.headers,
@@ -64,11 +64,11 @@ export function parsePatterns(raw: string): ApiPattern[] {
 
 /**
  * Validate and normalize raw JSON string into formatted array
- * Returns validation result with parsed patterns, formatted JSON, and error message if invalid
+ * Returns validation result with parsed endpoints, formatted JSON, and error message if invalid
  */
-export function validatePatterns(raw: string): {
+export function validateEndpoints(raw: string): {
   valid: boolean;
-  parsed: ApiPattern[];
+  parsed: ApiEndpoint[];
   formatted: string;
   errorMessage?: string;
 } {
@@ -79,7 +79,7 @@ export function validatePatterns(raw: string): {
         valid: false,
         parsed: [],
         formatted: '[]',
-        errorMessage: 'API patterns must be a JSON array.'
+        errorMessage: 'API endpoints must be a JSON array.'
       };
     }
 
@@ -87,11 +87,11 @@ export function validatePatterns(raw: string): {
     const cleaned = parsed
       .map((p: any, index: number) => {
         if (!p || typeof p.endpointTemplate !== 'string' || !p.endpointTemplate.trim()) {
-          throw new Error(`Pattern ${index + 1} is missing an endpointTemplate.`);
+          throw new Error(`Endpoint ${index + 1} is missing an endpointTemplate.`);
         }
-        const name = p.name || suggestPatternName(p.endpointTemplate);
+        const name = p.name || suggestEndpointName(p.endpointTemplate);
         if (names.has(name)) {
-          throw new Error(`Duplicate pattern name: "${name}" (Pattern ${index + 1})`);
+          throw new Error(`Duplicate endpoint name: "${name}" (Endpoint ${index + 1})`);
         }
         names.add(name);
         return {

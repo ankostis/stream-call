@@ -22,12 +22,12 @@
 - Message-based flow: content -> `STREAM_DETECTED`; popup -> PING + `GET_STREAMS`.
   All cross-component comms via `browser.runtime.sendMessage()`.
 - Bounded state: background caps 200 streams/tab (LRU) and cleans on close/nav;
-  popup caches patterns in-memory per session.
-- Shared utilities: `config.ts` (parse/validate), `template.ts` (interpolate),
-  `detect.ts` (patterns), `debounce.ts` (throttle). Content imports patterns
+  popup caches endpoints in-memory per session.
+- Shared utilities: `config.ts` (parse/validate endpoints), `template.ts` (interpolate placeholders),
+  `detect.ts` (detection patterns), `debounce.ts` (throttle). Content imports patterns
   from `detect.ts` instead of duplicating.
-- Pattern-first config: Only patterns, keyed by unique `name` (no `id`). Names
-  auto-suggested from endpoint host via `suggestPatternName()`.
+- Endpoint-first config: Only API endpoints, keyed by unique `name`. Names
+  auto-suggested from endpoint host via `suggestEndpointName()`.
 - Debounced detection: media scan 1s delay/2s interval; DOM mutation debounce
   500ms.
 
@@ -35,8 +35,8 @@
 - Errors bubble to UI; avoid silent catches. See `notes/error-handling-audit.md`.
   Storage errors deprioritized (young extension; devs handle manually).
 - Type isolation: each TS file `export {}` to avoid globals.
-- Pattern keying: unique `name`; `suggestPatternName()` derives from hostname;
-  `parsePatterns()` filters dups; `validatePatterns()` surfaces dups.
+- Endpoint keying: unique `name`; `suggestEndpointName()` derives from hostname;
+  `parseEndpoints()` filters dups; `validateEndpoints()` surfaces dups.
 - Template errors: handled separately in `callStreamAPI()`/`testAPI()` to
   distinguish placeholder issues from network errors.
 - Detection patterns: extend `STREAM_PATTERNS` and `getStreamType()` together;

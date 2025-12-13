@@ -4,7 +4,7 @@ A Firefox browser extension that detects streaming media (podcasts, radio
 stations, live streams) on web pages and sends the stream URLs to a configurable
 HTTP API endpoint.
 
-**Platform**: Works both on desktop Firefox and mobile Firefox Nightly.
+**Platform**: Works on desktop Firefox and mobile Firefox Nightly (future: dedicated mobile UI panel for API calls while viewing the webpage).
 
 ## Features
 
@@ -81,11 +81,11 @@ Then submit to [Firefox Add-ons](https://addons.mozilla.org/).
 
 ## Usage
 
-### 1. Configure API Patterns
+### 1. Configure API Endpoints
 
 1. Click the *Stream call* icon in your Firefox toolbar
 2. Click the "⚙️ Options" button
-3. Define one or more API patterns as a JSON array
+3. Define one or more API endpoints as a JSON array
 4. Click "💾 Save Settings"
 5. Click "🧪 Test API" to verify the connection
 
@@ -121,7 +121,7 @@ Then submit to [Firefox Add-ons](https://addons.mozilla.org/).
 - `{{pageTitle}}` - The webpage title
 - `{{timestamp}}` - Current timestamp in ISO format
 
-#### Pattern Fields
+#### Endpoint Fields
 
 - **id** (required): Unique identifier
 - **name** (required): Display name shown in popup
@@ -147,7 +147,7 @@ Then submit to [Firefox Add-ons](https://addons.mozilla.org/).
 
 ## API Payload Format
 
-The payload sent to your API endpoint depends on your pattern configuration:
+The payload sent to your API endpoint depends on your endpoint configuration:
 
 - If you use `bodyTemplate`, the extension sends that template with placeholders
   replaced
@@ -272,11 +272,53 @@ The extension requires the following permissions:
 - `webRequest` - To monitor network requests for streams
 - `<all_urls>` - To detect streams on any website
 
+## Architecture & Terminology
+
+To understand the codebase, it's helpful to distinguish three key concepts:
+
+### 1. **Detection Patterns** (regex, internal)
+- **What**: Regular expression patterns (`STREAM_PATTERNS`) that match known streaming media URLs
+- **Where**: Defined in `src/detect.ts`
+- **Purpose**: Content script uses them to identify stream URLs (HLS, DASH, MP3, RTMP, Icecast, etc.)
+- **Examples**: `/\.(m3u8|mpd)/i`, `/rtmp:/`, `/icecast|shoutcast/i`
+- **Not configurable by users** — built-in to the extension
+
+### 2. **API Endpoints** (user-configured)
+- **What**: HTTP targets where detected stream URLs are sent
+- **Where**: Configured in options page, stored as JSON in `browser.storage.sync.apiEndpoints`
+- **Structure**: Name, URL template, HTTP method, headers, optional body template
+- **Purpose**: Each endpoint is a webhook/API target the user defines (e.g., their own webhook, httpbin for testing)
+- **Examples**:
+  ```json
+  {
+    "name": "My API",
+    "endpointTemplate": "https://api.example.com/stream",
+    "method": "POST",
+    "bodyTemplate": "{\"url\":\"{{streamUrl}}\",\"timestamp\":\"{{timestamp}}\"}"
+  }
+  ```
+- **Fully customizable by users** in the options page
+
+### 3. **Interpolation Templates** (string templates with placeholders)
+- **What**: Strings in `endpointTemplate` and `bodyTemplate` that contain placeholders like `{{streamUrl}}`
+- **Where**: Defined as endpoint field values; processed by `src/template.ts`
+- **Purpose**: Allow dynamic values (stream URL, page title, timestamp) to be inserted at API call time
+- **Available placeholders**: `{{streamUrl}}`, `{{pageUrl}}`, `{{pageTitle}}`, `{{timestamp}}`
+- **Error handling**: "Interpolation error" occurs when a placeholder is undefined or malformed
+- **Examples**:
+  - Endpoint template: `https://api.example.com/notify?url={{streamUrl}}`
+  - Body template: `{"stream":"{{streamUrl}}","detected":"{{timestamp}}"}`
+
+### Clean Separation
+- **Detection** (content script) → finds streams using patterns
+- **Configuration** (options page) → user defines endpoints
+- **Calling** (background worker) → interpolates templates and calls endpoints
+
 ## Privacy
 
 *Stream call*:
 - Only sends data to **your configured API endpoint**
-- Does not collect or transmit data to any third parties
+- Does not track browsing history, neither collect or transmit data to 3rd parties
 - Stores configuration locally in Firefox sync storage
 
 ## Mobile Firefox Nightly Support
@@ -284,7 +326,6 @@ The extension requires the following permissions:
 **Current**: Extension works on desktop Firefox and mobile Firefox Nightly, with options page accessed separately from the webpage.
 
 **Future (Phase 5+)**: A dedicated UI panel will allow API calls and diagnostics while viewing the original webpage on mobile (via injected content script UI), reusing the same Logger and StatusBar components.
-- Does not track browsing history
 
 ## License
 

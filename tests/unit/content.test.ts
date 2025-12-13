@@ -21,7 +21,7 @@ test('rejects non-stream URLs', () => {
   assert.strictEqual(isStreamUrl('https://example.com/page.html'), false);
 });
 
-test('protocol-based radio patterns', () => {
+test('protocol-based radio detection patterns', () => {
   assert.strictEqual(isStreamUrl('rtmp://radio.example.com/live'), true);
   assert.strictEqual(isStreamUrl('rtsp://radio.example.com/live'), true);
 });

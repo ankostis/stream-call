@@ -3,7 +3,7 @@
  */
 export {};
 
-import { parsePatterns, type ApiPattern } from './config';
+import { parseEndpoints, type ApiEndpoint } from './config';
 
 type StreamInfo = {
   url: string;
@@ -14,10 +14,10 @@ type StreamInfo = {
 };
 
 let currentTabId: number | null = null;
-let apiPatterns: ApiPattern[] = [];
+let apiEndpoints: ApiEndpoint[] = [];
 
-// Cache patterns in memory for the popup's lifetime to avoid repeated storage reads
-let patternsCached = false;
+// Cache endpoints in memory for the popup's lifetime to avoid repeated storage reads
+let endpointsCached = false;
 
 /**
  * Initialize popup
@@ -28,7 +28,7 @@ async function initialize() {
     if (tabs.length === 0) return;
 
     currentTabId = tabs[0].id ?? null;
-    await loadPatterns();
+    await loadEndpoints();
     await loadStreams();
 
     document.getElementById('refresh-btn')?.addEventListener('click', handleRefresh);
@@ -39,23 +39,23 @@ async function initialize() {
   }
 }
 
-async function loadPatterns() {
-  // Return cached patterns if available (avoids repeated storage reads during popup lifetime)
-  if (patternsCached) return;
+async function loadEndpoints() {
+  // Return cached endpoints if available (avoids repeated storage reads during popup lifetime)
+  if (endpointsCached) return;
 
-  const defaults = { apiPatterns: '[]' } as const;
+  const defaults = { apiEndpoints: '[]' } as const;
   const stored = (await browser.storage.sync.get(defaults)) as typeof defaults;
   try {
-    apiPatterns = parsePatterns(stored.apiPatterns);
+    apiEndpoints = parseEndpoints(stored.apiEndpoints);
   } catch (error: any) {
-    console.error('Failed to parse API patterns:', error);
+    console.error('Failed to parse API endpoints:', error);
     showNotification(
-      `API pattern error: ${error?.message ?? 'Invalid patterns'}. Check options.`,
+      `API endpoint error: ${error?.message ?? 'Invalid endpoints'}. Check options.`,
       'error'
     );
-    apiPatterns = [];
+    apiEndpoints = [];
   }
-  patternsCached = true;
+  endpointsCached = true;
 }
 
 /**
@@ -151,20 +151,20 @@ function createStreamItem(stream: StreamInfo, index: number): HTMLElement {
   const actions = document.createElement('div');
   actions.className = 'stream-actions';
 
-  let patternName: string | undefined = apiPatterns[0]?.name;
+  let endpointName: string | undefined = apiEndpoints[0]?.name;
 
-  if (apiPatterns.length > 0) {
+  if (apiEndpoints.length > 0) {
     const select = document.createElement('select');
-    select.className = 'pattern-select';
-    apiPatterns.forEach((pattern) => {
+    select.className = 'endpoint-select';
+    apiEndpoints.forEach((endpoint) => {
       const option = document.createElement('option');
-      option.value = pattern.name;
-      option.textContent = pattern.name;
+      option.value = endpoint.name;
+      option.textContent = endpoint.name;
       select.appendChild(option);
     });
     select.addEventListener('change', (e) => {
       const target = e.target as HTMLSelectElement;
-      patternName = target.value;
+      endpointName = target.value;
     });
     actions.appendChild(select);
   }
@@ -172,7 +172,7 @@ function createStreamItem(stream: StreamInfo, index: number): HTMLElement {
   const callBtn = document.createElement('button');
   callBtn.className = 'btn-primary';
   callBtn.textContent = '📤 Call API';
-  callBtn.addEventListener('click', () => handleCallAPI(stream, patternName));
+  callBtn.addEventListener('click', () => handleCallAPI(stream, endpointName));
 
   const copyBtn = document.createElement('button');
   copyBtn.className = 'btn-secondary';
@@ -192,22 +192,22 @@ function createStreamItem(stream: StreamInfo, index: number): HTMLElement {
 /**
  * Handle API call
  */
-async function handleCallAPI(stream: StreamInfo, patternName?: string) {
+async function handleCallAPI(stream: StreamInfo, endpointName?: string) {
   try {
-    const config = await browser.storage.sync.get(['apiPatterns']);
-    let patterns: ReturnType<typeof parsePatterns>;
+    const config = await browser.storage.sync.get(['apiEndpoints']);
+    let endpoints: ReturnType<typeof parseEndpoints>;
     try {
-      patterns = parsePatterns(config.apiPatterns || '[]');
+      endpoints = parseEndpoints(config.apiEndpoints || '[]');
     } catch (parseError: any) {
       showNotification(
-        `Failed to parse patterns: ${parseError?.message ?? 'Invalid JSON'}. Check options.`,
+        `Failed to parse endpoints: ${parseError?.message ?? 'Invalid JSON'}. Check options.`,
         'error'
       );
       return;
     }
 
-    if (patterns.length === 0) {
-      showNotification('Please configure API patterns in options first', 'error');
+    if (endpoints.length === 0) {
+      showNotification('Please configure API endpoints in options first', 'error');
       setTimeout(() => {
         browser.runtime.openOptionsPage();
       }, 2000);
@@ -221,7 +221,7 @@ async function handleCallAPI(stream: StreamInfo, patternName?: string) {
       streamUrl: stream.url,
       pageUrl: stream.pageUrl,
       pageTitle: stream.pageTitle,
-      patternName
+      endpointName
     });
 
     if (response?.success) {

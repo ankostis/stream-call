@@ -94,7 +94,7 @@ async function callStreamAPI({ ... }) {
 - Users see "Unknown error" instead of "Missing placeholder: streamUrl in endpoint template".
 
 **UI Caller That Could Benefit:**
-- [popup.ts](src/popup.ts#L220): `handleCallAPI()` displays `response?.error` generically; more granular errors would help users debug misconfigured patterns.
+- [popup.ts](src/popup.ts#L220): `handleCallAPI()` displays `response?.error` generically; more granular errors would help users debug misconfigured endpoints.
 
 **Recommended Fix:**
 - Wrap `applyTemplate()` separately with a specific error handler that distinguishes template errors from network errors.
@@ -122,7 +122,7 @@ async function loadSettings() {
 
 **Impact:**
 - Alert is shown, but the underlying error (e.g., quota exceeded, corrupted storage) is not surfaced.
-- Users can't distinguish "corrupted sync" from "no patterns set yet".
+- Users can't distinguish "corrupted sync" from "no endpoints configured yet".
 
 **UI Caller That Could Benefit:**
 - [options.ts](src/options.ts#L154-L170): `showAlert()` could accept error details to explain what went wrong (e.g., "Storage quota exceeded" vs "Network error reading sync storage").
@@ -152,8 +152,8 @@ try {
 ```
 
 **Impact:**
-- If a pattern has `{{pageTitle}}` but `includePageInfo: false`, the template will try to use an undefined value, and the error message might say "Missing placeholder" but doesn't clarify *which* placeholder or *why*.
-- Test feedback isn't actionable; user can't easily fix the pattern.
+- If an endpoint has `{{pageTitle}}` but `includePageInfo: false`, the template will try to use an undefined value, and the error message might say "Missing placeholder" but doesn't clarify *which* placeholder or *why*.
+- Test feedback isn't actionable; user can't easily fix the endpoint.
 
 **UI Caller That Could Benefit:**
 - User in options page trying to debug why test fails; error context should include which placeholder was missing and how to fix the pattern.

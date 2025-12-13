@@ -1,10 +1,10 @@
 export {};
 
 import { applyTemplate } from './template';
-import { ApiPattern, suggestPatternName, validatePatterns } from './config';
+import { ApiEndpoint, suggestEndpointName, validateEndpoints } from './config';
 
 const DEFAULT_CONFIG = {
-  apiPatterns: JSON.stringify(
+  apiEndpoints: JSON.stringify(
     [
       {
         name: 'example.com GET',
@@ -37,21 +37,21 @@ const DEFAULT_CONFIG = {
 
 type Config = typeof DEFAULT_CONFIG;
 
-let patterns: ApiPattern[] = [];
+let endpoints: ApiEndpoint[] = [];
 let editingIndex: number | null = null;
-let pendingImportPatterns: ApiPattern[] = [];
+let pendingImportEndpoints: ApiEndpoint[] = [];
 
 const els = {
   alert: () => document.getElementById('alert'),
-  patternsList: () => document.getElementById('patterns-list') as HTMLDivElement,
-  patternsEmpty: () => document.getElementById('patterns-empty') as HTMLDivElement,
+  endpointsList: () => document.getElementById('endpoints-list') as HTMLDivElement,
+  endpointsEmpty: () => document.getElementById('endpoints-empty') as HTMLDivElement,
   editorCard: () => document.getElementById('editor-card') as HTMLDivElement,
   editorTitle: () => document.getElementById('editor-title') as HTMLHeadingElement,
-  name: () => document.getElementById('pattern-name') as HTMLInputElement,
-  method: () => document.getElementById('pattern-method') as HTMLSelectElement,
-  endpoint: () => document.getElementById('pattern-endpoint') as HTMLInputElement,
-  body: () => document.getElementById('pattern-body') as HTMLTextAreaElement,
-  includePage: () => document.getElementById('pattern-include-page') as HTMLInputElement,
+  name: () => document.getElementById('endpoint-name') as HTMLInputElement,
+  method: () => document.getElementById('endpoint-method') as HTMLSelectElement,
+  endpoint: () => document.getElementById('endpoint-endpoint') as HTMLInputElement,
+  body: () => document.getElementById('endpoint-body') as HTMLTextAreaElement,
+  includePage: () => document.getElementById('endpoint-include-page') as HTMLInputElement,
   headersRows: () => document.getElementById('headers-rows') as HTMLDivElement,
   preview: () => document.getElementById('preview') as HTMLDivElement
 };
@@ -111,8 +111,8 @@ function loadSettings() {
   browser.storage.sync
     .get(DEFAULT_CONFIG)
     .then((config) => {
-      const validated = validatePatterns((config as Config).apiPatterns || '[]');
-      patterns = validated.valid ? validated.parsed : [];
+      const validated = validateEndpoints((config as Config).apiEndpoints || '[]');
+      endpoints = validated.valid ? validated.parsed : [];
       renderList();
     })
     .catch((error) => {
@@ -122,34 +122,34 @@ function loadSettings() {
 }
 
 function renderList() {
-  const list = els.patternsList();
-  const emptyState = els.patternsEmpty();
+  const list = els.endpointsList();
+  const emptyState = els.endpointsEmpty();
   list.innerHTML = '';
 
-  if (patterns.length === 0) {
+  if (endpoints.length === 0) {
     emptyState.style.display = 'block';
     return;
   }
 
   emptyState.style.display = 'none';
 
-  patterns.forEach((pattern, index) => {
+  endpoints.forEach((endpoint, index) => {
     const card = document.createElement('div');
-    card.className = 'pattern-card';
+    card.className = 'endpoint-card';
 
     const title = document.createElement('h3');
-    title.textContent = pattern.name;
+    title.textContent = endpoint.name;
 
     const meta = document.createElement('div');
-    meta.className = 'pattern-meta';
-    meta.textContent = `${(pattern.method || 'POST').toUpperCase()} → ${pattern.endpointTemplate}`;
+    meta.className = 'endpoint-meta';
+    meta.textContent = `${(endpoint.method || 'POST').toUpperCase()} → ${endpoint.endpointTemplate}`;
 
     const pageInfo = document.createElement('div');
-    pageInfo.className = 'pattern-meta';
-    pageInfo.textContent = pattern.includePageInfo === false ? 'Page info: off' : 'Page info: on';
+    pageInfo.className = 'endpoint-meta';
+    pageInfo.textContent = endpoint.includePageInfo === false ? 'Page info: off' : 'Page info: on';
 
     const actions = document.createElement('div');
-    actions.className = 'pattern-actions';
+    actions.className = 'endpoint-actions';
 
     const editBtn = document.createElement('button');
     editBtn.className = 'btn-ghost';
@@ -159,7 +159,7 @@ function renderList() {
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'btn-secondary btn-danger';
     deleteBtn.textContent = '🗑 Delete';
-    deleteBtn.addEventListener('click', () => deletePattern(index));
+    deleteBtn.addEventListener('click', () => deleteEndpoint(index));
 
     actions.appendChild(editBtn);
     actions.appendChild(deleteBtn);
@@ -174,9 +174,9 @@ function renderList() {
 
 function openEditor(index: number | null) {
   editingIndex = index;
-  const pattern = index === null ? newPatternDefaults() : patterns[index];
-  fillForm(pattern);
-  els.editorTitle().textContent = index === null ? 'Add pattern' : 'Edit pattern';
+  const endpoint = index === null ? newEndpointDefaults() : endpoints[index];
+  fillForm(endpoint);
+  els.editorTitle().textContent = index === null ? 'Add API endpoint' : 'Edit API endpoint';
   els.editorCard().style.display = 'block';
   els.preview().style.display = 'none';
 }
@@ -187,16 +187,16 @@ function closeEditor() {
   els.preview().style.display = 'none';
 }
 
-function fillForm(pattern: ApiPattern) {
-  els.name().value = pattern.name || '';
-  els.method().value = (pattern.method || 'POST').toUpperCase();
-  els.endpoint().value = pattern.endpointTemplate || '';
-  els.body().value = pattern.bodyTemplate || '';
-  els.includePage().checked = pattern.includePageInfo !== false;
-  setHeadersRows(pattern.headers);
+function fillForm(endpoint: ApiEndpoint) {
+  els.name().value = endpoint.name || '';
+  els.method().value = (endpoint.method || 'POST').toUpperCase();
+  els.endpoint().value = endpoint.endpointTemplate || '';
+  els.body().value = endpoint.bodyTemplate || '';
+  els.includePage().checked = endpoint.includePageInfo !== false;
+  setHeadersRows(endpoint.headers);
 }
 
-function newPatternDefaults(): ApiPattern {
+function newEndpointDefaults(): ApiEndpoint {
   return {
     name: '',
     endpointTemplate: '',
@@ -207,7 +207,7 @@ function newPatternDefaults(): ApiPattern {
   };
 }
 
-function buildPatternFromForm(): ApiPattern | null {
+function buildEndpointFromForm(): ApiEndpoint | null {
   const nameRaw = els.name().value.trim();
   const endpoint = els.endpoint().value.trim();
   const method = els.method().value.trim().toUpperCase() || 'POST';
@@ -234,8 +234,8 @@ function buildPatternFromForm(): ApiPattern | null {
       }
     });
 
-  const pattern: ApiPattern = {
-    name: nameRaw || suggestPatternName(endpoint),
+  const apiEndpoint: ApiEndpoint = {
+    name: nameRaw || suggestEndpointName(endpoint),
     endpointTemplate: endpoint,
     method,
     headers: Object.keys(headers).length ? headers : undefined,
@@ -243,73 +243,73 @@ function buildPatternFromForm(): ApiPattern | null {
     includePageInfo
   };
 
-  return pattern;
+  return apiEndpoint;
 }
 
-function savePattern() {
-  const candidate = buildPatternFromForm();
+function saveEndpoint() {
+  const candidate = buildEndpointFromForm();
   if (!candidate) return;
 
-  const updated = [...patterns];
+  const updated = [...endpoints];
   if (editingIndex === null) {
     updated.push(candidate);
   } else {
     updated[editingIndex] = candidate;
   }
 
-  const validated = validatePatterns(JSON.stringify(updated));
+  const validated = validateEndpoints(JSON.stringify(updated));
   if (!validated.valid) {
-    showAlert(validated.errorMessage || 'Invalid pattern', 'error');
+    showAlert(validated.errorMessage || 'Invalid API endpoint', 'error');
     return;
   }
 
-  patterns = validated.parsed;
+  endpoints = validated.parsed;
 
   browser.storage.sync
-    .set({ apiPatterns: validated.formatted })
+    .set({ apiEndpoints: validated.formatted })
     .then(() => {
       renderList();
       closeEditor();
-      showAlert('✅ Pattern saved', 'success');
+      showAlert('✅ API endpoint saved', 'success');
     })
     .catch((error) => {
-      console.error('Failed to save pattern:', error);
-      showAlert('Failed to save pattern', 'error');
+      console.error('Failed to save API endpoint:', error);
+      showAlert('Failed to save API endpoint', 'error');
     });
 }
 
-function deletePattern(index: number) {
-  const pattern = patterns[index];
-  if (!pattern) return;
+function deleteEndpoint(index: number) {
+  const endpoint = endpoints[index];
+  if (!endpoint) return;
 
-  if (!confirm(`Delete pattern "${pattern.name}"?`)) {
+  if (!confirm(`Delete API endpoint "${endpoint.name}"?`)) {
     return;
   }
 
-  const updated = patterns.filter((_, i) => i !== index);
-  const validated = validatePatterns(JSON.stringify(updated));
+  const updated = endpoints.filter((_, i) => i !== index);
+  const validated = validateEndpoints(JSON.stringify(updated));
   if (!validated.valid) {
-    showAlert(validated.errorMessage || 'Failed to delete pattern', 'error');
+    showAlert(validated.errorMessage || 'Failed to delete API endpoint', 'error');
     return;
   }
 
-  patterns = validated.parsed;
+  endpoints = validated.parsed;
 
   browser.storage.sync
-    .set({ apiPatterns: validated.formatted })
+    .set({ apiEndpoints: validated.formatted })
     .then(() => {
       renderList();
       closeEditor();
-      showAlert('Pattern deleted', 'success');
+      showAlert('API endpoint deleted', 'success');
     })
     .catch((error) => {
-      console.error('Failed to delete pattern:', error);
-      showAlert('Failed to delete pattern', 'error');
+      console.error('Failed to delete API endpoint:', error);
+      showAlert('Failed to delete API endpoint', 'error');
     });
 }
 
-function previewPattern() {
-  const candidate = buildPatternFromForm();
+function previewEndpoint() {
+  const candidate = buildEndpointFromForm();
   if (!candidate) return;
 
   const context = {
@@ -344,30 +344,30 @@ function previewPattern() {
 }
 
 function testAPI() {
-  if (patterns.length === 0) {
-    showAlert('Please add at least one pattern first', 'error');
+  if (endpoints.length === 0) {
+    showAlert('Please add at least one API endpoint first', 'error');
     return;
   }
 
-  const firstPattern = patterns[0];
+  const firstEndpoint = endpoints[0];
   showAlert('Testing API connection...', 'info');
 
   const context = {
     streamUrl: 'https://example.com/test-stream.m3u8',
     timestamp: new Date().toISOString(),
-    pageUrl: firstPattern.includePageInfo ? 'https://example.com/test-page' : undefined,
-    pageTitle: firstPattern.includePageInfo ? 'Test Page - stream-call' : undefined
+    pageUrl: firstEndpoint.includePageInfo ? 'https://example.com/test-page' : undefined,
+    pageTitle: firstEndpoint.includePageInfo ? 'Test Page - stream-call' : undefined
   } as Record<string, unknown>;
 
   let endpoint: string;
   let body: string | undefined;
 
   try {
-    endpoint = applyTemplate(firstPattern.endpointTemplate, context);
-    body = firstPattern.bodyTemplate
-      ? applyTemplate(firstPattern.bodyTemplate, context)
+    endpoint = applyTemplate(firstEndpoint.endpointTemplate, context);
+    body = firstEndpoint.bodyTemplate
+      ? applyTemplate(firstEndpoint.bodyTemplate, context)
       : JSON.stringify(
-          firstPattern.includePageInfo
+          firstEndpoint.includePageInfo
             ? context
             : { streamUrl: context.streamUrl, timestamp: context.timestamp }
         );
@@ -380,13 +380,13 @@ function testAPI() {
     return;
   }
 
-  const method = (firstPattern.method || 'POST').toUpperCase();
+  const method = (firstEndpoint.method || 'POST').toUpperCase();
 
   let headers: Record<string, string> | undefined = undefined;
   if (body) {
-    headers = { 'Content-Type': 'application/json', ...(firstPattern.headers || {}) };
-  } else if (firstPattern.headers) {
-    headers = { ...firstPattern.headers };
+    headers = { 'Content-Type': 'application/json', ...(firstEndpoint.headers || {}) };
+  } else if (firstEndpoint.headers) {
+    headers = { ...firstEndpoint.headers };
   }
 
   fetch(endpoint, {
@@ -408,15 +408,15 @@ function testAPI() {
 }
 
 function resetSettings() {
-  if (!confirm('Reset patterns to defaults?')) return;
-  const validated = validatePatterns(DEFAULT_CONFIG.apiPatterns);
+  if (!confirm('Reset API endpoints to defaults?')) return;
+  const validated = validateEndpoints(DEFAULT_CONFIG.apiEndpoints);
   if (!validated.valid) {
     showAlert('Default config is invalid', 'error');
     return;
   }
-  patterns = validated.parsed;
+  endpoints = validated.parsed;
   browser.storage.sync
-    .set({ apiPatterns: validated.formatted })
+    .set({ apiEndpoints: validated.formatted })
     .then(() => {
       renderList();
       closeEditor();
@@ -428,23 +428,23 @@ function resetSettings() {
     });
 }
 
-function exportPatterns() {
-  if (patterns.length === 0) {
-    showAlert('No patterns to export', 'error');
+function exportEndpoints() {
+  if (endpoints.length === 0) {
+    showAlert('No API endpoints to export', 'error');
     return;
   }
 
-  const json = JSON.stringify(patterns, null, 2);
+  const json = JSON.stringify(endpoints, null, 2);
   const blob = new Blob([json], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `stream-call-patterns-${new Date().toISOString().split('T')[0]}.json`;
+  link.download = `stream-call-endpoints-${new Date().toISOString().split('T')[0]}.json`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
-  showAlert('✅ Patterns exported', 'success');
+  showAlert('✅ API endpoints exported', 'success');
 }
 
 function handleFileSelect(e: Event) {
@@ -457,14 +457,14 @@ function handleFileSelect(e: Event) {
     try {
       const content = event.target?.result as string;
       const parsed = JSON.parse(content);
-      const validated = validatePatterns(JSON.stringify(parsed));
+      const validated = validateEndpoints(JSON.stringify(parsed));
 
       if (!validated.valid) {
         showAlert(`Invalid file: ${validated.errorMessage}`, 'error');
         return;
       }
 
-      pendingImportPatterns = validated.parsed;
+      pendingImportEndpoints = validated.parsed;
       showImportModal();
     } catch (error: any) {
       showAlert(`Failed to read file: ${error?.message ?? 'Invalid JSON'}`, 'error');
@@ -480,12 +480,12 @@ function showImportModal() {
   const modal = document.getElementById('import-modal') as HTMLDivElement;
   const preview = document.getElementById('import-preview') as HTMLDivElement;
 
-  const dupes = pendingImportPatterns.filter((p) => patterns.some((existing) => existing.name === p.name));
-  const newPatterns = pendingImportPatterns.filter((p) => !patterns.some((existing) => existing.name === p.name));
+  const dupes = pendingImportEndpoints.filter((p) => endpoints.some((existing) => existing.name === p.name));
+  const newEndpoints = pendingImportEndpoints.filter((p) => !endpoints.some((existing) => existing.name === p.name));
 
-  let previewText = `Importing ${pendingImportPatterns.length} pattern(s):\n\n`;
-  if (newPatterns.length > 0) {
-    previewText += `New patterns:\n${newPatterns.map((p) => `  • ${p.name}`).join('\n')}\n\n`;
+  let previewText = `Importing ${pendingImportEndpoints.length} endpoint(s):\n\n`;
+  if (newEndpoints.length > 0) {
+    previewText += `New endpoints:\n${newEndpoints.map((p) => `  • ${p.name}`).join('\n')}\n\n`;
   }
   if (dupes.length > 0) {
     previewText += `Duplicate names (will be updated if merging):\n${dupes.map((p) => `  • ${p.name}`).join('\n')}`;
@@ -498,47 +498,47 @@ function showImportModal() {
 function closeImportModal() {
   const modal = document.getElementById('import-modal') as HTMLDivElement;
   modal.style.display = 'none';
-  pendingImportPatterns = [];
+  pendingImportEndpoints = [];
 }
 
 function performImport(merge: boolean) {
   const updated = merge
     ? [
-        ...patterns.filter((p) => !pendingImportPatterns.some((imported) => imported.name === p.name)),
-        ...pendingImportPatterns
+        ...endpoints.filter((p) => !pendingImportEndpoints.some((imported) => imported.name === p.name)),
+        ...pendingImportEndpoints
       ]
-    : pendingImportPatterns;
+    : pendingImportEndpoints;
 
-  const validated = validatePatterns(JSON.stringify(updated));
+  const validated = validateEndpoints(JSON.stringify(updated));
   if (!validated.valid) {
-    showAlert(`Invalid import: ${validated.errorMessage}`, 'error');
+    showAlert(`Invalid endpoints import: ${validated.errorMessage}`, 'error');
     return;
   }
 
-  patterns = validated.parsed;
+  endpoints = validated.parsed;
 
   browser.storage.sync
-    .set({ apiPatterns: validated.formatted })
+    .set({ apiEndpoints: validated.formatted })
     .then(() => {
       renderList();
       closeImportModal();
-      showAlert(merge ? '✅ Patterns merged' : '✅ Patterns replaced', 'success');
+      showAlert(merge ? '✅ Endpoints merged' : '✅ Endpoints replaced', 'success');
     })
     .catch((error) => {
-      console.error('Failed to import patterns:', error);
-      showAlert('Failed to import patterns', 'error');
+      console.error('Failed to import endpoints:', error);
+      showAlert('Failed to import endpoints', 'error');
     });
 }
 
 function wireEvents() {
-  document.getElementById('add-pattern-btn')?.addEventListener('click', () => openEditor(null));
-  document.getElementById('save-pattern-btn')?.addEventListener('click', savePattern);
+  document.getElementById('add-endpoint-btn')?.addEventListener('click', () => openEditor(null));
+  document.getElementById('save-endpoint-btn')?.addEventListener('click', saveEndpoint);
   document.getElementById('cancel-edit-btn')?.addEventListener('click', closeEditor);
-  document.getElementById('preview-btn')?.addEventListener('click', previewPattern);
+  document.getElementById('preview-btn')?.addEventListener('click', previewEndpoint);
   document.getElementById('add-header-row')?.addEventListener('click', () => addHeaderRow());
   document.getElementById('test-btn')?.addEventListener('click', testAPI);
   document.getElementById('reset-btn')?.addEventListener('click', resetSettings);
-  document.getElementById('export-btn')?.addEventListener('click', exportPatterns);
+  document.getElementById('export-btn')?.addEventListener('click', exportEndpoints);
   document.getElementById('import-btn')?.addEventListener('click', () => {
     (document.getElementById('import-file-input') as HTMLInputElement).click();
   });
@@ -548,7 +548,7 @@ function wireEvents() {
   document.getElementById('import-cancel-btn')?.addEventListener('click', closeImportModal);
   els.endpoint().addEventListener('blur', () => {
     if (!els.name().value.trim() && els.endpoint().value.trim()) {
-      els.name().value = suggestPatternName(els.endpoint().value.trim());
+      els.name().value = suggestEndpointName(els.endpoint().value.trim());
     }
   });
 }

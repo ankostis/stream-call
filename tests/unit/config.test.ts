@@ -1,19 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert';
-import { parsePatterns, validatePatterns, suggestPatternName } from '../../src/config';
+import { parseEndpoints, validateEndpoints, suggestEndpointName } from '../../src/config';
 
-test('suggestPatternName: extracts hostname from URL', () => {
-  assert.strictEqual(suggestPatternName('https://api.example.com/stream'), 'api.example.com');
-  assert.strictEqual(suggestPatternName('https://httpbin.org/anything'), 'httpbin.org');
-  assert.strictEqual(suggestPatternName('http://localhost:3000/webhook'), 'localhost');
+test('suggestEndpointName: extracts hostname from URL', () => {
+  assert.strictEqual(suggestEndpointName('https://api.example.com/stream'), 'api.example.com');
+  assert.strictEqual(suggestEndpointName('https://httpbin.org/anything'), 'httpbin.org');
+  assert.strictEqual(suggestEndpointName('http://localhost:3000/webhook'), 'localhost');
 });
 
-test('suggestPatternName: handles invalid URL gracefully', () => {
-  const result = suggestPatternName('not-a-url');
+test('suggestEndpointName: handles invalid URL gracefully', () => {
+  const result = suggestEndpointName('not-a-url');
   assert(result.length > 0, 'Should return a fallback value');
 });
 
-test('parsePatterns: parses valid JSON array', () => {
+test('parseEndpoints: parses valid JSON array', () => {
   const raw = JSON.stringify([
     {
       name: 'test-api',
@@ -21,25 +21,25 @@ test('parsePatterns: parses valid JSON array', () => {
     }
   ]);
 
-  const patterns = parsePatterns(raw);
-  assert.strictEqual(patterns.length, 1);
-  assert.strictEqual(patterns[0].name, 'test-api');
-  assert.strictEqual(patterns[0].endpointTemplate, 'https://api.example.com/stream');
+  const endpoints = parseEndpoints(raw);
+  assert.strictEqual(endpoints.length, 1);
+  assert.strictEqual(endpoints[0].name, 'test-api');
+  assert.strictEqual(endpoints[0].endpointTemplate, 'https://api.example.com/stream');
 });
 
-test('parsePatterns: auto-suggests name from endpoint when missing', () => {
+test('parseEndpoints: auto-suggests name from endpoint when missing', () => {
   const raw = JSON.stringify([
     {
       endpointTemplate: 'https://api.example.com/stream'
     }
   ]);
 
-  const patterns = parsePatterns(raw);
-  assert.strictEqual(patterns.length, 1);
-  assert.strictEqual(patterns[0].name, 'api.example.com');
+  const endpoints = parseEndpoints(raw);
+  assert.strictEqual(endpoints.length, 1);
+  assert.strictEqual(endpoints[0].name, 'api.example.com');
 });
 
-test('parsePatterns: filters out duplicate names', () => {
+test('parseEndpoints: filters out duplicate names', () => {
   const raw = JSON.stringify([
     {
       name: 'api',
@@ -51,12 +51,12 @@ test('parsePatterns: filters out duplicate names', () => {
     }
   ]);
 
-  const patterns = parsePatterns(raw);
-  assert.strictEqual(patterns.length, 1, 'Only first pattern should be kept');
-  assert.strictEqual(patterns[0].name, 'api');
+  const endpoints = parseEndpoints(raw);
+  assert.strictEqual(endpoints.length, 1, 'Only first endpoint should be kept');
+  assert.strictEqual(endpoints[0].name, 'api');
 });
 
-test('parsePatterns: filters out invalid patterns', () => {
+test('parseEndpoints: filters out invalid endpoints', () => {
   const raw = JSON.stringify([
     {
       name: 'valid',
@@ -71,21 +71,21 @@ test('parsePatterns: filters out invalid patterns', () => {
     }
   ]);
 
-  const patterns = parsePatterns(raw);
+  const endpoints = parseEndpoints(raw);
   // First is valid, second has empty endpoint (filtered), third auto-names to api.example.com
-  assert(patterns.length >= 1);
-  assert(patterns.some((p) => p.name === 'valid'));
+  assert(endpoints.length >= 1);
+  assert(endpoints.some((p) => p.name === 'valid'));
 });
 
-test('parsePatterns: throws on non-array JSON', () => {
-  assert.throws(() => parsePatterns('{"key": "value"}'), /must be a JSON array/);
+test('parseEndpoints: throws on non-array JSON', () => {
+  assert.throws(() => parseEndpoints('{"key": "value"}'), /must be a JSON array/);
 });
 
-test('parsePatterns: returns empty array on invalid JSON', () => {
-  assert.throws(() => parsePatterns('not json'), /JSON/);
+test('parseEndpoints: returns empty array on invalid JSON', () => {
+  assert.throws(() => parseEndpoints('not json'), /JSON/);
 });
 
-test('validatePatterns: validates and formats', () => {
+test('validateEndpoints: validates and formats', () => {
   const raw = JSON.stringify([
     {
       name: 'test-api',
@@ -93,32 +93,32 @@ test('validatePatterns: validates and formats', () => {
     }
   ]);
 
-  const result = validatePatterns(raw);
+  const result = validateEndpoints(raw);
   assert(result.valid);
   assert.strictEqual(result.parsed.length, 1);
   assert.strictEqual(result.parsed[0].name, 'test-api');
   assert.strictEqual(result.parsed[0].method, 'POST', 'Default method should be POST');
 });
 
-test('validatePatterns: rejects non-array JSON', () => {
-  const result = validatePatterns('{"key": "value"}');
+test('validateEndpoints: rejects non-array JSON', () => {
+  const result = validateEndpoints('{"key": "value"}');
   assert(!result.valid);
   assert.match(result.errorMessage!, /must be a JSON array/);
 });
 
-test('validatePatterns: rejects pattern with missing endpointTemplate', () => {
+test('validateEndpoints: rejects endpoint with missing endpointTemplate', () => {
   const raw = JSON.stringify([
     {
       name: 'Invalid'
     }
   ]);
 
-  const result = validatePatterns(raw);
+  const result = validateEndpoints(raw);
   assert(!result.valid);
   assert.match(result.errorMessage!, /missing an endpointTemplate/);
 });
 
-test('validatePatterns: rejects duplicate names', () => {
+test('validateEndpoints: rejects duplicate names', () => {
   const raw = JSON.stringify([
     {
       name: 'api',
@@ -130,12 +130,12 @@ test('validatePatterns: rejects duplicate names', () => {
     }
   ]);
 
-  const result = validatePatterns(raw);
+  const result = validateEndpoints(raw);
   assert(!result.valid);
-  assert.match(result.errorMessage!, /Duplicate pattern name/);
+  assert.match(result.errorMessage!, /Duplicate endpoint name/);
 });
 
-test('validatePatterns: auto-suggests name when missing and enforces uniqueness', () => {
+test('validateEndpoints: auto-suggests name when missing and enforces uniqueness', () => {
   const raw = JSON.stringify([
     {
       endpointTemplate: 'https://api.example.com/stream'
@@ -145,16 +145,16 @@ test('validatePatterns: auto-suggests name when missing and enforces uniqueness'
     }
   ]);
 
-  const result = validatePatterns(raw);
+  const result = validateEndpoints(raw);
   assert(result.valid);
   assert.strictEqual(result.parsed.length, 2);
   assert.strictEqual(result.parsed[0].name, 'api.example.com');
   assert.strictEqual(result.parsed[1].name, 'other.example.com');
 });
 
-test('validatePatterns: returns formatted JSON', () => {
+test('validateEndpoints: returns formatted JSON', () => {
   const raw = JSON.stringify([{ name: 'test', endpointTemplate: 'https://api.example.com' }]);
-  const result = validatePatterns(raw);
+  const result = validateEndpoints(raw);
 
   // Should be nicely formatted
   assert(result.formatted.includes('\n'));

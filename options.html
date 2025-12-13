@@ -238,13 +238,13 @@
       color: #667eea;
     }
 
-    .patterns-list {
+    .endpoints-list {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
       gap: 12px;
     }
 
-    .pattern-card {
+    .endpoint-card {
       border: 1px solid #e5e7eb;
       border-radius: 6px;
       padding: 12px;
@@ -254,19 +254,19 @@
       background: #fafafa;
     }
 
-    .pattern-card h3 {
+    .endpoint-card h3 {
       font-size: 15px;
       font-weight: 600;
       color: #111827;
     }
 
-    .pattern-meta {
+    .endpoint-meta {
       font-size: 12px;
       color: #4b5563;
       line-height: 1.4;
     }
 
-    .pattern-actions {
+    .endpoint-actions {
       display: flex;
       gap: 8px;
       margin-top: 8px;
@@ -379,37 +379,37 @@
 
     <div class="card">
       <div class="card-header">
-        <h2 class="card-title">API Patterns</h2>
+        <h2 class="card-title">API Endpoints</h2>
         <div class="card-actions">
-          <button id="add-pattern-btn" class="btn-primary">＋ Add pattern</button>
-          <button id="test-btn" class="btn-test">🧪 Test first pattern</button>
+          <button id="add-endpoint-btn" class="btn-primary">＋ Add API endpoint</button>
+          <button id="test-btn" class="btn-test">🧪 Test first endpoint</button>
           <button id="reset-btn" class="btn-secondary">↺ Reset defaults</button>
           <button id="export-btn" class="btn-secondary">⬇ Export</button>
           <button id="import-btn" class="btn-secondary">⬆ Import</button>
         </div>
       </div>
 
-      <div id="patterns-empty" class="empty-state" style="display: none;">
+      <div id="endpoints-empty" class="empty-state" style="display: none;">
         <div class="empty-state-icon">📄</div>
-        <p><strong>No patterns yet</strong></p>
-        <p style="font-size: 12px; margin-top: 8px;">Click “Add pattern” to create one.</p>
+        <p><strong>No endpoints yet</strong></p>
+        <p style="font-size: 12px; margin-top: 8px;">Click “Add API endpoint” to create one.</p>
       </div>
 
-      <div id="patterns-list" class="patterns-list"></div>
+      <div id="endpoints-list" class="endpoints-list"></div>
     </div>
 
     <div class="card" id="editor-card" style="display: none;">
-      <h2 class="card-title" id="editor-title">Add pattern</h2>
+      <h2 class="card-title" id="editor-title">Add API endpoint</h2>
       <div class="form-grid">
         <div class="form-group">
-          <label for="pattern-name">Name *</label>
-          <input type="text" id="pattern-name" placeholder="example.com POST" />
+          <label for="endpoint-name">Endpoint name *</label>
+          <input type="text" id="endpoint-name" placeholder="example.com POST" />
           <div class="help-text">Must be unique. Auto-suggested from endpoint host.</div>
         </div>
 
         <div class="form-group">
-          <label for="pattern-method">Method *</label>
-          <select id="pattern-method">
+          <label for="endpoint-method">HTTP method *</label>
+          <select id="endpoint-method">
             <option value="POST">POST</option>
             <option value="GET">GET</option>
             <option value="PUT">PUT</option>
@@ -419,8 +419,8 @@
         </div>
 
         <div class="form-group">
-          <label for="pattern-endpoint">Endpoint URL *</label>
-          <input type="url" id="pattern-endpoint" placeholder="https://api.example.com/stream" />
+          <label for="endpoint-endpoint">Endpoint URL *</label>
+          <input type="url" id="endpoint-endpoint" placeholder="https://api.example.com/stream" />
           <div class="help-text">Supports placeholders like {{streamUrl}}, {{timestamp}}.</div>
         </div>
 
@@ -431,19 +431,19 @@
         </div>
 
         <div class="form-group">
-          <label for="pattern-body">Body template (optional)</label>
-          <textarea id="pattern-body" placeholder='{"url":"{{streamUrl}}"}'></textarea>
+          <label for="endpoint-body">Body template (optional)</label>
+          <textarea id="endpoint-body" placeholder='{"url":"{{streamUrl}}"}'></textarea>
           <div class="help-text">Leave empty to send defaults (URL + timestamp, and page info if enabled).</div>
         </div>
 
         <div class="form-group checkbox-group">
           <label>
-            <input type="checkbox" id="pattern-include-page" checked /> Include page info (URL/title)
+            <input type="checkbox" id="endpoint-include-page" checked /> Include page info (URL/title)
           </label>
         </div>
 
         <div class="button-group">
-          <button id="save-pattern-btn" class="btn-primary" type="button">💾 Save pattern</button>
+          <button id="save-endpoint-btn" class="btn-primary" type="button">💾 Save API endpoint</button>
           <button id="cancel-edit-btn" class="btn-secondary" type="button">✖ Cancel</button>
           <button id="preview-btn" class="btn-test" type="button">👁 Preview</button>
         </div>
@@ -468,7 +468,7 @@
   <!-- Import modal -->
   <div id="import-modal" class="modal" style="display: none;">
     <div class="modal-content">
-      <h2>Import patterns</h2>
+      <h2>Import endpoints</h2>
       <div id="import-preview" class="import-preview"></div>
       <div class="button-group">
         <button id="import-merge-btn" class="btn-primary">Merge</button>

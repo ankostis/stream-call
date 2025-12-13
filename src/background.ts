@@ -6,7 +6,7 @@
 export {};
 
 import { applyTemplate } from './template';
-import { parsePatterns } from './config';
+import { parseEndpoints } from './config';
 
 // Limit streams per tab to prevent unbounded memory growth
 const MAX_STREAMS_PER_TAB = 200;
@@ -22,7 +22,7 @@ type StreamInfo = {
 type RuntimeMessage =
   | { type: 'STREAM_DETECTED'; url: string; streamType: string }
   | { type: 'GET_STREAMS'; tabId: number }
-  | { type: 'CALL_API'; streamUrl: string; pageUrl?: string; pageTitle?: string; patternName?: string }
+  | { type: 'CALL_API'; streamUrl: string; pageUrl?: string; pageTitle?: string; endpointName?: string }
   | { type: 'CLEAR_STREAMS'; tabId: number }
   | { type: 'PING' };
 
@@ -72,7 +72,7 @@ browser.runtime.onMessage.addListener((message: RuntimeMessage, sender) => {
         streamUrl: message.streamUrl,
         pageUrl: message.pageUrl,
         pageTitle: message.pageTitle,
-        patternName: message.patternName
+        endpointName: message.endpointName
       });
     }
 
@@ -138,33 +138,33 @@ async function callStreamAPI({
   streamUrl,
   pageUrl,
   pageTitle,
-  patternName
+  endpointName
 }: {
   streamUrl: string;
   pageUrl?: string;
   pageTitle?: string;
-  patternName?: string;
+  endpointName?: string;
 }) {
   try {
-    const defaults = { apiPatterns: '[]' } as const;
+    const defaults = { apiEndpoints: '[]' } as const;
     const config = (await browser.storage.sync.get(defaults)) as typeof defaults;
 
-    let patterns: ReturnType<typeof parsePatterns>;
+    let endpoints: ReturnType<typeof parseEndpoints>;
     try {
-      patterns = parsePatterns(config.apiPatterns);
+      endpoints = parseEndpoints(config.apiEndpoints);
     } catch (parseError: any) {
       return {
         success: false,
-        error: `Failed to parse API patterns: ${parseError?.message ?? 'Unknown error'}`
+        error: `Failed to parse API endpoints: ${parseError?.message ?? 'Unknown error'}`
       };
     }
 
-    const selectedPattern = patternName ? patterns.find((p) => p.name === patternName) : patterns[0];
+    const selectedEndpoint = endpointName ? endpoints.find((e) => e.name === endpointName) : endpoints[0];
 
-    if (!selectedPattern) {
+    if (!selectedEndpoint) {
       return {
         success: false,
-        error: 'No API patterns configured. Please add a pattern in the extension options.'
+        error: 'No API endpoints configured. Please add an endpoint in the extension options.'
       };
     }
 
@@ -174,26 +174,26 @@ async function callStreamAPI({
     let endpoint: string;
     let bodyJson: string;
     try {
-      endpoint = applyTemplate(selectedPattern.endpointTemplate, requestContext);
-      bodyJson = selectedPattern.bodyTemplate
-        ? applyTemplate(selectedPattern.bodyTemplate, requestContext)
+      endpoint = applyTemplate(selectedEndpoint.endpointTemplate, requestContext);
+      bodyJson = selectedEndpoint.bodyTemplate
+        ? applyTemplate(selectedEndpoint.bodyTemplate, requestContext)
         : JSON.stringify(
-            selectedPattern.includePageInfo
+            selectedEndpoint.includePageInfo
               ? requestContext
               : { streamUrl, timestamp: requestContext.timestamp }
           );
     } catch (templateError: any) {
       return {
         success: false,
-        error: `Interpolation error in pattern "${selectedPattern.name}": ${templateError?.message ?? 'Invalid placeholder'}. Check endpoint/body templates and placeholders.`
+        error: `Interpolation error in endpoint "${selectedEndpoint.name}": ${templateError?.message ?? 'Invalid placeholder'}. Check endpoint/body templates and placeholders.`
       };
     }
 
-    const method = (selectedPattern.method || 'POST').toUpperCase();
+    const method = (selectedEndpoint.method || 'POST').toUpperCase();
 
     let headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (selectedPattern.headers) {
-      headers = { ...headers, ...selectedPattern.headers };
+    if (selectedEndpoint.headers) {
+      headers = { ...headers, ...selectedEndpoint.headers };
     }
 
     const response = await fetch(endpoint, {
