@@ -22,7 +22,7 @@ type StreamInfo = {
 type RuntimeMessage =
   | { type: 'STREAM_DETECTED'; url: string; streamType: string }
   | { type: 'GET_STREAMS'; tabId: number }
-  | { type: 'CALL_API'; streamUrl: string; pageUrl?: string; pageTitle?: string; patternId?: string }
+  | { type: 'CALL_API'; streamUrl: string; pageUrl?: string; pageTitle?: string; patternName?: string }
   | { type: 'CLEAR_STREAMS'; tabId: number }
   | { type: 'PING' };
 
@@ -72,7 +72,7 @@ browser.runtime.onMessage.addListener((message: RuntimeMessage, sender) => {
         streamUrl: message.streamUrl,
         pageUrl: message.pageUrl,
         pageTitle: message.pageTitle,
-        patternId: message.patternId
+        patternName: message.patternName
       });
     }
 
@@ -138,19 +138,19 @@ async function callStreamAPI({
   streamUrl,
   pageUrl,
   pageTitle,
-  patternId
+  patternName
 }: {
   streamUrl: string;
   pageUrl?: string;
   pageTitle?: string;
-  patternId?: string;
+  patternName?: string;
 }) {
   try {
     const defaults = { apiPatterns: '[]' } as const;
     const config = (await browser.storage.sync.get(defaults)) as typeof defaults;
 
     const patterns = parsePatterns(config.apiPatterns);
-    const selectedPattern = patternId ? patterns.find((p) => p.id === patternId) : patterns[0];
+    const selectedPattern = patternName ? patterns.find((p) => p.name === patternName) : patterns[0];
 
     if (!selectedPattern) {
       return {

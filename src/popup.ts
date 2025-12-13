@@ -132,20 +132,20 @@ function createStreamItem(stream: StreamInfo, index: number): HTMLElement {
   const actions = document.createElement('div');
   actions.className = 'stream-actions';
 
-  let patternId: string | undefined = apiPatterns[0]?.id;
+  let patternName: string | undefined = apiPatterns[0]?.name;
 
   if (apiPatterns.length > 0) {
     const select = document.createElement('select');
     select.className = 'pattern-select';
     apiPatterns.forEach((pattern) => {
       const option = document.createElement('option');
-      option.value = pattern.id;
+      option.value = pattern.name;
       option.textContent = pattern.name;
       select.appendChild(option);
     });
     select.addEventListener('change', (e) => {
       const target = e.target as HTMLSelectElement;
-      patternId = target.value;
+      patternName = target.value;
     });
     actions.appendChild(select);
   }
@@ -153,7 +153,7 @@ function createStreamItem(stream: StreamInfo, index: number): HTMLElement {
   const callBtn = document.createElement('button');
   callBtn.className = 'btn-primary';
   callBtn.textContent = '📤 Call API';
-  callBtn.addEventListener('click', () => handleCallAPI(stream, patternId));
+  callBtn.addEventListener('click', () => handleCallAPI(stream, patternName));
 
   const copyBtn = document.createElement('button');
   copyBtn.className = 'btn-secondary';
@@ -173,7 +173,7 @@ function createStreamItem(stream: StreamInfo, index: number): HTMLElement {
 /**
  * Handle API call
  */
-async function handleCallAPI(stream: StreamInfo, patternId?: string) {
+async function handleCallAPI(stream: StreamInfo, patternName?: string) {
   try {
     const config = await browser.storage.sync.get(['apiPatterns']);
     const patterns = parsePatterns(config.apiPatterns || '[]');
@@ -193,7 +193,7 @@ async function handleCallAPI(stream: StreamInfo, patternId?: string) {
       streamUrl: stream.url,
       pageUrl: stream.pageUrl,
       pageTitle: stream.pageTitle,
-      patternId
+      patternName
     });
 
     if (response?.success) {

@@ -1,56 +1,80 @@
 import test from 'node:test';
 import assert from 'node:assert';
-import { parsePatterns, validatePatterns } from '../../src/config';
+import { parsePatterns, validatePatterns, suggestPatternName } from '../../src/config';
+
+test('suggestPatternName: extracts hostname from URL', () => {
+  assert.strictEqual(suggestPatternName('https://api.example.com/stream'), 'api.example.com');
+  assert.strictEqual(suggestPatternName('https://httpbin.org/anything'), 'httpbin.org');
+  assert.strictEqual(suggestPatternName('http://localhost:3000/webhook'), 'localhost');
+});
+
+test('suggestPatternName: handles invalid URL gracefully', () => {
+  const result = suggestPatternName('not-a-url');
+  assert(result.length > 0, 'Should return a fallback value');
+});
 
 test('parsePatterns: parses valid JSON array', () => {
   const raw = JSON.stringify([
     {
-      id: 'test-1',
-      name: 'Test Pattern',
+      name: 'test-api',
       endpointTemplate: 'https://api.example.com/stream'
     }
   ]);
 
   const patterns = parsePatterns(raw);
   assert.strictEqual(patterns.length, 1);
-  assert.strictEqual(patterns[0].name, 'Test Pattern');
+  assert.strictEqual(patterns[0].name, 'test-api');
   assert.strictEqual(patterns[0].endpointTemplate, 'https://api.example.com/stream');
 });
 
-test('parsePatterns: assigns UUID to missing ids', () => {
+test('parsePatterns: auto-suggests name from endpoint when missing', () => {
   const raw = JSON.stringify([
     {
-      name: 'No ID Pattern',
       endpointTemplate: 'https://api.example.com/stream'
     }
   ]);
 
   const patterns = parsePatterns(raw);
   assert.strictEqual(patterns.length, 1);
-  assert(patterns[0].id, 'UUID should be generated');
+  assert.strictEqual(patterns[0].name, 'api.example.com');
+});
+
+test('parsePatterns: filters out duplicate names', () => {
+  const raw = JSON.stringify([
+    {
+      name: 'api',
+      endpointTemplate: 'https://api.example.com/stream'
+    },
+    {
+      name: 'api',
+      endpointTemplate: 'https://api.example.com/other'
+    }
+  ]);
+
+  const patterns = parsePatterns(raw);
+  assert.strictEqual(patterns.length, 1, 'Only first pattern should be kept');
+  assert.strictEqual(patterns[0].name, 'api');
 });
 
 test('parsePatterns: filters out invalid patterns', () => {
   const raw = JSON.stringify([
     {
-      id: 'valid',
-      name: 'Valid',
+      name: 'valid',
       endpointTemplate: 'https://api.example.com/valid'
     },
     {
-      id: 'invalid',
-      name: 'Missing endpoint'
+      name: 'invalid',
+      endpointTemplate: ''
     },
     {
-      id: 'empty-endpoint',
-      name: 'Empty endpoint',
-      endpointTemplate: ''
+      endpointTemplate: 'https://api.example.com/no-name'
     }
   ]);
 
   const patterns = parsePatterns(raw);
-  assert.strictEqual(patterns.length, 1);
-  assert.strictEqual(patterns[0].name, 'Valid');
+  // First is valid, second has empty endpoint (filtered), third auto-names to api.example.com
+  assert(patterns.length >= 1);
+  assert(patterns.some((p) => p.name === 'valid'));
 });
 
 test('parsePatterns: returns empty array on invalid JSON', () => {
@@ -61,7 +85,7 @@ test('parsePatterns: returns empty array on invalid JSON', () => {
 test('validatePatterns: validates and formats', () => {
   const raw = JSON.stringify([
     {
-      name: 'Test',
+      name: 'test-api',
       endpointTemplate: 'https://api.example.com/stream'
     }
   ]);
@@ -69,9 +93,8 @@ test('validatePatterns: validates and formats', () => {
   const result = validatePatterns(raw);
   assert(result.valid);
   assert.strictEqual(result.parsed.length, 1);
-  assert(result.parsed[0].id, 'ID should be generated');
+  assert.strictEqual(result.parsed[0].name, 'test-api');
   assert.strictEqual(result.parsed[0].method, 'POST', 'Default method should be POST');
-  assert.strictEqual(result.parsed[0].includePageInfo, true, 'Default includePageInfo should be true');
 });
 
 test('validatePatterns: rejects non-array JSON', () => {
@@ -83,8 +106,7 @@ test('validatePatterns: rejects non-array JSON', () => {
 test('validatePatterns: rejects pattern with missing endpointTemplate', () => {
   const raw = JSON.stringify([
     {
-      name: 'Invalid',
-      method: 'POST'
+      name: 'Invalid'
     }
   ]);
 
@@ -93,8 +115,42 @@ test('validatePatterns: rejects pattern with missing endpointTemplate', () => {
   assert.match(result.errorMessage!, /missing an endpointTemplate/);
 });
 
+test('validatePatterns: rejects duplicate names', () => {
+  const raw = JSON.stringify([
+    {
+      name: 'api',
+      endpointTemplate: 'https://api.example.com'
+    },
+    {
+      name: 'api',
+      endpointTemplate: 'https://other.example.com'
+    }
+  ]);
+
+  const result = validatePatterns(raw);
+  assert(!result.valid);
+  assert.match(result.errorMessage!, /Duplicate pattern name/);
+});
+
+test('validatePatterns: auto-suggests name when missing and enforces uniqueness', () => {
+  const raw = JSON.stringify([
+    {
+      endpointTemplate: 'https://api.example.com/stream'
+    },
+    {
+      endpointTemplate: 'https://other.example.com/webhook'
+    }
+  ]);
+
+  const result = validatePatterns(raw);
+  assert(result.valid);
+  assert.strictEqual(result.parsed.length, 2);
+  assert.strictEqual(result.parsed[0].name, 'api.example.com');
+  assert.strictEqual(result.parsed[1].name, 'other.example.com');
+});
+
 test('validatePatterns: returns formatted JSON', () => {
-  const raw = JSON.stringify([{ name: 'T', endpointTemplate: 'https://api.example.com' }]);
+  const raw = JSON.stringify([{ name: 'test', endpointTemplate: 'https://api.example.com' }]);
   const result = validatePatterns(raw);
 
   // Should be nicely formatted

@@ -4,7 +4,6 @@
  */
 
 export type ApiPattern = {
-  id: string;
   name: string;
   endpointTemplate: string;
   method?: string;
@@ -14,24 +13,51 @@ export type ApiPattern = {
 };
 
 /**
+ * Suggest a pattern name from an endpoint URL (extract hostname)
+ * Example: https://api.example.com/stream → api.example.com
+ */
+export function suggestPatternName(endpointUrl: string): string {
+  try {
+    const url = new URL(endpointUrl);
+    return url.hostname || 'API Pattern';
+  } catch {
+    // Fallback if URL is invalid
+    return endpointUrl.substring(0, 30).replace(/[^a-z0-9.-]/gi, '');
+  }
+}
+
+/**
  * Parse raw JSON string into validated ApiPattern array
- * Normalizes missing fields and generates IDs if needed
+ * Requires name field; enforces uniqueness by name
  */
 export function parsePatterns(raw: string): ApiPattern[] {
   try {
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
+
+    const names = new Set<string>();
     return parsed
       .map((p) => ({
-        id: p.id || crypto.randomUUID(),
-        name: p.name || 'Pattern',
+        name: p.name || suggestPatternName(p.endpointTemplate),
         endpointTemplate: p.endpointTemplate,
         method: p.method,
         headers: p.headers,
         bodyTemplate: p.bodyTemplate,
         includePageInfo: p.includePageInfo
       }))
-      .filter((p) => typeof p.endpointTemplate === 'string' && p.endpointTemplate.length > 0);
+      .filter((p) => {
+        // Require endpoint and unique name
+        if (
+          typeof p.endpointTemplate !== 'string' ||
+          p.endpointTemplate.length === 0 ||
+          !p.name ||
+          names.has(p.name)
+        ) {
+          return false;
+        }
+        names.add(p.name);
+        return true;
+      });
   } catch (e) {
     console.warn('Invalid apiPatterns JSON', e);
     return [];
@@ -59,14 +85,19 @@ export function validatePatterns(raw: string): {
       };
     }
 
+    const names = new Set<string>();
     const cleaned = parsed
       .map((p: any, index: number) => {
         if (!p || typeof p.endpointTemplate !== 'string' || !p.endpointTemplate.trim()) {
           throw new Error(`Pattern ${index + 1} is missing an endpointTemplate.`);
         }
+        const name = p.name || suggestPatternName(p.endpointTemplate);
+        if (names.has(name)) {
+          throw new Error(`Duplicate pattern name: "${name}" (Pattern ${index + 1})`);
+        }
+        names.add(name);
         return {
-          id: p.id || crypto.randomUUID(),
-          name: p.name || `Pattern ${index + 1}`,
+          name,
           endpointTemplate: p.endpointTemplate,
           method: p.method || 'POST',
           headers: p.headers,

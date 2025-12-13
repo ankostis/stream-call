@@ -10,15 +10,13 @@ const DEFAULT_CONFIG = {
   apiPatterns: JSON.stringify(
     [
       {
-        id: 'url-param',
-        name: 'URL Parameter GET',
+        name: 'example.com GET',
         endpointTemplate: 'https://api.example.com/record?url={{streamUrl}}&time={{timestamp}}',
         method: 'GET',
         includePageInfo: false
       },
       {
-        id: 'default-json',
-        name: 'Default JSON POST',
+        name: 'example.com JSON POST',
         endpointTemplate: 'https://api.example.com/stream',
         method: 'POST',
         bodyTemplate:
@@ -26,8 +24,7 @@ const DEFAULT_CONFIG = {
         includePageInfo: true
       },
       {
-        id: 'echo-httpbin',
-        name: 'Echo httpbin (POST)',
+        name: 'Echo httpbin.org',
         endpointTemplate: 'https://httpbin.org/anything',
         method: 'POST',
         headers: { 'X-Test': 'stream-call' },
