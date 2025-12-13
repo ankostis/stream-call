@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Stream call - Test Page</title>
+</head>
+<body>
+  <h1>Stream call Test</h1>
+  <p>Static media elements for detection:</p>
+
+  <audio id="audio1" controls src="https://example.com/audio.mp3"></audio>
+
+  <video id="video1" controls>
+    <source src="https://example.com/live.m3u8" type="application/vnd.apple.mpegurl" />
+  </video>
+
+  <script>
+    // Simulate network requests that should be intercepted
+    fetch('https://example.com/manifest.mpd');
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', 'https://radio.example.com/stream');
+    xhr.send();
+  </script>
+</body>
+</html>

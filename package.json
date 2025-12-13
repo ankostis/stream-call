@@ -8,7 +8,7 @@
     "build:ts": "tsc",
     "copy:static": "mkdir -p dist && cp popup.html options.html dist/",
     "build": "npm run clean && npm run build:ts && npm run copy:static",
-    "test": "tsx tests/unit/template.test.ts"
+    "test": "node --test --import tsx tests/unit/*.test.ts"
   },
   "devDependencies": {
     "@types/firefox-webext-browser": "^143.0.0",
