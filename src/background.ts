@@ -169,21 +169,32 @@ async function callStreamAPI({
     }
 
     const requestContext = buildContext({ streamUrl, pageUrl, pageTitle });
-    const endpoint = applyTemplate(selectedPattern.endpointTemplate, requestContext);
+    
+    // Separate template error handling for actionable error messages
+    let endpoint: string;
+    let bodyJson: string;
+    try {
+      endpoint = applyTemplate(selectedPattern.endpointTemplate, requestContext);
+      bodyJson = selectedPattern.bodyTemplate
+        ? applyTemplate(selectedPattern.bodyTemplate, requestContext)
+        : JSON.stringify(
+            selectedPattern.includePageInfo
+              ? requestContext
+              : { streamUrl, timestamp: requestContext.timestamp }
+          );
+    } catch (templateError: any) {
+      return {
+        success: false,
+        error: `Template error in pattern "${selectedPattern.name}": ${templateError?.message ?? 'Invalid placeholder'}. Check pattern configuration.`
+      };
+    }
+
     const method = (selectedPattern.method || 'POST').toUpperCase();
 
     let headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (selectedPattern.headers) {
       headers = { ...headers, ...selectedPattern.headers };
     }
-
-    const bodyJson = selectedPattern.bodyTemplate
-      ? applyTemplate(selectedPattern.bodyTemplate, requestContext)
-      : JSON.stringify(
-          selectedPattern.includePageInfo
-            ? requestContext
-            : { streamUrl, timestamp: requestContext.timestamp }
-        );
 
     const response = await fetch(endpoint, {
       method,

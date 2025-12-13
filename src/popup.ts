@@ -65,6 +65,17 @@ async function loadStreams() {
   if (currentTabId === null) return;
 
   try {
+    // Verify background worker is alive before fetching streams
+    try {
+      await browser.runtime.sendMessage({ type: 'PING' });
+    } catch (pingError) {
+      console.error('Background worker not responding:', pingError);
+      const loadingEl = document.getElementById('loading');
+      if (loadingEl) loadingEl.style.display = 'none';
+      showNotification('⚠️ Extension background service not responding. Try reloading the extension.', 'error');
+      return;
+    }
+
     const response = await browser.runtime.sendMessage({
       type: 'GET_STREAMS',
       tabId: currentTabId
@@ -97,8 +108,7 @@ async function loadStreams() {
     console.error('Failed to load streams:', error);
     const loadingEl = document.getElementById('loading');
     if (loadingEl) loadingEl.style.display = 'none';
-    const emptyState = document.getElementById('empty-state');
-    if (emptyState) emptyState.style.display = 'block';
+    showNotification('Failed to load streams from background. Try refreshing.', 'error');
   }
 }
 

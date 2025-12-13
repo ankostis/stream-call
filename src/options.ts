@@ -105,21 +105,34 @@ async function testAPI() {
       pageTitle: firstPattern.includePageInfo ? 'Test Page - stream-call' : undefined
     } as Record<string, unknown>;
 
-    const endpoint = applyTemplate(firstPattern.endpointTemplate, context);
+    // Separate template error handling for actionable feedback
+    let endpoint: string;
+    let body: string;
+    try {
+      endpoint = applyTemplate(firstPattern.endpointTemplate, context);
+      body = firstPattern.bodyTemplate
+        ? applyTemplate(firstPattern.bodyTemplate, context)
+        : JSON.stringify(
+            firstPattern.includePageInfo
+              ? context
+              : { streamUrl: context.streamUrl, timestamp: context.timestamp }
+          );
+    } catch (templateError: any) {
+      const availableFields = Object.keys(context).filter(k => context[k] !== undefined).join(', ');
+      showAlert(
+        `❌ Template error: ${templateError?.message ?? 'Invalid placeholder'}. Available fields: ${availableFields}. ` +
+        `Check that your pattern uses {{streamUrl}}, {{timestamp}}, and optionally {{pageUrl}}/{{pageTitle}} if includePageInfo is true.`,
+        'error'
+      );
+      return;
+    }
+
     const method = (firstPattern.method || 'POST').toUpperCase();
 
     let headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (firstPattern.headers) {
       headers = { ...headers, ...firstPattern.headers };
     }
-
-    const body = firstPattern.bodyTemplate
-      ? applyTemplate(firstPattern.bodyTemplate, context)
-      : JSON.stringify(
-          firstPattern.includePageInfo
-            ? context
-            : { streamUrl: context.streamUrl, timestamp: context.timestamp }
-        );
 
     const response = await fetch(endpoint, {
       method,

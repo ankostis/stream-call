@@ -67,7 +67,9 @@ import { debounce } from './debounce';
         }
       })
       .catch((err) => {
-        console.error('stream-call: Failed to report stream:', err);
+        console.error('stream-call: Failed to report stream to background worker:', err);
+        console.error('stream-call: Stream URL:', url, '| This detection will be missing from the popup.');
+        // In a future enhancement, could track failure count and surface via a diagnostic message
       });
   }
 
