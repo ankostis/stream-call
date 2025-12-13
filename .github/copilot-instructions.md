@@ -14,6 +14,9 @@
   (web-ext, Firefox, local HTTP server on 9090).
 - Templating placeholders for endpoints/bodies: `streamUrl`, `pageUrl`,
   `pageTitle`, `timestamp`.
+- **Mobile Firefox Nightly**: Must support mobile browsers where options page
+  is separate from webpage. Future UI panels (Phase 5+) will reuse Logger &
+  StatusBar for in-page diagnostics. See `notes/logger-plan.md`.
 
 ## Architecture principles
 - Message-based flow: content -> `STREAM_DETECTED`; popup -> PING + `GET_STREAMS`.

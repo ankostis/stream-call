@@ -4,6 +4,8 @@ A Firefox browser extension that detects streaming media (podcasts, radio
 stations, live streams) on web pages and sends the stream URLs to a configurable
 HTTP API endpoint.
 
+**Platform**: Works both on desktop Firefox and mobile Firefox Nightly.
+
 ## Features
 
 - 🔍 **Automatic Stream Detection** - Detects HLS, DASH, MP3, AAC, OGG, RTMP,
@@ -276,6 +278,12 @@ The extension requires the following permissions:
 - Only sends data to **your configured API endpoint**
 - Does not collect or transmit data to any third parties
 - Stores configuration locally in Firefox sync storage
+
+## Mobile Firefox Nightly Support
+
+**Current**: Extension works on desktop Firefox and mobile Firefox Nightly, with options page accessed separately from the webpage.
+
+**Future (Phase 5+)**: A dedicated UI panel will allow API calls and diagnostics while viewing the original webpage on mobile (via injected content script UI), reusing the same Logger and StatusBar components.
 - Does not track browsing history
 
 ## License
