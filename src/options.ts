@@ -339,7 +339,7 @@ function previewPattern() {
     )}\n\nBody:\n${body}`;
     showAlert('Preview generated', 'info');
   } catch (error: any) {
-    showAlert(`Template error: ${error?.message ?? 'Invalid template'}`, 'error');
+    showAlert(`Interpolation error: ${error?.message ?? 'Invalid placeholder'}`, 'error');
   }
 }
 
@@ -374,7 +374,7 @@ function testAPI() {
   } catch (templateError: any) {
     const availableFields = Object.keys(context).filter((k) => context[k] !== undefined).join(', ');
     showAlert(
-      `❌ Template error: ${templateError?.message ?? 'Invalid placeholder'}. Fields: ${availableFields}.`,
+      `❌ Interpolation error: ${templateError?.message ?? 'Invalid placeholder'}. Fields: ${availableFields}.`,
       'error'
     );
     return;

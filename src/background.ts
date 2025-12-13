@@ -185,7 +185,7 @@ async function callStreamAPI({
     } catch (templateError: any) {
       return {
         success: false,
-        error: `Template error in pattern "${selectedPattern.name}": ${templateError?.message ?? 'Invalid placeholder'}. Check pattern configuration.`
+        error: `Interpolation error in pattern "${selectedPattern.name}": ${templateError?.message ?? 'Invalid placeholder'}. Check endpoint/body templates and placeholders.`
       };
     }
 
