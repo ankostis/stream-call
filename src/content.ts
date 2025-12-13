@@ -1,4 +1,5 @@
 import { isStreamUrl as isStreamUrlShared, getStreamType as getStreamTypeShared } from './detect';
+import { debounce } from './debounce';
 /**
  * stream-call Content Script
  * Detects streaming media on web pages
@@ -132,8 +133,12 @@ import { isStreamUrl as isStreamUrlShared, getStreamType as getStreamTypeShared 
    * Monitor DOM for new media elements
    */
   function monitorDOMChanges() {
-    const observer = new MutationObserver(() => {
+    const debouncedMonitor = debounce(() => {
       monitorMediaElements();
+    }, 500);
+
+    const observer = new MutationObserver(() => {
+      debouncedMonitor();
     });
 
     if (document.body) {
@@ -173,7 +178,14 @@ import { isStreamUrl as isStreamUrlShared, getStreamType as getStreamTypeShared 
     monitorMediaElements();
     monitorDOMChanges();
 
-    setInterval(monitorMediaElements, 2000);
+    // Debounce periodic media element scan (2s interval, 1s delay)
+    const debouncedMediaScan = debounce(() => {
+      monitorMediaElements();
+    }, 1000);
+
+    setInterval(() => {
+      debouncedMediaScan();
+    }, 2000);
   }
 
   function initialize() {
