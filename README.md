@@ -274,16 +274,31 @@ The extension requires the following permissions:
 
 ## Architecture & Terminology
 
-To understand the codebase, it's helpful to distinguish three key concepts:
+The extension architecture revolves around five core concepts that work together in a message-driven flow:
 
-### 1. **Detection Patterns** (regex, internal)
+| Concept | 🎯 What | 📍 Where | 🔧 Purpose |
+|---------|---------|----------|------------|
+| **Detection Patterns** | Regex for stream URLs | `STREAM_PATTERNS` in `detect.ts` | • Match streaming media URLs<br>• Built-in, not user-configurable<br>• Tested via `content.test.ts` |
+| **Streams & Types** | Detected URLs + metadata + classification | `StreamInfo` in `background.ts` | • Store detected media per tab<br>• Typed as HLS, DASH, MP3, RTMP, etc.<br>• Include page context + timestamp |
+| **API Endpoints** | User-configured HTTP targets | `storage.sync.apiEndpoints`, `config.ts` | • Webhooks/APIs for detected streams<br>• Support templating<br>• Fully customizable |
+| **Interpolation Templates** | Placeholder strings | Endpoint/body templates | • Dynamic value insertion<br>• `{{streamUrl}}`, `{{pageUrl}}`, `{{pageTitle}}`, `{{timestamp}}` |
+| **Runtime Messages** | Cross-component IPC | `RuntimeMessage` type | • `STREAM_DETECTED`, `GET_STREAMS`<br>• `CALL_API`, `PING`, `CLEAR_STREAMS` |
+
+### 2. **Detection Patterns**
 - **What**: Regular expression patterns (`STREAM_PATTERNS`) that match known streaming media URLs
-- **Where**: Defined in `src/detect.ts`
+- **Where**: Defined in `src/detect.ts` (separate from `content.ts` for modularity, reuse, and stateless testability)
 - **Purpose**: Content script uses them to identify stream URLs (HLS, DASH, MP3, RTMP, Icecast, etc.)
 - **Examples**: `/\.(m3u8|mpd)/i`, `/rtmp:/`, `/icecast|shoutcast/i`
 - **Not configurable by users** — built-in to the extension
+- **Testing**: Validated via `tests/unit/content.test.ts` (detection patterns and stream type classification)
 
-### 2. **API Endpoints** (user-configured)
+### 1. **Streams & Stream Types**
+- **What**: Detected media URLs with metadata (`StreamInfo`) and classification labels
+- **Where**: `StreamInfo` type in `src/background.ts`; `getStreamType()` in `src/detect.ts`
+- **Purpose**: Store detected streaming resources with type (HLS, DASH, HTTP Audio, RTMP, Icecast/Shoutcast), page context, and timestamp
+- **Examples**: `{ url: "https://example.com/live.m3u8", type: "HLS", pageUrl: "...", timestamp: 1234567890 }`
+
+### 3. **API Endpoints**
 - **What**: HTTP targets where detected stream URLs are sent
 - **Where**: Configured in options page, stored as JSON in `browser.storage.sync.apiEndpoints`
 - **Structure**: Name, URL template, HTTP method, headers, optional body template
@@ -299,7 +314,7 @@ To understand the codebase, it's helpful to distinguish three key concepts:
   ```
 - **Fully customizable by users** in the options page
 
-### 3. **Interpolation Templates** (string templates with placeholders)
+### 4. **Interpolation Templates**
 - **What**: Strings in `endpointTemplate` and `bodyTemplate` that contain placeholders like `{{streamUrl}}`
 - **Where**: Defined as endpoint field values; processed by `src/template.ts`
 - **Purpose**: Allow dynamic values (stream URL, page title, timestamp) to be inserted at API call time
@@ -309,10 +324,52 @@ To understand the codebase, it's helpful to distinguish three key concepts:
   - Endpoint template: `https://api.example.com/notify?url={{streamUrl}}`
   - Body template: `{"stream":"{{streamUrl}}","detected":"{{timestamp}}"}`
 
-### Clean Separation
-- **Detection** (content script) → finds streams using patterns
-- **Configuration** (options page) → user defines endpoints
-- **Calling** (background worker) → interpolates templates and calls endpoints
+### 5. **Runtime Messages**
+- **What**: Cross-component communication protocol via `browser.runtime.sendMessage()`
+- **Where**: `RuntimeMessage` type in `src/background.ts`
+- **Purpose**: Message-passing between content scripts, background worker, and popup
+- **Message Types**:
+  - `STREAM_DETECTED` (content → background): Reports newly detected stream URL with type
+  - `GET_STREAMS` (popup → background): Requests all streams for current tab
+  - `CALL_API` (popup → background): Triggers API call with stream data to configured endpoint
+  - `PING` (popup → background): Health check to verify background worker is alive
+  - `CLEAR_STREAMS` (popup → background): Clears stored streams for a tab
+
+### Message Flow
+
+The extension uses a message-driven architecture via `browser.runtime.sendMessage()`:
+
+```
+┌─────────────┐  STREAM_DETECTED   ┌────────────────┐  GET_STREAMS    ┌────────┐
+│   Content   ├───────────────────>│   Background   │<────────────────┤ Popup  │
+│   Script    │                    │     Worker     │                 │   UI   │
+│ (detect.ts) │                    │ (background.ts)│─── Stores ───>  │        │
+└─────────────┘                    └────────┬───────┘                 └────┬───┘
+                                            │                               │
+                                            │ CALL_API (triggered by user)  │
+                                            │<──────────────────────────────┘
+                                            │
+                                            ▼
+                                  ┌─────────────────┐
+                                  │  API Endpoint   │
+                                  │ (user-configured)│
+                                  └─────────────────┘
+```
+
+**Message Types:**
+- `STREAM_DETECTED` (content → background): Reports a newly detected stream URL with its type
+- `GET_STREAMS` (popup → background): Requests all streams for the current tab
+- `CALL_API` (popup → background): Triggers an API call with stream data to a configured endpoint
+- `PING` (popup → background): Health check to verify background worker is alive
+- `CLEAR_STREAMS` (popup → background): Clears stored streams for a tab
+
+### Execution Flow
+
+1. **Detection** (content script) → Scans page for stream URLs using detection patterns
+2. **Storage** (background worker) → Stores detected streams per tab (max 200), updates badge
+3. **Display** (popup UI) → Fetches and shows streams for the active tab
+4. **Configuration** (options page) → User defines API endpoints with interpolation templates
+5. **Invocation** (background worker) → Interpolates templates and calls configured endpoints on user action
 
 ## Privacy
 
@@ -341,6 +398,7 @@ Contributions are welcome! Please:
 2. Create a feature branch
 3. Make your changes
 4. Submit a pull request
+5. AI vibe-coding endorsed only with elaborate commit message (and notes/*).
 
 ## Support
 

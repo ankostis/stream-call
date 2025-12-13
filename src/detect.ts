@@ -1,5 +1,12 @@
 /**
- * Pure helpers for stream URL detection and typing, extracted for testing.
+ * Pure helpers for stream URL detection and typing.
+ *
+ * Separated from content.ts for:
+ * - Modularity: Detection logic isolated from DOM/messaging concerns
+ * - Reuse: Background/popup/diagnostics can import patterns without page context
+ * - Testability: Pure functions easy to unit test (see content.test.ts)
+ * - Stability: Pattern evolution independent of content-script implementation
+ * - Single source of truth: Avoids regex duplication across components
  */
 export const STREAM_PATTERNS: RegExp[] = [
   /\.(m3u8|m3u|pls|asx|ram|mp3|aac|ogg|opus|flac|wav|m4a|wma)(\?.*)?$/i,
