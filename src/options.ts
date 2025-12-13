@@ -1,10 +1,7 @@
-/**
- * stream-call Options Script
- */
 export {};
 
 import { applyTemplate } from './template';
-import { validatePatterns } from './config';
+import { ApiPattern, suggestPatternName, validatePatterns } from './config';
 
 const DEFAULT_CONFIG = {
   apiPatterns: JSON.stringify(
@@ -40,132 +37,26 @@ const DEFAULT_CONFIG = {
 
 type Config = typeof DEFAULT_CONFIG;
 
-/**
- * Load saved settings
- */
-async function loadSettings() {
-  try {
-    const config = (await browser.storage.sync.get(DEFAULT_CONFIG)) as Config;
-    (document.getElementById('api-patterns') as HTMLTextAreaElement).value = config.apiPatterns;
-  } catch (error) {
-    console.error('Failed to load settings:', error);
-    showAlert('Failed to load settings', 'error');
-  }
-}
+let patterns: ApiPattern[] = [];
+let editingIndex: number | null = null;
 
-/**
- * Save settings
- */
-async function saveSettings() {
-  try {
-    const apiPatternsRaw = (document.getElementById('api-patterns') as HTMLTextAreaElement).value.trim();
+const els = {
+  alert: () => document.getElementById('alert'),
+  patternsList: () => document.getElementById('patterns-list') as HTMLDivElement,
+  patternsEmpty: () => document.getElementById('patterns-empty') as HTMLDivElement,
+  editorCard: () => document.getElementById('editor-card') as HTMLDivElement,
+  editorTitle: () => document.getElementById('editor-title') as HTMLHeadingElement,
+  name: () => document.getElementById('pattern-name') as HTMLInputElement,
+  method: () => document.getElementById('pattern-method') as HTMLSelectElement,
+  endpoint: () => document.getElementById('pattern-endpoint') as HTMLInputElement,
+  body: () => document.getElementById('pattern-body') as HTMLTextAreaElement,
+  includePage: () => document.getElementById('pattern-include-page') as HTMLInputElement,
+  headersRows: () => document.getElementById('headers-rows') as HTMLDivElement,
+  preview: () => document.getElementById('preview') as HTMLDivElement
+};
 
-    const validatedPatterns = validatePatterns(apiPatternsRaw || '[]');
-    if (!validatedPatterns.valid) {
-      showAlert(validatedPatterns.errorMessage ?? 'Invalid API patterns JSON', 'error');
-      return;
-    }
-
-    if (validatedPatterns.parsed.length === 0) {
-      showAlert('Please add at least one API pattern', 'error');
-      return;
-    }
-
-    await browser.storage.sync.set({
-      apiPatterns: validatedPatterns.formatted
-    });
-
-    showAlert('✅ Settings saved successfully!', 'success');
-  } catch (error) {
-    console.error('Failed to save settings:', error);
-    showAlert('Failed to save settings', 'error');
-  }
-}
-
-/**
- * Test API connection
- */
-async function testAPI() {
-  try {
-    const apiPatternsRaw = (document.getElementById('api-patterns') as HTMLTextAreaElement).value.trim();
-    const patterns = validatePatterns(apiPatternsRaw || '[]');
-
-    if (!patterns.valid || patterns.parsed.length === 0) {
-      showAlert('Please add at least one valid API pattern first', 'error');
-      return;
-    }
-
-    showAlert('Testing API connection...', 'info');
-
-    const firstPattern = patterns.parsed[0];
-    const context = {
-      streamUrl: 'https://example.com/test-stream.m3u8',
-      timestamp: new Date().toISOString(),
-      pageUrl: firstPattern.includePageInfo ? 'https://example.com/test-page' : undefined,
-      pageTitle: firstPattern.includePageInfo ? 'Test Page - stream-call' : undefined
-    } as Record<string, unknown>;
-
-    // Separate template error handling for actionable feedback
-    let endpoint: string;
-    let body: string;
-    try {
-      endpoint = applyTemplate(firstPattern.endpointTemplate, context);
-      body = firstPattern.bodyTemplate
-        ? applyTemplate(firstPattern.bodyTemplate, context)
-        : JSON.stringify(
-            firstPattern.includePageInfo
-              ? context
-              : { streamUrl: context.streamUrl, timestamp: context.timestamp }
-          );
-    } catch (templateError: any) {
-      const availableFields = Object.keys(context).filter(k => context[k] !== undefined).join(', ');
-      showAlert(
-        `❌ Template error: ${templateError?.message ?? 'Invalid placeholder'}. Available fields: ${availableFields}. ` +
-        `Check that your pattern uses {{streamUrl}}, {{timestamp}}, and optionally {{pageUrl}}/{{pageTitle}} if includePageInfo is true.`,
-        'error'
-      );
-      return;
-    }
-
-    const method = (firstPattern.method || 'POST').toUpperCase();
-
-    let headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (firstPattern.headers) {
-      headers = { ...headers, ...firstPattern.headers };
-    }
-
-    const response = await fetch(endpoint, {
-      method,
-      headers,
-      body
-    });
-
-    if (response.ok) {
-      showAlert(`✅ API test successful! Status: ${response.status} ${response.statusText}`, 'success');
-    } else {
-      showAlert(`⚠️ API returned status ${response.status}: ${response.statusText}`, 'error');
-    }
-  } catch (error: any) {
-    console.error('API test error:', error);
-    showAlert(`❌ API test failed: ${error?.message ?? 'Unknown error'}`, 'error');
-  }
-}
-
-/**
- * Reset to default settings
- */
-function resetSettings() {
-  if (confirm('Are you sure you want to reset all settings to defaults?')) {
-    (document.getElementById('api-patterns') as HTMLTextAreaElement).value = DEFAULT_CONFIG.apiPatterns;
-    showAlert('Settings reset to defaults. Click Save to apply.', 'info');
-  }
-}
-
-/**
- * Show alert message
- */
 function showAlert(message: string, type: 'info' | 'success' | 'error' = 'info') {
-  const alert = document.getElementById('alert');
+  const alert = els.alert();
   if (!alert) return;
 
   alert.textContent = message;
@@ -179,25 +70,382 @@ function showAlert(message: string, type: 'info' | 'success' | 'error' = 'info')
   }
 }
 
-/**
- * Initialize options page
- */
-function initialize() {
-  loadSettings();
+function addHeaderRow(key = '', value = '') {
+  const row = document.createElement('div');
+  row.className = 'header-row';
 
-  document.getElementById('save-btn')?.addEventListener('click', saveSettings);
+  const keyInput = document.createElement('input');
+  keyInput.type = 'text';
+  keyInput.placeholder = 'Header name';
+  keyInput.value = key;
+
+  const valueInput = document.createElement('input');
+  valueInput.type = 'text';
+  valueInput.placeholder = 'Header value';
+  valueInput.value = value;
+
+  const removeBtn = document.createElement('button');
+  removeBtn.type = 'button';
+  removeBtn.className = 'btn-secondary btn-danger';
+  removeBtn.textContent = '✖';
+  removeBtn.addEventListener('click', () => row.remove());
+
+  row.appendChild(keyInput);
+  row.appendChild(valueInput);
+  row.appendChild(removeBtn);
+  els.headersRows().appendChild(row);
+}
+
+function setHeadersRows(headers?: Record<string, string>) {
+  els.headersRows().innerHTML = '';
+  const entries = headers ? Object.entries(headers) : [];
+  if (entries.length === 0) {
+    addHeaderRow();
+    return;
+  }
+  entries.forEach(([key, value]) => addHeaderRow(key, value));
+}
+
+function loadSettings() {
+  browser.storage.sync
+    .get(DEFAULT_CONFIG)
+    .then((config) => {
+      const validated = validatePatterns((config as Config).apiPatterns || '[]');
+      patterns = validated.valid ? validated.parsed : [];
+      renderList();
+    })
+    .catch((error) => {
+      console.error('Failed to load settings:', error);
+      showAlert('Failed to load settings', 'error');
+    });
+}
+
+function renderList() {
+  const list = els.patternsList();
+  const emptyState = els.patternsEmpty();
+  list.innerHTML = '';
+
+  if (patterns.length === 0) {
+    emptyState.style.display = 'block';
+    return;
+  }
+
+  emptyState.style.display = 'none';
+
+  patterns.forEach((pattern, index) => {
+    const card = document.createElement('div');
+    card.className = 'pattern-card';
+
+    const title = document.createElement('h3');
+    title.textContent = pattern.name;
+
+    const meta = document.createElement('div');
+    meta.className = 'pattern-meta';
+    meta.textContent = `${(pattern.method || 'POST').toUpperCase()} → ${pattern.endpointTemplate}`;
+
+    const pageInfo = document.createElement('div');
+    pageInfo.className = 'pattern-meta';
+    pageInfo.textContent = pattern.includePageInfo === false ? 'Page info: off' : 'Page info: on';
+
+    const actions = document.createElement('div');
+    actions.className = 'pattern-actions';
+
+    const editBtn = document.createElement('button');
+    editBtn.className = 'btn-ghost';
+    editBtn.textContent = '✏️ Edit';
+    editBtn.addEventListener('click', () => openEditor(index));
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'btn-secondary btn-danger';
+    deleteBtn.textContent = '🗑 Delete';
+    deleteBtn.addEventListener('click', () => deletePattern(index));
+
+    actions.appendChild(editBtn);
+    actions.appendChild(deleteBtn);
+
+    card.appendChild(title);
+    card.appendChild(meta);
+    card.appendChild(pageInfo);
+    card.appendChild(actions);
+    list.appendChild(card);
+  });
+}
+
+function openEditor(index: number | null) {
+  editingIndex = index;
+  const pattern = index === null ? newPatternDefaults() : patterns[index];
+  fillForm(pattern);
+  els.editorTitle().textContent = index === null ? 'Add pattern' : 'Edit pattern';
+  els.editorCard().style.display = 'block';
+  els.preview().style.display = 'none';
+}
+
+function closeEditor() {
+  editingIndex = null;
+  els.editorCard().style.display = 'none';
+  els.preview().style.display = 'none';
+}
+
+function fillForm(pattern: ApiPattern) {
+  els.name().value = pattern.name || '';
+  els.method().value = (pattern.method || 'POST').toUpperCase();
+  els.endpoint().value = pattern.endpointTemplate || '';
+  els.body().value = pattern.bodyTemplate || '';
+  els.includePage().checked = pattern.includePageInfo !== false;
+  setHeadersRows(pattern.headers);
+}
+
+function newPatternDefaults(): ApiPattern {
+  return {
+    name: '',
+    endpointTemplate: '',
+    method: 'POST',
+    headers: {},
+    bodyTemplate: '',
+    includePageInfo: true
+  };
+}
+
+function buildPatternFromForm(): ApiPattern | null {
+  const nameRaw = els.name().value.trim();
+  const endpoint = els.endpoint().value.trim();
+  const method = els.method().value.trim().toUpperCase() || 'POST';
+  const bodyTemplate = els.body().value.trim();
+  const includePageInfo = els.includePage().checked;
+
+  if (!endpoint) {
+    showAlert('Endpoint URL is required', 'error');
+    return null;
+  }
+
+  const headers: Record<string, string> = {};
+  els.headersRows()
+    .querySelectorAll('.header-row')
+    .forEach((row) => {
+      const [keyInput, valueInput] = Array.from(row.querySelectorAll('input')) as [
+        HTMLInputElement,
+        HTMLInputElement
+      ];
+      const key = keyInput.value.trim();
+      const value = valueInput.value.trim();
+      if (key) {
+        headers[key] = value;
+      }
+    });
+
+  const pattern: ApiPattern = {
+    name: nameRaw || suggestPatternName(endpoint),
+    endpointTemplate: endpoint,
+    method,
+    headers: Object.keys(headers).length ? headers : undefined,
+    bodyTemplate: bodyTemplate || undefined,
+    includePageInfo
+  };
+
+  return pattern;
+}
+
+function savePattern() {
+  const candidate = buildPatternFromForm();
+  if (!candidate) return;
+
+  const updated = [...patterns];
+  if (editingIndex === null) {
+    updated.push(candidate);
+  } else {
+    updated[editingIndex] = candidate;
+  }
+
+  const validated = validatePatterns(JSON.stringify(updated));
+  if (!validated.valid) {
+    showAlert(validated.errorMessage || 'Invalid pattern', 'error');
+    return;
+  }
+
+  patterns = validated.parsed;
+
+  browser.storage.sync
+    .set({ apiPatterns: validated.formatted })
+    .then(() => {
+      renderList();
+      closeEditor();
+      showAlert('✅ Pattern saved', 'success');
+    })
+    .catch((error) => {
+      console.error('Failed to save pattern:', error);
+      showAlert('Failed to save pattern', 'error');
+    });
+}
+
+function deletePattern(index: number) {
+  const pattern = patterns[index];
+  if (!pattern) return;
+
+  if (!confirm(`Delete pattern "${pattern.name}"?`)) {
+    return;
+  }
+
+  const updated = patterns.filter((_, i) => i !== index);
+  const validated = validatePatterns(JSON.stringify(updated));
+  if (!validated.valid) {
+    showAlert(validated.errorMessage || 'Failed to delete pattern', 'error');
+    return;
+  }
+
+  patterns = validated.parsed;
+
+  browser.storage.sync
+    .set({ apiPatterns: validated.formatted })
+    .then(() => {
+      renderList();
+      closeEditor();
+      showAlert('Pattern deleted', 'success');
+    })
+    .catch((error) => {
+      console.error('Failed to delete pattern:', error);
+      showAlert('Failed to delete pattern', 'error');
+    });
+}
+
+function previewPattern() {
+  const candidate = buildPatternFromForm();
+  if (!candidate) return;
+
+  const context = {
+    streamUrl: 'https://example.com/stream.m3u8',
+    timestamp: new Date().toISOString(),
+    pageUrl: candidate.includePageInfo ? 'https://example.com/page' : undefined,
+    pageTitle: candidate.includePageInfo ? 'Example page' : undefined
+  } as Record<string, unknown>;
+
+  try {
+    const endpoint = applyTemplate(candidate.endpointTemplate, context);
+    const body = candidate.bodyTemplate
+      ? applyTemplate(candidate.bodyTemplate, context)
+      : JSON.stringify(
+          candidate.includePageInfo
+            ? context
+            : { streamUrl: context.streamUrl, timestamp: context.timestamp },
+          null,
+          2
+        );
+
+    els.preview().style.display = 'block';
+    els.preview().textContent = `Endpoint: ${endpoint}\nMethod: ${(candidate.method || 'POST').toUpperCase()}\n\nHeaders: ${JSON.stringify(
+      candidate.headers || {},
+      null,
+      2
+    )}\n\nBody:\n${body}`;
+    showAlert('Preview generated', 'info');
+  } catch (error: any) {
+    showAlert(`Template error: ${error?.message ?? 'Invalid template'}`, 'error');
+  }
+}
+
+function testAPI() {
+  if (patterns.length === 0) {
+    showAlert('Please add at least one pattern first', 'error');
+    return;
+  }
+
+  const firstPattern = patterns[0];
+  showAlert('Testing API connection...', 'info');
+
+  const context = {
+    streamUrl: 'https://example.com/test-stream.m3u8',
+    timestamp: new Date().toISOString(),
+    pageUrl: firstPattern.includePageInfo ? 'https://example.com/test-page' : undefined,
+    pageTitle: firstPattern.includePageInfo ? 'Test Page - stream-call' : undefined
+  } as Record<string, unknown>;
+
+  let endpoint: string;
+  let body: string | undefined;
+
+  try {
+    endpoint = applyTemplate(firstPattern.endpointTemplate, context);
+    body = firstPattern.bodyTemplate
+      ? applyTemplate(firstPattern.bodyTemplate, context)
+      : JSON.stringify(
+          firstPattern.includePageInfo
+            ? context
+            : { streamUrl: context.streamUrl, timestamp: context.timestamp }
+        );
+  } catch (templateError: any) {
+    const availableFields = Object.keys(context).filter((k) => context[k] !== undefined).join(', ');
+    showAlert(
+      `❌ Template error: ${templateError?.message ?? 'Invalid placeholder'}. Fields: ${availableFields}.`,
+      'error'
+    );
+    return;
+  }
+
+  const method = (firstPattern.method || 'POST').toUpperCase();
+
+  let headers: Record<string, string> | undefined = undefined;
+  if (body) {
+    headers = { 'Content-Type': 'application/json', ...(firstPattern.headers || {}) };
+  } else if (firstPattern.headers) {
+    headers = { ...firstPattern.headers };
+  }
+
+  fetch(endpoint, {
+    method,
+    headers,
+    body: method === 'GET' || method === 'HEAD' ? undefined : body
+  })
+    .then((response) => {
+      if (response.ok) {
+        showAlert(`✅ API test successful! Status: ${response.status} ${response.statusText}`, 'success');
+      } else {
+        showAlert(`⚠️ API returned status ${response.status}: ${response.statusText}`, 'error');
+      }
+    })
+    .catch((error) => {
+      console.error('API test error:', error);
+      showAlert(`❌ API test failed: ${error?.message ?? 'Unknown error'}`, 'error');
+    });
+}
+
+function resetSettings() {
+  if (!confirm('Reset patterns to defaults?')) return;
+  const validated = validatePatterns(DEFAULT_CONFIG.apiPatterns);
+  if (!validated.valid) {
+    showAlert('Default config is invalid', 'error');
+    return;
+  }
+  patterns = validated.parsed;
+  browser.storage.sync
+    .set({ apiPatterns: validated.formatted })
+    .then(() => {
+      renderList();
+      closeEditor();
+      showAlert('Defaults restored. Ready to save.', 'info');
+    })
+    .catch((error) => {
+      console.error('Failed to reset settings:', error);
+      showAlert('Failed to reset settings', 'error');
+    });
+}
+
+function wireEvents() {
+  document.getElementById('add-pattern-btn')?.addEventListener('click', () => openEditor(null));
+  document.getElementById('save-pattern-btn')?.addEventListener('click', savePattern);
+  document.getElementById('cancel-edit-btn')?.addEventListener('click', closeEditor);
+  document.getElementById('preview-btn')?.addEventListener('click', previewPattern);
+  document.getElementById('add-header-row')?.addEventListener('click', () => addHeaderRow());
   document.getElementById('test-btn')?.addEventListener('click', testAPI);
   document.getElementById('reset-btn')?.addEventListener('click', resetSettings);
-
-  (document.getElementById('api-patterns') as HTMLTextAreaElement).addEventListener('blur', function () {
-    const value = this.value.trim();
-    if (value) {
-      const validated = validatePatterns(value);
-      if (validated.valid) {
-        this.value = validated.formatted;
-      }
+  els.endpoint().addEventListener('blur', () => {
+    if (!els.name().value.trim() && els.endpoint().value.trim()) {
+      els.name().value = suggestPatternName(els.endpoint().value.trim());
     }
   });
+}
+
+function initialize() {
+  loadSettings();
+  wireEvents();
+  setHeadersRows();
 }
 
 if (typeof document !== 'undefined') {

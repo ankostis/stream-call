@@ -51,6 +51,20 @@
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
 
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
     .card-title {
       font-size: 18px;
       font-weight: 600;
@@ -223,6 +237,95 @@
     .example-box strong {
       color: #667eea;
     }
+
+    .patterns-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 12px;
+    }
+
+    .pattern-card {
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      background: #fafafa;
+    }
+
+    .pattern-card h3 {
+      font-size: 15px;
+      font-weight: 600;
+      color: #111827;
+    }
+
+    .pattern-meta {
+      font-size: 12px;
+      color: #4b5563;
+      line-height: 1.4;
+    }
+
+    .pattern-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: #667eea;
+      padding: 8px 12px;
+      border: 1px solid #e5e7eb;
+      flex: 1;
+    }
+
+    .btn-danger {
+      background: #fef2f2;
+      color: #b91c1c;
+      border: 1px solid #fecaca;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 24px;
+      border: 1px dashed #e5e7eb;
+      border-radius: 6px;
+      color: #6b7280;
+    }
+
+    .empty-state-icon {
+      font-size: 32px;
+      margin-bottom: 8px;
+    }
+
+    .form-grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    .headers-rows {
+      display: grid;
+      gap: 8px;
+    }
+
+    .header-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .preview {
+      background: #0b1021;
+      color: #e5e7eb;
+      border-radius: 6px;
+      padding: 12px;
+      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+      line-height: 1.5;
+    }
   </style>
 </head>
 <body>
@@ -235,85 +338,88 @@
     <div id="alert" class="alert"></div>
 
     <div class="card">
-      <h2 class="card-title">API Patterns</h2>
-
-      <div class="form-group">
-        <label for="api-patterns">
-          API Pattern Configuration (JSON array) *
-          <span class="label-description">Define one or more API endpoints with {{placeholders}}</span>
-        </label>
-        <textarea
-          id="api-patterns"
-          placeholder='[
-  {
-    "id": "my-api",
-    "name": "My API",
-    "endpointTemplate": "https://api.example.com/stream",
-    "method": "POST",
-    "bodyTemplate": "{\"streamUrl\":\"{{streamUrl}}\",\"timestamp\":\"{{timestamp}}\"}",
-    "includePageInfo": true
-  }
-]'
-        ></textarea>
-        <p class="help-text">
-          Available placeholders: <code>{{streamUrl}}</code>, <code>{{pageUrl}}</code>, <code>{{pageTitle}}</code>, <code>{{timestamp}}</code>
-        </p>
-        <div class="example-box">
-          <strong>Simple JSON POST:</strong>
-          <pre style="margin-top: 8px; font-size: 11px;">[{
-  "id": "json-api",
-  "name": "JSON API",
-  "endpointTemplate": "https://api.example.com/stream",
-  "method": "POST",
-  "headers": {"Authorization": "Bearer TOKEN"},
-  "bodyTemplate": "{\"url\":\"{{streamUrl}}\"}",
-  "includePageInfo": false
-}]</pre>
-        </div>
-        <div class="example-box">
-          <strong>URL Parameter GET:</strong>
-          <pre style="margin-top: 8px; font-size: 11px;">[{
-  "id": "url-param",
-  "name": "URL Param",
-  "endpointTemplate": "https://api.example.com/notify?url={{streamUrl}}&page={{pageUrl}}",
-  "method": "GET"
-}]</pre>
+      <div class="card-header">
+        <h2 class="card-title">API Patterns</h2>
+        <div class="card-actions">
+          <button id="add-pattern-btn" class="btn-primary">＋ Add pattern</button>
+          <button id="test-btn" class="btn-test">🧪 Test first pattern</button>
+          <button id="reset-btn" class="btn-secondary">↺ Reset defaults</button>
         </div>
       </div>
+
+      <div id="patterns-empty" class="empty-state" style="display: none;">
+        <div class="empty-state-icon">📄</div>
+        <p><strong>No patterns yet</strong></p>
+        <p style="font-size: 12px; margin-top: 8px;">Click “Add pattern” to create one.</p>
+      </div>
+
+      <div id="patterns-list" class="patterns-list"></div>
     </div>
 
-    <div class="card">
-      <h2 class="card-title">Pattern Fields</h2>
-      <ul style="margin: 0; padding-left: 20px; line-height: 1.8;">
-        <li><strong>id</strong>: Unique identifier</li>
-        <li><strong>name</strong>: Display name shown in popup</li>
-        <li><strong>endpointTemplate</strong>: API URL (supports {{placeholders}})</li>
-        <li><strong>method</strong>: HTTP method (GET, POST, etc.) - defaults to POST</li>
-        <li><strong>headers</strong>: Custom headers object (optional)</li>
-        <li><strong>bodyTemplate</strong>: Request body (supports {{placeholders}}, optional)</li>
-        <li><strong>includePageInfo</strong>: Include page URL/title (optional, defaults to false)</li>
-      </ul>
-    </div>
+    <div class="card" id="editor-card" style="display: none;">
+      <h2 class="card-title" id="editor-title">Add pattern</h2>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="pattern-name">Name *</label>
+          <input type="text" id="pattern-name" placeholder="example.com POST" />
+          <div class="help-text">Must be unique. Auto-suggested from endpoint host.</div>
+        </div>
 
-    <div class="button-group">
-      <button id="save-btn" class="btn-primary">💾 Save Settings</button>
-      <button id="test-btn" class="btn-test">🧪 Test API</button>
-      <button id="reset-btn" class="btn-secondary">↺ Reset to Defaults</button>
+        <div class="form-group">
+          <label for="pattern-method">Method *</label>
+          <select id="pattern-method">
+            <option value="POST">POST</option>
+            <option value="GET">GET</option>
+            <option value="PUT">PUT</option>
+            <option value="PATCH">PATCH</option>
+            <option value="DELETE">DELETE</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="pattern-endpoint">Endpoint URL *</label>
+          <input type="url" id="pattern-endpoint" placeholder="https://api.example.com/stream" />
+          <div class="help-text">Supports placeholders like {{streamUrl}}, {{timestamp}}.</div>
+        </div>
+
+        <div class="form-group">
+          <label>Headers (key/value pairs)</label>
+          <div id="headers-rows" class="headers-rows"></div>
+          <button id="add-header-row" class="btn-secondary" type="button">＋ Add header</button>
+        </div>
+
+        <div class="form-group">
+          <label for="pattern-body">Body template (optional)</label>
+          <textarea id="pattern-body" placeholder='{"url":"{{streamUrl}}"}'></textarea>
+          <div class="help-text">Leave empty to send defaults (URL + timestamp, and page info if enabled).</div>
+        </div>
+
+        <div class="form-group checkbox-group">
+          <label>
+            <input type="checkbox" id="pattern-include-page" checked /> Include page info (URL/title)
+          </label>
+        </div>
+
+        <div class="button-group">
+          <button id="save-pattern-btn" class="btn-primary" type="button">💾 Save pattern</button>
+          <button id="cancel-edit-btn" class="btn-secondary" type="button">✖ Cancel</button>
+          <button id="preview-btn" class="btn-test" type="button">👁 Preview</button>
+        </div>
+
+        <div id="preview" class="preview" style="display: none;"></div>
+      </div>
     </div>
 
     <div class="card" style="margin-top: 24px;">
       <h2 class="card-title">About <em>Stream call</em></h2>
       <p style="margin-bottom: 12px;">
-        <em>Stream call</em> detects streaming media URLs (podcasts, radio stations, live streams) on web pages
-        and allows you to send them to your configured HTTP API endpoint.
+        <em>Stream call</em> detects streaming media (podcasts, radio, live streams) and
+        sends URLs to your HTTP API.
       </p>
       <p style="margin-bottom: 12px;">
-        <strong>Supported stream types:</strong> HLS (.m3u8), DASH (.mpd), HTTP Audio (MP3, AAC, OGG),
-        RTMP, RTSP, Icecast, Shoutcast, and more.
+        Supported: HLS (.m3u8), DASH (.mpd), HTTP audio, RTMP/RTSP, Icecast/Shoutcast.
       </p>
-      <p style="color: #666; font-size: 13px;">
-        Version 1.0.0 | Made with ❤️
-      </p>
+      <p style="color: #666; font-size: 13px;">Version 1.0.0</p>
     </div>
   </div>
 
