@@ -5,6 +5,9 @@
  */
 export {};
 
+// Limit streams per tab to prevent unbounded memory growth
+const MAX_STREAMS_PER_TAB = 200;
+
 type StreamInfo = {
   url: string;
   type: string;
@@ -54,6 +57,10 @@ browser.runtime.onMessage.addListener((message: RuntimeMessage, sender) => {
     const exists = streams.some((s) => s.url === streamInfo.url);
     if (!exists) {
       streams.push(streamInfo);
+      // Enforce cap: remove oldest entry if limit exceeded
+      if (streams.length > MAX_STREAMS_PER_TAB) {
+        streams.shift();
+      }
       console.log('Stream detected:', streamInfo);
       updateBadge(tabId, streams.length);
     }
