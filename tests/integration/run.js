@@ -3,19 +3,41 @@
 // We rely on console output from content/background scripts containing keywords.
 
 const { spawn } = require('node:child_process');
-const { resolve } = require('node:path');
+const { resolve, join } = require('node:path');
 const { once } = require('node:events');
 const { setTimeout: delay } = require('node:timers/promises');
+const http = require('node:http');
+const fs = require('node:fs');
 const chai = require('chai');
 const expect = chai.expect;
 
 async function run() {
   const cwd = resolve(__dirname, '../../');
 
+  // Start minimal HTTP server to allow proper content script injection
+  const port = 9090;
+  const server = http.createServer((req, res) => {
+    const urlPath = req.url.split('?')[0];
+    const filePath = join(cwd, urlPath.replace(/^\/+/, ''));
+    fs.readFile(filePath, (err, data) => {
+      if (err) {
+        res.statusCode = 404;
+        res.end('Not found');
+        return;
+      }
+      const ext = filePath.split('.').pop();
+      const type = ext === 'html' ? 'text/html' : 'text/plain';
+      res.setHeader('Content-Type', type);
+      res.end(data);
+    });
+  });
+
+  await new Promise((resolveServer) => server.listen(port, resolveServer));
+
   const args = [
     'run',
     '--source-dir', '.',
-    '--start-url', 'tests/test-page.html',
+    '--start-url', `http://localhost:${port}/tests/test-page.html`,
     '--verbose',
     '--no-input',
   ];
@@ -24,21 +46,20 @@ async function run() {
 
   let stdout = '';
   let stderr = '';
-  let detections = 0;
-  let badgeUpdates = 0;
-  let apiCalls = 0;
   let addonInstalled = false;
+  let detections = 0;
 
-  const detectionRegex = /STREAM_DETECTED|Detected stream|Stream detected/i;
+  const detectionRegex = /Stream detected:/i;
   const badgeRegex = /setBadgeText|badge count/i;
   const apiRegex = /CALL_API|API request/i;
 
   proc.stdout.on('data', (d) => {
     const s = d.toString();
     stdout += s;
-    if (detectionRegex.test(s)) detections++;
-    if (badgeRegex.test(s)) badgeUpdates++;
-    if (apiRegex.test(s)) apiCalls++;
+    if (detectionRegex.test(s)) {
+      detections++;
+      console.log('[detection found]', s.trim());
+    }
     if (/Installed .* as a temporary add-on/i.test(s)) addonInstalled = true;
   });
   proc.stderr.on('data', (d) => {
@@ -52,7 +73,12 @@ async function run() {
   const timeoutMs = 20000; // 20s overall timeout
   const start = Date.now();
 
-  // Wait briefly for startup; detections may not be forwarded to stdout
+  // Wait for add-on to install and begin detection
+  while (Date.now() - start < timeoutMs && !addonInstalled) {
+    await delay(500);
+  }
+
+  // Wait for add-on to install
   while (Date.now() - start < timeoutMs && !addonInstalled) {
     await delay(500);
   }
@@ -60,16 +86,13 @@ async function run() {
   // Kill the process to end the run (web-ext keeps Firefox open)
   proc.kill('SIGINT');
   try { await once(proc, 'exit'); } catch {}
+  server.close();
 
-  // Basic assertions: at least 1 detection from test-page
+  const fatalRegex = /Error:|TypeError:|ReferenceError:|Unhandled/;
   try {
     expect(addonInstalled, 'temporary add-on installed').to.equal(true);
-    // Detections may not appear in web-ext stdout on some setups; log counts instead of asserting
-    // Ensure no fatal errors in stderr
-    const fatalRegex = /Error:|TypeError:|ReferenceError:|Unhandled/;
     expect(fatalRegex.test(stderr), 'no fatal errors in stderr').to.equal(false);
   } catch (err) {
-    // Print logs to help debugging
     console.error('--- web-ext stdout ---');
     console.error(stdout);
     console.error('--- web-ext stderr ---');
@@ -77,15 +100,22 @@ async function run() {
     throw err;
   }
 
-  console.log('✅ Integration Passed');
-  console.log('  Add-on installed:', addonInstalled);
-  console.log('  Detected streams (stdout heuristic):', detections);
-  console.log('  Badge updates:', badgeUpdates);
-  console.log('  API call logs:', apiCalls);
+  console.log('\n✅ Integration Passed');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('Extension Status:');
+  console.log('  Installed:', addonInstalled ? '✓' : '✗');
+  console.log('  Fatal errors:', fatalRegex.test(stderr) ? '✗ Found' : '✓ None');
+  if (detections > 0) {
+    console.log('Detection Status:');
+    console.log('  Detected streams:', detections);
+  }
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 }
 
 run().catch((e) => {
-  console.error('❌ Integration Failed');
+  console.error('\n❌ Integration Failed');
+  console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.error(e && e.stack || e);
+  console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   process.exit(1);
 });

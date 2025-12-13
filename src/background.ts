@@ -17,7 +17,8 @@ type RuntimeMessage =
   | { type: 'STREAM_DETECTED'; url: string; streamType: string }
   | { type: 'GET_STREAMS'; tabId: number }
   | { type: 'CALL_API'; streamUrl: string; pageUrl?: string; pageTitle?: string; patternId?: string }
-  | { type: 'CLEAR_STREAMS'; tabId: number };
+  | { type: 'CLEAR_STREAMS'; tabId: number }
+  | { type: 'PING' };
 
 type ApiPattern = {
   id: string;
@@ -33,13 +34,11 @@ const tabStreams = new Map<number, StreamInfo[]>();
 
 // Listen for messages from content scripts and popup
 browser.runtime.onMessage.addListener((message: RuntimeMessage, sender) => {
-  if (message.type === 'STREAM_DETECTED') {
+  return (async () => {
+    if (message.type === 'STREAM_DETECTED') {
     const tabId = sender.tab?.id;
     if (tabId === undefined) {
-      return Promise.resolve({ success: false, error: 'No tab context for stream detection.' });
-    }
-
-    if (!tabStreams.has(tabId)) {
+        return { success: false, error: 'No tab context for stream detection.' };
       tabStreams.set(tabId, []);
     }
 
@@ -60,22 +59,22 @@ browser.runtime.onMessage.addListener((message: RuntimeMessage, sender) => {
     }
 
     return Promise.resolve({ success: true });
-  }
+    }
 
-  if (message.type === 'GET_STREAMS') {
-    const tabId = message.tabId;
-    const streams = tabStreams.get(tabId) || [];
-    return Promise.resolve({ streams });
-  }
+    if (message.type === 'GET_STREAMS') {
+      const tabId = message.tabId;
+      const streams = tabStreams.get(tabId) || [];
+      return { streams };
+    }
 
-  if (message.type === 'CALL_API') {
-    return callStreamAPI({
-      streamUrl: message.streamUrl,
-      pageUrl: message.pageUrl,
-      pageTitle: message.pageTitle,
-      patternId: message.patternId
-    });
-  }
+    if (message.type === 'CALL_API') {
+      return callStreamAPI({
+        streamUrl: message.streamUrl,
+        pageUrl: message.pageUrl,
+        pageTitle: message.pageTitle,
+        patternId: message.patternId
+      });
+    }
 
   if (message.type === 'CLEAR_STREAMS') {
     const tabId = message.tabId;
@@ -84,7 +83,18 @@ browser.runtime.onMessage.addListener((message: RuntimeMessage, sender) => {
     return Promise.resolve({ success: true });
   }
 
+  if (message.type === 'PING') {
+    // Test integration: respond with current detection state
+    const totalDetected = Array.from(tabStreams.values()).reduce((sum, streams) => sum + streams.length, 0);
+    return {
+      pong: true,
+      totalDetected,
+      tabCount: tabStreams.size
+    };
+  }
+
   return Promise.resolve({ success: false, error: 'Unhandled message type' });
+  })();
 });
 
 // Clean up when tabs are closed

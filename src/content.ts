@@ -1,3 +1,4 @@
+import { isStreamUrl as isStreamUrlShared, getStreamType as getStreamTypeShared } from './detect';
 /**
  * stream-call Content Script
  * Detects streaming media on web pages
@@ -12,14 +13,11 @@
   // Common streaming patterns to detect
   const STREAM_PATTERNS: RegExp[] = [
     // Direct stream URLs
-    /\.(m3u8|m3u|pls|asx|ram|mp3|aac|ogg|opus|flac|wav|m4a|wma)(\?.*)?$/i,
     // HLS/DASH streams
-    /\/manifest\.(m3u8|mpd)/i,
     // Radio stream protocols
-    /^(https?|rtmp|rtsp|mms):\/\/.*(stream|radio|live|cast|audio|podcast)/i,
     // Icecast/Shoutcast
-    /\/(listen|stream|;\?|dyn\/)/i
   ];
+    // Detection patterns centralized in detect.ts
 
   const getUrlString = (input: RequestInfo | URL): string | null => {
     if (typeof input === 'string') return input;
@@ -34,13 +32,7 @@
   function isStreamUrl(url: string | null | undefined): boolean {
     if (!url || typeof url !== 'string') return false;
 
-    try {
-      const urlObj = new URL(url, window.location.href);
-      const fullUrl = urlObj.href;
-      return STREAM_PATTERNS.some((pattern) => pattern.test(fullUrl));
-    } catch (e) {
-      return false;
-    }
+      return isStreamUrlShared(url ?? null, window.location.href);
   }
 
   /**
@@ -49,26 +41,7 @@
   function getStreamType(url: string): string {
     const urlLower = url.toLowerCase();
 
-    if (urlLower.includes('.m3u8') || urlLower.includes('manifest')) {
-      return 'HLS';
-    }
-    if (urlLower.includes('.mpd')) {
-      return 'DASH';
-    }
-    if (urlLower.match(/\.(mp3|aac|ogg)(\?|$)/)) {
-      return 'HTTP Audio';
-    }
-    if (urlLower.includes('rtmp')) {
-      return 'RTMP';
-    }
-    if (urlLower.includes('rtsp')) {
-      return 'RTSP';
-    }
-    if (urlLower.includes('icecast') || urlLower.includes('shoutcast')) {
-      return 'Icecast/Shoutcast';
-    }
-
-    return 'Stream';
+      return getStreamTypeShared(url);
   }
 
   /**
@@ -85,6 +58,12 @@
         type: 'STREAM_DETECTED',
         url,
         streamType: getStreamType(url)
+      })
+      .then(() => {
+        // Relay detection status to a test ping if needed
+        if ((window as any).testIntegrationPingHandler) {
+          (window as any).testIntegrationPingHandler({ detected: true });
+        }
       })
       .catch((err) => {
         console.error('stream-call: Failed to report stream:', err);
@@ -198,7 +177,7 @@
   }
 
   function initialize() {
-    console.log('stream-call: Content script initialized');
+    console.log('stream-call: Content script initialized at', window.location.href);
 
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', () => {
