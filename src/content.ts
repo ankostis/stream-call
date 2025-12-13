@@ -2,7 +2,7 @@
  * stream-call Content Script
  * Detects streaming media on web pages
  */
-export {};
+// Module content script (no exports needed)
 
 (() => {
   'use strict';
