@@ -149,7 +149,16 @@ async function callStreamAPI({
     const defaults = { apiPatterns: '[]' } as const;
     const config = (await browser.storage.sync.get(defaults)) as typeof defaults;
 
-    const patterns = parsePatterns(config.apiPatterns);
+    let patterns: ReturnType<typeof parsePatterns>;
+    try {
+      patterns = parsePatterns(config.apiPatterns);
+    } catch (parseError: any) {
+      return {
+        success: false,
+        error: `Failed to parse API patterns: ${parseError?.message ?? 'Unknown error'}`
+      };
+    }
+
     const selectedPattern = patternName ? patterns.find((p) => p.name === patternName) : patterns[0];
 
     if (!selectedPattern) {

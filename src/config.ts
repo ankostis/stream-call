@@ -29,39 +29,37 @@ export function suggestPatternName(endpointUrl: string): string {
 /**
  * Parse raw JSON string into validated ApiPattern array
  * Requires name field; enforces uniqueness by name
+ * Throws on invalid JSON or invalid pattern structure
  */
 export function parsePatterns(raw: string): ApiPattern[] {
-  try {
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-
-    const names = new Set<string>();
-    return parsed
-      .map((p) => ({
-        name: p.name || suggestPatternName(p.endpointTemplate),
-        endpointTemplate: p.endpointTemplate,
-        method: p.method,
-        headers: p.headers,
-        bodyTemplate: p.bodyTemplate,
-        includePageInfo: p.includePageInfo
-      }))
-      .filter((p) => {
-        // Require endpoint and unique name
-        if (
-          typeof p.endpointTemplate !== 'string' ||
-          p.endpointTemplate.length === 0 ||
-          !p.name ||
-          names.has(p.name)
-        ) {
-          return false;
-        }
-        names.add(p.name);
-        return true;
-      });
-  } catch (e) {
-    console.warn('Invalid apiPatterns JSON', e);
-    return [];
+  const parsed = JSON.parse(raw);
+  if (!Array.isArray(parsed)) {
+    throw new Error('API patterns must be a JSON array.');
   }
+
+  const names = new Set<string>();
+  return parsed
+    .map((p) => ({
+      name: p.name || suggestPatternName(p.endpointTemplate),
+      endpointTemplate: p.endpointTemplate,
+      method: p.method,
+      headers: p.headers,
+      bodyTemplate: p.bodyTemplate,
+      includePageInfo: p.includePageInfo
+    }))
+    .filter((p) => {
+      // Require endpoint and unique name
+      if (
+        typeof p.endpointTemplate !== 'string' ||
+        p.endpointTemplate.length === 0 ||
+        !p.name ||
+        names.has(p.name)
+      ) {
+        return false;
+      }
+      names.add(p.name);
+      return true;
+    });
 }
 
 /**

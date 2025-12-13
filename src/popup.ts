@@ -45,7 +45,16 @@ async function loadPatterns() {
 
   const defaults = { apiPatterns: '[]' } as const;
   const stored = (await browser.storage.sync.get(defaults)) as typeof defaults;
-  apiPatterns = parsePatterns(stored.apiPatterns);
+  try {
+    apiPatterns = parsePatterns(stored.apiPatterns);
+  } catch (error: any) {
+    console.error('Failed to parse API patterns:', error);
+    showNotification(
+      `API pattern error: ${error?.message ?? 'Invalid patterns'}. Check options.`,
+      'error'
+    );
+    apiPatterns = [];
+  }
   patternsCached = true;
 }
 
@@ -176,7 +185,16 @@ function createStreamItem(stream: StreamInfo, index: number): HTMLElement {
 async function handleCallAPI(stream: StreamInfo, patternName?: string) {
   try {
     const config = await browser.storage.sync.get(['apiPatterns']);
-    const patterns = parsePatterns(config.apiPatterns || '[]');
+    let patterns: ReturnType<typeof parsePatterns>;
+    try {
+      patterns = parsePatterns(config.apiPatterns || '[]');
+    } catch (parseError: any) {
+      showNotification(
+        `Failed to parse patterns: ${parseError?.message ?? 'Invalid JSON'}. Check options.`,
+        'error'
+      );
+      return;
+    }
 
     if (patterns.length === 0) {
       showNotification('Please configure API patterns in options first', 'error');

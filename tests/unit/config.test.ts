@@ -77,9 +77,12 @@ test('parsePatterns: filters out invalid patterns', () => {
   assert(patterns.some((p) => p.name === 'valid'));
 });
 
+test('parsePatterns: throws on non-array JSON', () => {
+  assert.throws(() => parsePatterns('{"key": "value"}'), /must be a JSON array/);
+});
+
 test('parsePatterns: returns empty array on invalid JSON', () => {
-  const patterns = parsePatterns('not json');
-  assert.strictEqual(patterns.length, 0);
+  assert.throws(() => parsePatterns('not json'), /JSON/);
 });
 
 test('validatePatterns: validates and formats', () => {
