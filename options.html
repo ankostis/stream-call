@@ -326,6 +326,46 @@
       white-space: pre-wrap;
       line-height: 1.5;
     }
+
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 8px;
+      padding: 24px;
+      max-width: 500px;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 25px rgba(0, 0, 0, 0.15);
+    }
+
+    .modal-content h2 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: #667eea;
+    }
+
+    .import-preview {
+      background: #f8f9fa;
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 16px;
+      border: 1px solid #e5e7eb;
+      font-size: 13px;
+      line-height: 1.6;
+    }
   </style>
 </head>
 <body>
@@ -344,6 +384,8 @@
           <button id="add-pattern-btn" class="btn-primary">＋ Add pattern</button>
           <button id="test-btn" class="btn-test">🧪 Test first pattern</button>
           <button id="reset-btn" class="btn-secondary">↺ Reset defaults</button>
+          <button id="export-btn" class="btn-secondary">⬇ Export</button>
+          <button id="import-btn" class="btn-secondary">⬆ Import</button>
         </div>
       </div>
 
@@ -422,6 +464,20 @@
       <p style="color: #666; font-size: 13px;">Version 1.0.0</p>
     </div>
   </div>
+
+  <!-- Import modal -->
+  <div id="import-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <h2>Import patterns</h2>
+      <div id="import-preview" class="import-preview"></div>
+      <div class="button-group">
+        <button id="import-merge-btn" class="btn-primary">Merge</button>
+        <button id="import-replace-btn" class="btn-test">Replace all</button>
+        <button id="import-cancel-btn" class="btn-secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
+  <input type="file" id="import-file-input" accept=".json" style="display: none;" />
 
   <script src="options.js"></script>
 </body>

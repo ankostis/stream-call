@@ -39,6 +39,7 @@ type Config = typeof DEFAULT_CONFIG;
 
 let patterns: ApiPattern[] = [];
 let editingIndex: number | null = null;
+let pendingImportPatterns: ApiPattern[] = [];
 
 const els = {
   alert: () => document.getElementById('alert'),
@@ -427,6 +428,108 @@ function resetSettings() {
     });
 }
 
+function exportPatterns() {
+  if (patterns.length === 0) {
+    showAlert('No patterns to export', 'error');
+    return;
+  }
+
+  const json = JSON.stringify(patterns, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `stream-call-patterns-${new Date().toISOString().split('T')[0]}.json`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+  showAlert('✅ Patterns exported', 'success');
+}
+
+function handleFileSelect(e: Event) {
+  const input = e.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    try {
+      const content = event.target?.result as string;
+      const parsed = JSON.parse(content);
+      const validated = validatePatterns(JSON.stringify(parsed));
+
+      if (!validated.valid) {
+        showAlert(`Invalid file: ${validated.errorMessage}`, 'error');
+        return;
+      }
+
+      pendingImportPatterns = validated.parsed;
+      showImportModal();
+    } catch (error: any) {
+      showAlert(`Failed to read file: ${error?.message ?? 'Invalid JSON'}`, 'error');
+    }
+  };
+  reader.readAsText(file);
+
+  // Reset file input
+  input.value = '';
+}
+
+function showImportModal() {
+  const modal = document.getElementById('import-modal') as HTMLDivElement;
+  const preview = document.getElementById('import-preview') as HTMLDivElement;
+
+  const dupes = pendingImportPatterns.filter((p) => patterns.some((existing) => existing.name === p.name));
+  const newPatterns = pendingImportPatterns.filter((p) => !patterns.some((existing) => existing.name === p.name));
+
+  let previewText = `Importing ${pendingImportPatterns.length} pattern(s):\n\n`;
+  if (newPatterns.length > 0) {
+    previewText += `New patterns:\n${newPatterns.map((p) => `  • ${p.name}`).join('\n')}\n\n`;
+  }
+  if (dupes.length > 0) {
+    previewText += `Duplicate names (will be updated if merging):\n${dupes.map((p) => `  • ${p.name}`).join('\n')}`;
+  }
+
+  preview.textContent = previewText;
+  modal.style.display = 'flex';
+}
+
+function closeImportModal() {
+  const modal = document.getElementById('import-modal') as HTMLDivElement;
+  modal.style.display = 'none';
+  pendingImportPatterns = [];
+}
+
+function performImport(merge: boolean) {
+  const updated = merge
+    ? [
+        ...patterns.filter((p) => !pendingImportPatterns.some((imported) => imported.name === p.name)),
+        ...pendingImportPatterns
+      ]
+    : pendingImportPatterns;
+
+  const validated = validatePatterns(JSON.stringify(updated));
+  if (!validated.valid) {
+    showAlert(`Invalid import: ${validated.errorMessage}`, 'error');
+    return;
+  }
+
+  patterns = validated.parsed;
+
+  browser.storage.sync
+    .set({ apiPatterns: validated.formatted })
+    .then(() => {
+      renderList();
+      closeImportModal();
+      showAlert(merge ? '✅ Patterns merged' : '✅ Patterns replaced', 'success');
+    })
+    .catch((error) => {
+      console.error('Failed to import patterns:', error);
+      showAlert('Failed to import patterns', 'error');
+    });
+}
+
 function wireEvents() {
   document.getElementById('add-pattern-btn')?.addEventListener('click', () => openEditor(null));
   document.getElementById('save-pattern-btn')?.addEventListener('click', savePattern);
@@ -435,6 +538,14 @@ function wireEvents() {
   document.getElementById('add-header-row')?.addEventListener('click', () => addHeaderRow());
   document.getElementById('test-btn')?.addEventListener('click', testAPI);
   document.getElementById('reset-btn')?.addEventListener('click', resetSettings);
+  document.getElementById('export-btn')?.addEventListener('click', exportPatterns);
+  document.getElementById('import-btn')?.addEventListener('click', () => {
+    (document.getElementById('import-file-input') as HTMLInputElement).click();
+  });
+  document.getElementById('import-file-input')?.addEventListener('change', handleFileSelect);
+  document.getElementById('import-merge-btn')?.addEventListener('click', () => performImport(true));
+  document.getElementById('import-replace-btn')?.addEventListener('click', () => performImport(false));
+  document.getElementById('import-cancel-btn')?.addEventListener('click', closeImportModal);
   els.endpoint().addEventListener('blur', () => {
     if (!els.name().value.trim() && els.endpoint().value.trim()) {
       els.name().value = suggestPatternName(els.endpoint().value.trim());
