@@ -3,19 +3,14 @@
  */
 export {};
 
+import { parsePatterns, type ApiPattern } from './config';
+
 type StreamInfo = {
   url: string;
   type: string;
   pageUrl?: string;
   pageTitle?: string;
   timestamp?: number;
-};
-
-type ApiPattern = {
-  id: string;
-  name: string;
-  endpointTemplate: string;
-  method?: string;
 };
 
 let currentTabId: number | null = null;
@@ -261,23 +256,6 @@ function showNotification(message: string, type: 'info' | 'success' | 'error' = 
   setTimeout(() => {
     notification.remove();
   }, 3000);
-}
-
-function parsePatterns(raw: string): ApiPattern[] {
-  try {
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed
-      .map((p) => ({
-        id: p.id || crypto.randomUUID(),
-        name: p.name || 'Pattern',
-        endpointTemplate: p.endpointTemplate,
-        method: p.method
-      }))
-      .filter((p) => typeof p.endpointTemplate === 'string' && p.endpointTemplate.length > 0);
-  } catch (e) {
-    return [];
-  }
 }
 
 // Initialize when popup opens

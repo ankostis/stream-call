@@ -5,6 +5,9 @@
  */
 export {};
 
+import { applyTemplate } from './template';
+import { parsePatterns, validatePatterns, type ApiPattern } from './config';
+
 // Limit streams per tab to prevent unbounded memory growth
 const MAX_STREAMS_PER_TAB = 200;
 
@@ -22,16 +25,6 @@ type RuntimeMessage =
   | { type: 'CALL_API'; streamUrl: string; pageUrl?: string; pageTitle?: string; patternId?: string }
   | { type: 'CLEAR_STREAMS'; tabId: number }
   | { type: 'PING' };
-
-type ApiPattern = {
-  id: string;
-  name: string;
-  endpointTemplate: string;
-  method?: string;
-  headers?: Record<string, string>;
-  bodyTemplate?: string;
-  includePageInfo?: boolean;
-};
 
 const tabStreams = new Map<number, StreamInfo[]>();
 
@@ -224,29 +217,6 @@ function buildContext({
     pageTitle,
     timestamp: Date.now()
   };
-}
-
-import { applyTemplate } from './template';
-
-function parsePatterns(raw: string): ApiPattern[] {
-  try {
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed
-      .map((p) => ({
-        id: p.id || crypto.randomUUID(),
-        name: p.name || 'Pattern',
-        endpointTemplate: p.endpointTemplate,
-        method: p.method,
-        headers: p.headers,
-        bodyTemplate: p.bodyTemplate,
-        includePageInfo: p.includePageInfo
-      }))
-      .filter((p) => typeof p.endpointTemplate === 'string' && p.endpointTemplate.length > 0);
-  } catch (e) {
-    console.warn('Invalid apiPatterns JSON', e);
-    return [];
-  }
 }
 
 console.log('stream-call: background service worker loaded');

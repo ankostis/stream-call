@@ -3,6 +3,9 @@
  */
 export {};
 
+import { applyTemplate } from './template';
+import { validatePatterns } from './config';
+
 const DEFAULT_CONFIG = {
   apiPatterns: JSON.stringify(
     [
@@ -190,52 +193,3 @@ function initialize() {
 if (typeof document !== 'undefined') {
   document.addEventListener('DOMContentLoaded', initialize);
 }
-
-function validatePatterns(raw: string): {
-  valid: boolean;
-  parsed: Array<{
-    id: string;
-    name: string;
-    endpointTemplate: string;
-    method?: string;
-    headers?: Record<string, string>;
-    bodyTemplate?: string;
-    includePageInfo?: boolean;
-  }>;
-  formatted: string;
-  errorMessage?: string;
-} {
-  try {
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) {
-      return { valid: false, parsed: [], formatted: '[]', errorMessage: 'API patterns must be a JSON array.' };
-    }
-
-    const cleaned = parsed
-      .map((p: any, index: number) => {
-        if (!p || typeof p.endpointTemplate !== 'string' || !p.endpointTemplate.trim()) {
-          throw new Error(`Pattern ${index + 1} is missing an endpointTemplate.`);
-        }
-        return {
-          id: p.id || crypto.randomUUID(),
-          name: p.name || `Pattern ${index + 1}`,
-          endpointTemplate: p.endpointTemplate,
-          method: p.method || 'POST',
-          headers: p.headers,
-          bodyTemplate: p.bodyTemplate,
-          includePageInfo: p.includePageInfo ?? true
-        };
-      })
-      .filter(Boolean);
-
-    return {
-      valid: true,
-      parsed: cleaned,
-      formatted: JSON.stringify(cleaned, null, 2)
-    };
-  } catch (e: any) {
-    return { valid: false, parsed: [], formatted: '[]', errorMessage: e?.message };
-  }
-}
-
-import { applyTemplate } from './template';
