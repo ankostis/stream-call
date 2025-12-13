@@ -6,7 +6,7 @@
 export {};
 
 import { applyTemplate } from './template';
-import { parseEndpoints } from './config';
+import { parseEndpoints } from './endpoint';
 
 // Limit streams per tab to prevent unbounded memory growth
 const MAX_STREAMS_PER_TAB = 200;

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert';
-import { parseEndpoints, validateEndpoints, suggestEndpointName } from '../../src/config';
+import { parseEndpoints, validateEndpoints, suggestEndpointName } from '../../src/endpoint';
 
 test('suggestEndpointName: extracts hostname from URL', () => {
   assert.strictEqual(suggestEndpointName('https://api.example.com/stream'), 'api.example.com');

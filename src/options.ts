@@ -1,7 +1,7 @@
 export {};
 
 import { applyTemplate } from './template';
-import { ApiEndpoint, suggestEndpointName, validateEndpoints } from './config';
+import { ApiEndpoint, suggestEndpointName, validateEndpoints } from './endpoint';
 
 const DEFAULT_CONFIG = {
   apiEndpoints: JSON.stringify(

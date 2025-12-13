@@ -3,7 +3,7 @@
  */
 export {};
 
-import { parseEndpoints, type ApiEndpoint } from './config';
+import { parseEndpoints, type ApiEndpoint } from './endpoint';
 
 type StreamInfo = {
   url: string;
