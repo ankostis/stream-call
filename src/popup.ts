@@ -21,6 +21,9 @@ type ApiPattern = {
 let currentTabId: number | null = null;
 let apiPatterns: ApiPattern[] = [];
 
+// Cache patterns in memory for the popup's lifetime to avoid repeated storage reads
+let patternsCached = false;
+
 /**
  * Initialize popup
  */
@@ -42,9 +45,13 @@ async function initialize() {
 }
 
 async function loadPatterns() {
+  // Return cached patterns if available (avoids repeated storage reads during popup lifetime)
+  if (patternsCached) return;
+
   const defaults = { apiPatterns: '[]' } as const;
   const stored = (await browser.storage.sync.get(defaults)) as typeof defaults;
   apiPatterns = parsePatterns(stored.apiPatterns);
+  patternsCached = true;
 }
 
 /**
