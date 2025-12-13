@@ -11,15 +11,6 @@ import { debounce } from './debounce';
 
   const detectedStreams = new Set<string>();
 
-  // Common streaming patterns to detect
-  const STREAM_PATTERNS: RegExp[] = [
-    // Direct stream URLs
-    // HLS/DASH streams
-    // Radio stream protocols
-    // Icecast/Shoutcast
-  ];
-    // Detection patterns centralized in detect.ts
-
   const getUrlString = (input: RequestInfo | URL): string | null => {
     if (typeof input === 'string') return input;
     if (input instanceof URL) return input.href;

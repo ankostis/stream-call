@@ -6,7 +6,7 @@
 export {};
 
 import { applyTemplate } from './template';
-import { parsePatterns, validatePatterns, type ApiPattern } from './config';
+import { parsePatterns } from './config';
 
 // Limit streams per tab to prevent unbounded memory growth
 const MAX_STREAMS_PER_TAB = 200;
@@ -169,7 +169,7 @@ async function callStreamAPI({
     }
 
     const requestContext = buildContext({ streamUrl, pageUrl, pageTitle });
-    
+
     // Separate template error handling for actionable error messages
     let endpoint: string;
     let bodyJson: string;
