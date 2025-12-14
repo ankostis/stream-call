@@ -45,45 +45,162 @@
       const ctx = canvas.getContext('2d');
       const center = size / 2;
 
-      // Clear canvas
+      // Transparent background
       ctx.clearRect(0, 0, size, size);
 
-      // Create gradient background
-      const gradient = ctx.createLinearGradient(0, 0, size, size);
-      gradient.addColorStop(0, '#667eea');
-      gradient.addColorStop(1, '#764ba2');
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, size, size);
+      // New concept: treble clef escaping from a realistic mobile phone
 
-      // Draw radio wave circles
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-      ctx.lineWidth = size * 0.04;
+      // Mobile phone dimensions (centered, larger to fill space)
+      const phoneWidth = size * 0.42;
+      const phoneHeight = size * 0.72;
+      const phoneX = center - phoneWidth / 2;
+      const phoneY = center - phoneHeight / 2 + size * 0.08;
+      const phoneRadius = size * 0.04;
 
-      for (let i = 1; i <= 3; i++) {
-        ctx.beginPath();
-        ctx.arc(center, center, (size * 0.15) * i, 0, Math.PI * 2);
-        ctx.stroke();
-      }
+      // Draw mobile phone with realistic details
+      // Phone shadow
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+      ctx.fillRect(phoneX + size * 0.01, phoneY + size * 0.01, phoneWidth, phoneHeight);
 
-      // Draw center dot
-      ctx.fillStyle = 'white';
+      // Phone body (darker edge)
+      ctx.fillStyle = '#2a2a2a';
+      ctx.strokeStyle = '#1a1a1a';
+      ctx.lineWidth = size * 0.01;
+
+      // Rounded rectangle for phone
       ctx.beginPath();
-      ctx.arc(center, center, size * 0.08, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Draw play icon
-      ctx.fillStyle = 'white';
-      const triangleSize = size * 0.15;
-      ctx.beginPath();
-      ctx.moveTo(center - triangleSize/2, center - triangleSize);
-      ctx.lineTo(center - triangleSize/2, center + triangleSize);
-      ctx.lineTo(center + triangleSize, center);
+      ctx.moveTo(phoneX + phoneRadius, phoneY);
+      ctx.lineTo(phoneX + phoneWidth - phoneRadius, phoneY);
+      ctx.quadraticCurveTo(phoneX + phoneWidth, phoneY, phoneX + phoneWidth, phoneY + phoneRadius);
+      ctx.lineTo(phoneX + phoneWidth, phoneY + phoneHeight - phoneRadius);
+      ctx.quadraticCurveTo(phoneX + phoneWidth, phoneY + phoneHeight, phoneX + phoneWidth - phoneRadius, phoneY + phoneHeight);
+      ctx.lineTo(phoneX + phoneRadius, phoneY + phoneHeight);
+      ctx.quadraticCurveTo(phoneX, phoneY + phoneHeight, phoneX, phoneY + phoneHeight - phoneRadius);
+      ctx.lineTo(phoneX, phoneY + phoneRadius);
+      ctx.quadraticCurveTo(phoneX, phoneY, phoneX + phoneRadius, phoneY);
       ctx.closePath();
       ctx.fill();
+      ctx.stroke();
+
+      // Phone bezel highlight
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+      ctx.lineWidth = size * 0.005;
+      ctx.stroke();
+
+      // Phone screen with gradient
+      const screenInset = size * 0.02;
+      const gradient = ctx.createLinearGradient(
+        phoneX + screenInset, phoneY + screenInset,
+        phoneX + screenInset, phoneY + phoneHeight - screenInset * 2.5
+      );
+      gradient.addColorStop(0, '#5aa9e6');
+      gradient.addColorStop(1, '#3a7ca5');
+      ctx.fillStyle = gradient;
+
+      const screenRadius = size * 0.025;
+      ctx.beginPath();
+      ctx.moveTo(phoneX + screenInset + screenRadius, phoneY + screenInset);
+      ctx.lineTo(phoneX + phoneWidth - screenInset - screenRadius, phoneY + screenInset);
+      ctx.quadraticCurveTo(phoneX + phoneWidth - screenInset, phoneY + screenInset,
+                          phoneX + phoneWidth - screenInset, phoneY + screenInset + screenRadius);
+      ctx.lineTo(phoneX + phoneWidth - screenInset, phoneY + phoneHeight - screenInset * 2.5 - screenRadius);
+      ctx.quadraticCurveTo(phoneX + phoneWidth - screenInset, phoneY + phoneHeight - screenInset * 2.5,
+                          phoneX + phoneWidth - screenInset - screenRadius, phoneY + phoneHeight - screenInset * 2.5);
+      ctx.lineTo(phoneX + screenInset + screenRadius, phoneY + phoneHeight - screenInset * 2.5);
+      ctx.quadraticCurveTo(phoneX + screenInset, phoneY + phoneHeight - screenInset * 2.5,
+                          phoneX + screenInset, phoneY + phoneHeight - screenInset * 2.5 - screenRadius);
+      ctx.lineTo(phoneX + screenInset, phoneY + screenInset + screenRadius);
+      ctx.quadraticCurveTo(phoneX + screenInset, phoneY + screenInset,
+                          phoneX + screenInset + screenRadius, phoneY + screenInset);
+      ctx.closePath();
+      ctx.fill();
+
+      // Screen gloss effect
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+      ctx.fillRect(
+        phoneX + screenInset,
+        phoneY + screenInset,
+        phoneWidth - screenInset * 2,
+        (phoneHeight - screenInset * 2.5) * 0.3
+      );
+
+      // Home button with realistic details
+      const buttonY = phoneY + phoneHeight - screenInset * 1.5;
+      ctx.fillStyle = '#3a3a3a';
+      ctx.beginPath();
+      ctx.arc(phoneX + phoneWidth / 2, buttonY, size * 0.018, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = '#555555';
+      ctx.lineWidth = size * 0.003;
+      ctx.beginPath();
+      ctx.arc(phoneX + phoneWidth / 2, buttonY, size * 0.018, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Camera and speaker
+      ctx.fillStyle = '#1a1a1a';
+      ctx.beginPath();
+      ctx.arc(phoneX + phoneWidth * 0.3, phoneY + screenInset * 0.5, size * 0.008, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillRect(phoneX + phoneWidth * 0.4, phoneY + screenInset * 0.4, phoneWidth * 0.2, size * 0.006);
+
+      // Single large treble clef (G/sol) positioned top-right
+      const clefX = phoneX + phoneWidth + size * 0.08;
+      const clefY = phoneY - size * 0.05;
+      const clefSize = phoneHeight * 0.85; // Comparable to phone height
+
+      ctx.save();
+      ctx.translate(clefX, clefY);
+      ctx.rotate(-8 * Math.PI / 180);
+
+      // Draw detailed treble clef
+      ctx.lineWidth = clefSize * 0.05;
+      ctx.strokeStyle = '#4CAF50';
+      ctx.fillStyle = '#4CAF50';
+
+      // Main spiral starting from G line
+      ctx.beginPath();
+      ctx.arc(0, clefSize * 0.25, clefSize * 0.12, Math.PI * 1.5, Math.PI * 3.2, false);
+      ctx.stroke();
+
+      // Outer loop
+      ctx.beginPath();
+      ctx.arc(0, clefSize * 0.25, clefSize * 0.22, Math.PI * 0.8, Math.PI * 2.3, false);
+      ctx.stroke();
+
+      // Vertical stem going up
+      ctx.beginPath();
+      ctx.moveTo(clefSize * 0.22, clefSize * 0.25);
+      ctx.lineTo(clefSize * 0.22, -clefSize * 0.35);
+      ctx.quadraticCurveTo(clefSize * 0.22, -clefSize * 0.45, clefSize * 0.12, -clefSize * 0.48);
+      ctx.quadraticCurveTo(0, -clefSize * 0.47, -clefSize * 0.05, -clefSize * 0.40);
+      ctx.stroke();
+
+      // Stem going down and curling
+      ctx.beginPath();
+      ctx.moveTo(0, clefSize * 0.25);
+      ctx.lineTo(0, clefSize * 0.60);
+      ctx.quadraticCurveTo(0, clefSize * 0.70, -clefSize * 0.10, clefSize * 0.73);
+      ctx.quadraticCurveTo(-clefSize * 0.20, clefSize * 0.72, -clefSize * 0.22, clefSize * 0.62);
+      ctx.quadraticCurveTo(-clefSize * 0.20, clefSize * 0.52, -clefSize * 0.10, clefSize * 0.50);
+      ctx.stroke();
+
+      // Inner curl at bottom
+      ctx.beginPath();
+      ctx.arc(-clefSize * 0.10, clefSize * 0.60, clefSize * 0.08, Math.PI * 0.3, Math.PI * 1.5, false);
+      ctx.stroke();
+
+      // Central dot on G line
+      ctx.beginPath();
+      ctx.arc(-clefSize * 0.03, clefSize * 0.25, clefSize * 0.045, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
     }
 
     function generateIcons() {
-      const sizes = [16, 32, 48, 128];
+      const sizes = [16, 32, 48, 96, 128];
       const container = document.getElementById('canvases');
       container.innerHTML = '';
 

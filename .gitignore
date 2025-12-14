@@ -3,9 +3,6 @@
 *.zip
 web-ext-artifacts/
 
-# Icons (generated)
-icons/*.png
-
 # Development
 .DS_Store
 .vscode/
