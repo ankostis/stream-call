@@ -9,7 +9,8 @@
     "copy:static": "mkdir -p dist && cp popup.html options.html dist/",
     "build": "npm run clean && npm run build:ts && npm run copy:static",
     "test": "node --test --import tsx tests/unit/*.test.ts",
-    "test:integration": "node tests/integration/run.js"
+    "test:integration": "node tests/integration/run.js",
+    "test:integration:options": "node tests/integration/options-crud.js"
   },
   "devDependencies": {
     "@types/chai": "^4.3.11",
@@ -18,6 +19,7 @@
     "@types/node": "^22.9.0",
     "chai": "^4.3.10",
     "jsdom": "^27.3.0",
+    "puppeteer": "^24.33.0",
     "tsx": "^4.7.2",
     "typescript": "^5.4.0",
     "web-ext": "^7.7.0"
