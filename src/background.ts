@@ -52,13 +52,17 @@ browser.webRequest.onSendHeaders.addListener(
 browser.runtime.onMessage.addListener((message: RuntimeMessage, sender) => {
   return (async () => {
     if (message.type === 'STREAM_DETECTED') {
-    const tabId = sender.tab?.id;
-    if (tabId === undefined) {
+      const tabId = sender.tab?.id;
+      if (tabId === undefined) {
         return { success: false, error: 'No tab context for stream detection.' };
-      tabStreams.set(tabId, []);
-    }
+      }
 
-    const streams = tabStreams.get(tabId)!;
+      // Initialize streams array for this tab if not exists
+      if (!tabStreams.has(tabId)) {
+        tabStreams.set(tabId, []);
+      }
+
+      const streams = tabStreams.get(tabId)!;
     const streamInfo: StreamInfo = {
       url: message.url,
       type: message.streamType,
@@ -78,7 +82,7 @@ browser.runtime.onMessage.addListener((message: RuntimeMessage, sender) => {
       updateBadge(tabId, streams.length);
     }
 
-    return Promise.resolve({ success: true });
+      return Promise.resolve({ success: true });
     }
 
     if (message.type === 'GET_STREAMS') {

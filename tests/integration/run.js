@@ -35,6 +35,7 @@ async function run() {
   await new Promise((resolveServer) => server.listen(port, resolveServer));
 
   const args = [
+    'web-ext',
     'run',
     '--source-dir', '.',
     '--start-url', `http://localhost:${port}/tests/test-page.html`,
@@ -42,7 +43,7 @@ async function run() {
     '--no-input',
   ];
 
-  const proc = spawn('web-ext', args, { cwd });
+  const proc = spawn('npx', args, { cwd });
 
   let stdout = '';
   let stderr = '';

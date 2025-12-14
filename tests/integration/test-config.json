@@ -1,0 +1,12 @@
+{
+  "apiEndpoints": [
+    {
+      "name": "httpbin Test",
+      "endpointTemplate": "https://httpbin.org/anything",
+      "method": "POST",
+      "bodyTemplate": "{\"streamUrl\":\"{{streamUrl}}\",\"pageUrl\":\"{{pageUrl}}\",\"pageTitle\":\"{{pageTitle}}\",\"timestamp\":\"{{timestamp}}\",\"test\":\"stream-call-integration\"}",
+      "includeCookies": true,
+      "includePageHeaders": true
+    }
+  ]
+}
