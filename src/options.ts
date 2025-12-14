@@ -1,6 +1,9 @@
 export {};
 
 import { applyTemplate } from './template';
+import { Logger } from './logger';
+import { StatusBar } from './status-bar';
+import { createLogAppender, createStatusRenderer } from './logging-ui';
 import { ApiEndpoint, suggestEndpointName, validateEndpoints } from './endpoint';
 
 const DEFAULT_CONFIG = {
@@ -43,6 +46,9 @@ let pendingImportEndpoints: ApiEndpoint[] = [];
 
 const els = {
   alert: () => document.getElementById('alert'),
+  statusBar: () => document.getElementById('status-bar') as HTMLDivElement,
+  statusIcon: () => document.getElementById('status-icon') as HTMLSpanElement,
+  statusMsg: () => document.getElementById('status-message') as HTMLSpanElement,
   endpointsList: () => document.getElementById('endpoints-list') as HTMLDivElement,
   endpointsEmpty: () => document.getElementById('endpoints-empty') as HTMLDivElement,
   editorCard: () => document.getElementById('editor-card') as HTMLDivElement,
@@ -54,22 +60,30 @@ const els = {
   includePage: () => document.getElementById('endpoint-include-page') as HTMLInputElement,
   headersRows: () => document.getElementById('headers-rows') as HTMLDivElement,
   preview: () => document.getElementById('preview') as HTMLDivElement
+  logViewer: () => document.getElementById('log-viewer') as HTMLDivElement,
+  logClear: () => document.getElementById('log-clear') as HTMLButtonElement,
+  logExport: () => document.getElementById('log-export') as HTMLButtonElement
 };
 
-function showAlert(message: string, type: 'info' | 'success' | 'error' = 'info') {
-  const alert = els.alert();
-  if (!alert) return;
+// Logging utilities
+const logger = new Logger();
+const statusBar = new StatusBar();
+statusBar.setLogger(logger);
 
-  alert.textContent = message;
-  alert.className = `alert ${type}`;
-  alert.style.display = 'block';
+// UI helpers
+const renderStatus = createStatusRenderer({
+  bar: els.statusBar(),
+  icon: els.statusIcon(),
+  message: els.statusMsg()
+});
+statusBar.subscribe((current) => renderStatus(current ? { level: current.level, message: current.message } : null));
 
-  if (type === 'success') {
-    setTimeout(() => {
-      alert.style.display = 'none';
-    }, 5000);
-  }
-}
+const appendLog = createLogAppender(els.logViewer());
+logger.subscribe((entries) => {
+  entries.slice(-1).forEach((e) => appendLog(e.level, e.category as any, e.message));
+});
+
+// Remove showAlert indirection: callers should use statusBar/logger directly.
 
 function addHeaderRow(key = '', value = '') {
   const row = document.createElement('div');
@@ -117,7 +131,7 @@ function loadSettings() {
     })
     .catch((error) => {
       console.error('Failed to load settings:', error);
-      showAlert('Failed to load settings', 'error');
+      statusBar.post('storage-error', 'error', 'Failed to load settings');
     });
 }
 
@@ -215,7 +229,8 @@ function buildEndpointFromForm(): ApiEndpoint | null {
   const includePageInfo = els.includePage().checked;
 
   if (!endpoint) {
-    showAlert('Endpoint URL is required', 'error');
+    statusBar.post('form-error', 'error', 'Endpoint URL is required');
+    logger.error('form-input', 'Endpoint URL missing');
     return null;
   }
 
@@ -259,7 +274,8 @@ function saveEndpoint() {
 
   const validated = validateEndpoints(JSON.stringify(updated));
   if (!validated.valid) {
-    showAlert(validated.errorMessage || 'Invalid API endpoint', 'error');
+    statusBar.post('endpoint-error', 'error', validated.errorMessage || 'Invalid API endpoint');
+    logger.error('endpoint-parse', validated.errorMessage || 'Invalid API endpoint');
     return;
   }
 
@@ -270,11 +286,13 @@ function saveEndpoint() {
     .then(() => {
       renderList();
       closeEditor();
-      showAlert('✅ API endpoint saved', 'success');
+      statusBar.flash('info', '✅ API endpoint saved', 3000, 'last-action');
+      logger.info('endpoint-list', 'API endpoint saved');
     })
     .catch((error) => {
       console.error('Failed to save API endpoint:', error);
-      showAlert('Failed to save API endpoint', 'error');
+      statusBar.post('storage-error', 'error', 'Failed to save API endpoint');
+      logger.error('storage', `Failed to save API endpoint: ${error?.message ?? 'Unknown'}`);
     });
 }
 
@@ -289,7 +307,8 @@ function deleteEndpoint(index: number) {
   const updated = endpoints.filter((_, i) => i !== index);
   const validated = validateEndpoints(JSON.stringify(updated));
   if (!validated.valid) {
-    showAlert(validated.errorMessage || 'Failed to delete API endpoint', 'error');
+    statusBar.post('endpoint-error', 'error', validated.errorMessage || 'Failed to delete API endpoint');
+    logger.error('endpoint-parse', validated.errorMessage || 'Failed to delete API endpoint');
     return;
   }
 
@@ -300,11 +319,11 @@ function deleteEndpoint(index: number) {
     .then(() => {
       renderList();
       closeEditor();
-      showAlert('API endpoint deleted', 'success');
+      statusBar.flash('info', 'API endpoint deleted', 3000, 'last-action');
     })
     .catch((error) => {
       console.error('Failed to delete API endpoint:', error);
-      showAlert('Failed to delete API endpoint', 'error');
+      statusBar.post('storage-error', 'error', 'Failed to delete API endpoint');
     });
 }
 
@@ -337,20 +356,23 @@ function previewEndpoint() {
       null,
       2
     )}\n\nBody:\n${body}`;
-    showAlert('Preview generated', 'info');
+    statusBar.flash('info', 'Preview generated', 2000, 'stat');
+    logger.info('api-test', 'Preview generated');
   } catch (error: any) {
-    showAlert(`Interpolation error: ${error?.message ?? 'Invalid placeholder'}`, 'error');
+    statusBar.post('interpolation-error', 'error', `Interpolation error: ${error?.message ?? 'Invalid placeholder'}`);
+    logger.error('api-test', `Interpolation error: ${error?.message ?? 'Invalid placeholder'}`);
   }
 }
 
 function testAPI() {
   if (endpoints.length === 0) {
-    showAlert('Please add at least one API endpoint first', 'error');
+    statusBar.post('endpoint-error', 'error', 'Please add at least one API endpoint first');
+    logger.warn('endpoint-list', 'No endpoints to test');
     return;
   }
 
   const firstEndpoint = endpoints[0];
-  showAlert('Testing API connection...', 'info');
+  statusBar.flash('info', 'Testing API connection...', 2000, 'stat');
 
   const context = {
     streamUrl: 'https://example.com/test-stream.m3u8',
@@ -373,10 +395,8 @@ function testAPI() {
         );
   } catch (templateError: any) {
     const availableFields = Object.keys(context).filter((k) => context[k] !== undefined).join(', ');
-    showAlert(
-      `❌ Interpolation error: ${templateError?.message ?? 'Invalid placeholder'}. Fields: ${availableFields}.`,
-      'error'
-    );
+    statusBar.post('interpolation-error', 'error', `❌ Interpolation error: ${templateError?.message ?? 'Invalid placeholder'}. Fields: ${availableFields}.`);
+    logger.error('api-test', `Template error: ${templateError?.message ?? 'Invalid placeholder'}; available: ${availableFields}`);
     return;
   }
 
@@ -396,14 +416,14 @@ function testAPI() {
   })
     .then((response) => {
       if (response.ok) {
-        showAlert(`✅ API test successful! Status: ${response.status} ${response.statusText}`, 'success');
+        statusBar.flash('info', `✅ API test successful! Status: ${response.status} ${response.statusText}`, 3000, 'last-action');
       } else {
-        showAlert(`⚠️ API returned status ${response.status}: ${response.statusText}`, 'error');
+        statusBar.post('interpolation-error', 'warn', `⚠️ API returned status ${response.status}: ${response.statusText}`);
       }
     })
     .catch((error) => {
       console.error('API test error:', error);
-      showAlert(`❌ API test failed: ${error?.message ?? 'Unknown error'}`, 'error');
+      statusBar.post('interpolation-error', 'error', `❌ API test failed: ${error?.message ?? 'Unknown error'}`);
     });
 }
 
@@ -411,7 +431,8 @@ function resetSettings() {
   if (!confirm('Reset API endpoints to defaults?')) return;
   const validated = validateEndpoints(DEFAULT_CONFIG.apiEndpoints);
   if (!validated.valid) {
-    showAlert('Default config is invalid', 'error');
+    statusBar.post('endpoint-error', 'error', 'Default config is invalid');
+    logger.error('endpoint-parse', 'Default config invalid');
     return;
   }
   endpoints = validated.parsed;
@@ -420,17 +441,18 @@ function resetSettings() {
     .then(() => {
       renderList();
       closeEditor();
-      showAlert('Defaults restored. Ready to save.', 'info');
+      statusBar.flash('info', 'Defaults restored. Ready to save.', 2000, 'stat');
     })
     .catch((error) => {
       console.error('Failed to reset settings:', error);
-      showAlert('Failed to reset settings', 'error');
+      statusBar.post('storage-error', 'error', 'Failed to reset settings');
     });
 }
 
 function exportEndpoints() {
   if (endpoints.length === 0) {
-    showAlert('No API endpoints to export', 'error');
+    statusBar.post('endpoint-error', 'warn', 'No API endpoints to export');
+    logger.warn('import-export', 'Export skipped: no endpoints');
     return;
   }
 
@@ -444,7 +466,7 @@ function exportEndpoints() {
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
-  showAlert('✅ API endpoints exported', 'success');
+  statusBar.flash('info', '✅ API endpoints exported', 3000, 'last-action');
 }
 
 function handleFileSelect(e: Event) {
@@ -460,14 +482,14 @@ function handleFileSelect(e: Event) {
       const validated = validateEndpoints(JSON.stringify(parsed));
 
       if (!validated.valid) {
-        showAlert(`Invalid file: ${validated.errorMessage}`, 'error');
+        statusBar.post('endpoint-error', 'error', `Invalid file: ${validated.errorMessage}`);
         return;
       }
 
       pendingImportEndpoints = validated.parsed;
       showImportModal();
     } catch (error: any) {
-      showAlert(`Failed to read file: ${error?.message ?? 'Invalid JSON'}`, 'error');
+      statusBar.post('endpoint-error', 'error', `Failed to read file: ${error?.message ?? 'Invalid JSON'}`);
     }
   };
   reader.readAsText(file);
@@ -511,7 +533,7 @@ function performImport(merge: boolean) {
 
   const validated = validateEndpoints(JSON.stringify(updated));
   if (!validated.valid) {
-    showAlert(`Invalid endpoints import: ${validated.errorMessage}`, 'error');
+    statusBar.post('endpoint-error', 'error', `Invalid endpoints import: ${validated.errorMessage}`);
     return;
   }
 
@@ -522,11 +544,11 @@ function performImport(merge: boolean) {
     .then(() => {
       renderList();
       closeImportModal();
-      showAlert(merge ? '✅ Endpoints merged' : '✅ Endpoints replaced', 'success');
+      statusBar.flash('info', merge ? '✅ Endpoints merged' : '✅ Endpoints replaced', 3000, 'last-action');
     })
     .catch((error) => {
       console.error('Failed to import endpoints:', error);
-      showAlert('Failed to import endpoints', 'error');
+      statusBar.post('storage-error', 'error', 'Failed to import endpoints');
     });
 }
 
@@ -557,6 +579,25 @@ function initialize() {
   loadSettings();
   wireEvents();
   setHeadersRows();
+  // Wire log viewer controls
+  els.logClear()?.addEventListener('click', () => {
+    logger.clear();
+    const viewer = els.logViewer();
+    viewer.innerHTML = '<div class="log-empty">No logs yet</div>';
+  });
+
+  els.logExport()?.addEventListener('click', () => {
+    const json = logger.exportJSON();
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `stream-call-logs-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  });
 }
 
 if (typeof document !== 'undefined') {

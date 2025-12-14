@@ -375,7 +375,15 @@
   </div>
 
   <div class="container">
-    <div id="alert" class="alert"></div>
+    <div id="alert" class="alert" style="display:none"></div>
+
+    <!-- Status Bar -->
+    <div id="status-bar" class="card" style="display:none; border-left: 4px solid #667eea;">
+      <div class="status-content" style="display:flex; align-items:center; gap:8px;">
+        <span id="status-icon" aria-hidden="true">ℹ️</span>
+        <span id="status-message"></span>
+      </div>
+    </div>
 
     <div class="card">
       <div class="card-header">
@@ -396,6 +404,20 @@
       </div>
 
       <div id="endpoints-list" class="endpoints-list"></div>
+    </div>
+
+    <!-- Activity Log -->
+    <div class="card" id="log-card">
+      <div class="card-header">
+        <h2 class="card-title">Activity Log</h2>
+        <div class="card-actions">
+          <button id="log-clear" class="btn-secondary">🗑 Clear</button>
+          <button id="log-export" class="btn-secondary">⬇ Export</button>
+        </div>
+      </div>
+      <div id="log-viewer" class="preview" style="max-height:300px; overflow:auto;">
+        <div class="log-empty">No logs yet</div>
+      </div>
     </div>
 
     <div class="card" id="editor-card" style="display: none;">
