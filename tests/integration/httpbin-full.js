@@ -24,6 +24,7 @@ async function run() {
     '--start-url', TEST_URL,
     '--no-input',
     '--args=--remote-debugging-port=9222',
+    '--args=--remote-allow-origins=http://127.0.0.1:9222',
   ], { cwd });
 
   let stdout = '';
@@ -42,6 +43,31 @@ async function run() {
 
   let browser;
   try {
+    // Test CDP endpoint availability first
+    console.log('🔍 Checking CDP endpoint at http://127.0.0.1:9222...');
+    try {
+      const http = require('http');
+      const testReq = await new Promise((resolve, reject) => {
+        const req = http.get('http://127.0.0.1:9222/json/version', (res) => {
+          let data = '';
+          res.on('data', chunk => data += chunk);
+          res.on('end', () => resolve({ status: res.statusCode, data }));
+        });
+        req.on('error', reject);
+        req.setTimeout(5000, () => {
+          req.destroy();
+          reject(new Error('Timeout'));
+        });
+      });
+      console.log(`   CDP endpoint status: ${testReq.status}`);
+      if (testReq.status === 200) {
+        console.log(`   CDP available: ${testReq.data.substring(0, 100)}`);
+      }
+    } catch (err) {
+      console.log(`   ⚠️  CDP endpoint not responding: ${err.message}`);
+      console.log(`   Firefox may not have --remote-debugging-port enabled`);
+    }
+
     // Connect Puppeteer to Firefox (requires CDP enabled)
     console.log('🔗 Connecting Puppeteer to Firefox...');
     browser = await puppeteer.connect({
