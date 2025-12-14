@@ -11,34 +11,43 @@
 
 **Key architectural point**: Logger and StatusBar are designed as reusable UI abstractions to support both desktop (options page) and future mobile (in-page panel) contexts.
 
+Recent updates (Dec 2025):
+- Logger categories are now free-form strings (no predefined list).
+- StatusBar slots are now free-form strings (no predefined list or mapping).
+- StatusBar methods were renamed: `set()` → `post()`, `action()` → `flash()`.
+- Transient stacking: later flashes don’t discard earlier; when the latest expires, the previous transient or persistent message is restored.
+- Level continues to control visibility priority (error > warn > info) for both persistent and transient messages.
+
 ### Logger Utility (`src/logger.ts`)
 - Simple class with level methods: `error()`, `warn()`, `info()`, `debug()`
-- Each entry: timestamp, level, category, message
+- Each entry: timestamp, level, category (free-form string), message
 - In-memory circular buffer (max 100 entries to avoid memory bloat)
 - Export to text/JSON for user diagnostics
 - Filter by level and category in UI
 
 ### Log Categories (Levels: error, warn, info, debug)
-- `pattern-parsing`: JSON deserialization & schema validation (storage load, file import)
-- `pattern-list`: Add/delete/edit list operations
-- `storage`: Load/save to `browser.storage.sync`
-- `import-export`: File import/export operations
-- `api-test`: Test API button actions
-- `form-input`: User input validation in the form UI (real-time, before-save)
+- Categories are free-form; use descriptive, consistent strings.
+- Suggested conventions:
+  - `endpoint-parse`: JSON deserialization & schema validation (storage load, file import)
+  - `endpoint-list`: Add/delete/edit list operations
+  - `storage`: Load/save to `browser.storage.sync`
+  - `import-export`: File import/export operations
+  - `api-test`: Test API button actions
+  - `form-input`: User input validation in the form UI (real-time, before-save)
 
 ### Status Bar
 - UI element below the log viewer showing current action/error state
 - Two message types:
-  - **Persistent**: Blocking errors or warnings on form/pattern (sticky until cleared by user action)
+  - **Persistent**: Blocking errors or warnings on form/endpoint (sticky until cleared by user action)
   - **Transient**: Action confirmations, stats (auto-dismiss after timeout, e.g., 3s)
 - Messages rendered with smileys & markdown
-- Organized by **slots** (categories for persistent messages):
+- Organized by **slots** (free-form strings for persistent messages). Suggested slots:
   - `form-error`: Form input validation error (blocks save)
-  - `template-error`: Pattern schema/uniqueness error (duplicate name, missing endpoint)
+  - `endpoint-error`: Endpoint schema/uniqueness error (duplicate name, missing endpoint)
   - `storage-error`: Storage I/O error (load/save to sync)
   - `interpolation-error`: Template interpolation error (missing placeholder in endpoint/body)
-  - `last-action`: Info-level action (e.g., "✅ Pattern saved", "✅ Imported 3 patterns", "📋 URL copied")
-  - `stat`: Statistics/counts (e.g., "📊 3 patterns loaded", "📊 Export ready")
+  - `last-action`: Info-level action (e.g., "✅ Endpoint saved", "✅ Imported 3 endpoints", "📋 URL copied")
+  - `stat`: Statistics/counts (e.g., "📊 3 endpoints loaded", "📊 Export ready")
   - Debug-level messages do **not** appear in status bar (only audit log)
 - **Overlay priority**:
   - Highest level wins (error > warn > info)
@@ -70,7 +79,7 @@
 
 ```typescript
 export type StatusLevel = 'error' | 'warn' | 'info';
-export type StatusSlot = 'form-error' | 'template-error' | 'storage-error' | 'interpolation-error' | 'last-action' | 'stat';
+export type StatusSlot = string; // free-form
 
 export interface StatusMessage {
   slot: StatusSlot;
@@ -83,20 +92,20 @@ export interface StatusMessage {
 
 export class StatusBar {
   private persistent: Map<StatusSlot, StatusMessage> = new Map(); // One per slot
-  private transient: StatusMessage | null = null; // Latest transient
+  private transientStack: StatusMessage[] = []; // Stacked transients
   private subscribers: Set<(msg: StatusMessage | null) => void> = new Set();
-  private transientTimer: NodeJS.Timeout | null = null;
+  private timers: Map<StatusMessage, NodeJS.Timeout> = new Map();
 
   // Persistent message (replaces older in same slot)
-  set(slot: StatusSlot, level: StatusLevel, message: string): void
+  post(slot: StatusSlot, level: StatusLevel, message: string): void
 
-  // Transient message (with optional timeout, default 3000ms)
-  action(level: StatusLevel, message: string, timeout?: number): void
+  // Transient message (with optional timeout, default 3000ms) — stacked
+  flash(level: StatusLevel, message: string, timeout?: number, slot?: StatusSlot): void
 
   // Clear slot or all slots, optionally by level
   clear(slot?: StatusSlot, level?: StatusLevel): void
 
-  // Get current visible message (priority: transient > highest level persistent)
+  // Get current visible message (priority: transients > highest level persistent)
   getCurrent(): StatusMessage | null
 
   // Subscribe to changes
@@ -108,14 +117,17 @@ export class StatusBar {
 ```
 
 **Logic**:
-- `set(slot, level, message)`: Store in `persistent[slot]`, notify subscribers
-- `action(level, message, timeout)`: Set `transient`, auto-clear after timeout (default 3s), notify
+- `post(slot, level, message)`: Store in `persistent[slot]`, notify subscribers
+- `flash(level, message, timeout, slot)`: Push onto a transient stack, auto-clear after timeout (default 3s), and restore previous transient or persistent message; notify
 - `clear(slot)`: Remove from `persistent[slot]` or clear all, notify
 - `getCurrent()`:
-  - If transient exists, return it (highest priority)
+  - If any transient exists, return the latest (highest priority)
   - Else, find persistent with highest level, return oldest in that level
   - Return null if empty
 - **Logging**: Each `set()` and `action()` also calls `logger.info(category, message)` (category derived from slot)
+
+Notes:
+- Logging uses slot name as the logger category (free-form).
 
 ---
 
@@ -236,8 +248,8 @@ Add log viewer section:
 **File**: `src/options.ts`
 
 Replace `showAlert()` calls with logger + status bar:
-- **Blocking errors** (form validation, pattern conflicts) → `statusBar.set('form-error', 'error', message)`
-- **Action confirmations** (saved, deleted) → `statusBar.action('info', '✅ Pattern saved', 3000)`
+- **Blocking errors** (form validation, endpoint conflicts) → `statusBar.post('form-error', 'error', message)`
+- **Action confirmations** (saved, deleted) → `statusBar.flash('info', '✅ Endpoint saved', 3000)`
 - **All operations** → also `logger.error()` / `logger.info()` for audit trail
 
 Wire status bar UI:
@@ -295,7 +307,7 @@ try {
 } catch (error: any) {
   const available = Object.keys(context).filter(k => context[k] !== undefined).join(', ');
   const message = `🔴 Template error: ${error?.message}. Available: ${available}`;
-  statusBar.set('form-error', 'error', message);
+  statusBar.post('interpolation-error', 'error', message);
   logger.error('api-test', `Template error in endpoint: ${error?.message}; available: ${available}`);
   return;
 }
@@ -321,7 +333,7 @@ try {
     message = '❌ Sync unavailable. Check browser sync settings.';
   }
 
-  statusBar.set('storage-error', 'error', message);
+  statusBar.post('storage-error', 'error', message);
   logger.error('storage', `Load failed: ${message}`);
 }
 ```
