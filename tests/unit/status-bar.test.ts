@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert';
 import { StatusBar } from '../../src/status-bar';
-import { Logger } from '../../src/logger';
+import { Logger, LogLevel } from '../../src/logger';
 
 test('StatusBar: post() stores persistent message in slot', () => {
   const statusBar = new StatusBar();
-  statusBar.post('form-error', 'error', 'Invalid input');
+  statusBar.post(LogLevel.Error, 'form-error', 'Invalid input');
 
   const current = statusBar.getCurrent();
   assert(current !== null);
@@ -17,8 +17,8 @@ test('StatusBar: post() stores persistent message in slot', () => {
 
 test('StatusBar: post() replaces older message in same slot', () => {
   const statusBar = new StatusBar();
-  statusBar.post('form-error', 'error', 'First error');
-  statusBar.post('form-error', 'warn', 'Second error');
+  statusBar.post(LogLevel.Error, 'form-error', 'First error');
+  statusBar.post(LogLevel.Warn, 'form-error', 'Second error');
 
   const current = statusBar.getCurrent();
   assert(current !== null);
@@ -28,7 +28,7 @@ test('StatusBar: post() replaces older message in same slot', () => {
 
 test('StatusBar: flash() sets transient message', () => {
   const statusBar = new StatusBar();
-  statusBar.flash('info', '✅ Saved', 5000);
+  statusBar.flash('info', 'transient', 5000, '✅ Saved');
 
   const current = statusBar.getCurrent();
   assert(current !== null);
@@ -39,8 +39,8 @@ test('StatusBar: flash() sets transient message', () => {
 
 test('StatusBar: transient overrides persistent (priority)', () => {
   const statusBar = new StatusBar();
-  statusBar.post('form-error', 'error', 'Persistent error');
-  statusBar.flash('info', '✅ Saved', 5000);
+  statusBar.post(LogLevel.Error, 'form-error', 'Persistent error');
+  statusBar.flash('info', 'transient', 5000, '✅ Saved');
 
   const current = statusBar.getCurrent();
   assert(current !== null);
@@ -50,11 +50,11 @@ test('StatusBar: transient overrides persistent (priority)', () => {
 
 test('StatusBar: transient auto-clears after timeout', async () => {
   const statusBar = new StatusBar();
-  statusBar.flash('info', '✅ Saved', 100); // Short timeout for testing
+  statusBar.flash('info', 'transient', 100, 'Short timeout for testing');
 
   let current = statusBar.getCurrent();
   assert(current !== null);
-  assert.strictEqual(current.message, '✅ Saved');
+  assert.strictEqual(current.message, 'Short timeout for testing');
 
   // Wait for timeout
   await new Promise((resolve) => setTimeout(resolve, 150));
@@ -65,8 +65,8 @@ test('StatusBar: transient auto-clears after timeout', async () => {
 
 test('StatusBar: after transient clears, persistent becomes visible', async () => {
   const statusBar = new StatusBar();
-  statusBar.post('form-error', 'error', 'Persistent error');
-  statusBar.flash('info', '✅ Saved', 100);
+  statusBar.post(LogLevel.Error, 'form-error', 'Persistent error');
+  statusBar.flash('info', 'transient', 100, 'Saved');
 
   // Wait for transient to clear
   await new Promise((resolve) => setTimeout(resolve, 150));
@@ -78,8 +78,8 @@ test('StatusBar: after transient clears, persistent becomes visible', async () =
 
 test('StatusBar: clear() removes specific slot', () => {
   const statusBar = new StatusBar();
-  statusBar.post('form-error', 'error', 'Error 1');
-  statusBar.post('storage-error', 'error', 'Error 2');
+  statusBar.post(LogLevel.Error, 'form-error', 'Error 1');
+  statusBar.post(LogLevel.Error, 'storage-error', 'Error 2');
 
   statusBar.clear('form-error');
 
@@ -90,8 +90,8 @@ test('StatusBar: clear() removes specific slot', () => {
 
 test('StatusBar: clear() with no args removes all slots', () => {
   const statusBar = new StatusBar();
-  statusBar.post('form-error', 'error', 'Error 1');
-  statusBar.post('storage-error', 'error', 'Error 2');
+  statusBar.post(LogLevel.Error, 'form-error', 'Error 1');
+  statusBar.post(LogLevel.Error, 'storage-error', 'Error 2');
 
   statusBar.clear();
 
@@ -101,8 +101,8 @@ test('StatusBar: clear() with no args removes all slots', () => {
 
 test('StatusBar: clear() by level filters correctly', () => {
   const statusBar = new StatusBar();
-  statusBar.post('form-error', 'error', 'Error msg');
-  statusBar.post('storage-error', 'warn', 'Warning msg');
+  statusBar.post(LogLevel.Error, 'form-error', 'Error msg');
+  statusBar.post(LogLevel.Warn, 'storage-error', 'Warning msg');
 
   statusBar.clear(undefined, 'error');
 
@@ -113,9 +113,9 @@ test('StatusBar: clear() by level filters correctly', () => {
 
 test('StatusBar: getCurrent() returns highest level persistent', () => {
   const statusBar = new StatusBar();
-  statusBar.post('form-error', 'info', 'Info msg');
-  statusBar.post('storage-error', 'error', 'Error msg');
-  statusBar.post('template-error', 'warn', 'Warn msg');
+  statusBar.post(LogLevel.Info, 'form-error', 'Info msg');
+  statusBar.post(LogLevel.Error, 'storage-error', 'Error msg');
+  statusBar.post(LogLevel.Warn, 'template-error', 'Warn msg');
 
   const current = statusBar.getCurrent();
   assert(current !== null);
@@ -127,9 +127,9 @@ test('StatusBar: getCurrent() returns oldest in same level', () => {
   const statusBar = new StatusBar();
 
   // Add multiple errors with slight delays to ensure timestamp ordering
-  statusBar.post('form-error', 'error', 'First error');
-  statusBar.post('storage-error', 'error', 'Second error');
-  statusBar.post('template-error', 'error', 'Third error');
+  statusBar.post(LogLevel.Error, 'form-error', 'First error');
+  statusBar.post(LogLevel.Error, 'storage-error', 'Second error');
+  statusBar.post(LogLevel.Error, 'template-error', 'Third error');
 
   const current = statusBar.getCurrent();
   assert(current !== null);
@@ -138,8 +138,8 @@ test('StatusBar: getCurrent() returns oldest in same level', () => {
 
 test('StatusBar: slot isolation (messages in different slots dont interfere)', () => {
   const statusBar = new StatusBar();
-  statusBar.post('form-error', 'error', 'Form error');
-  statusBar.post('storage-error', 'warn', 'Storage warn');
+  statusBar.post(LogLevel.Error, 'form-error', 'Form error');
+  statusBar.post(LogLevel.Warn, 'storage-error', 'Storage warn');
 
   statusBar.clear('form-error');
 
@@ -158,7 +158,7 @@ test('StatusBar: subscribe receives notification on post()', () => {
     receivedMsg = msg;
   });
 
-  statusBar.post('form-error', 'error', 'Test error');
+  statusBar.post(LogLevel.Error, 'form-error', 'Test error');
 
   assert.strictEqual(notified, true);
   assert(receivedMsg !== null);
@@ -173,7 +173,7 @@ test('StatusBar: subscribe receives notification on flash()', () => {
     notified = true;
   });
 
-  statusBar.flash('info', '✅ Saved', 3000);
+  statusBar.flash('info', 'transient', 3000, '✅ Saved');
 
   assert.strictEqual(notified, true);
 });
@@ -186,7 +186,7 @@ test('StatusBar: subscribe receives notification on clear()', () => {
     callCount++;
   });
 
-  statusBar.post('form-error', 'error', 'Error');
+  statusBar.post(LogLevel.Error, 'form-error', 'Error');
   statusBar.clear('form-error');
 
   assert.strictEqual(callCount, 2, 'Should notify on set + clear');
@@ -200,12 +200,12 @@ test('StatusBar: unsubscribe stops notifications', () => {
     callCount++;
   });
 
-  statusBar.post('form-error', 'error', 'Error');
+  statusBar.post(LogLevel.Error, 'form-error', 'Error');
   assert.strictEqual(callCount, 1);
 
   unsubscribe();
 
-  statusBar.post('storage-error', 'error', 'Another error');
+  statusBar.post(LogLevel.Error, 'storage-error', 'Another error');
   assert.strictEqual(callCount, 1, 'Should not notify after unsubscribe');
 });
 
@@ -214,7 +214,7 @@ test('StatusBar: setLogger() integrates with logger', () => {
   const statusBar = new StatusBar();
     statusBar.setLogger(logger);
 
-  statusBar.post('form-error', 'error', 'Form error msg');
+  statusBar.post(LogLevel.Error, 'form-error', 'Form error msg');
 
   const entries = logger.getAll();
   assert.strictEqual(entries.length, 1);
@@ -228,11 +228,12 @@ test('StatusBar: logger integration for flash()', () => {
   const statusBar = new StatusBar();
   statusBar.setLogger(logger);
 
-  statusBar.flash('info', '✅ Saved successfully', 3000);
+  statusBar.flash('info', 'transient', 3000, '✅ Saved successfully');
 
   const entries = logger.getAll();
   assert.strictEqual(entries.length, 1);
   assert.strictEqual(entries[0].level, 'info');
+  assert.strictEqual(entries[0].message, '✅ Saved successfully');
   assert.strictEqual(entries[0].message, '✅ Saved successfully');
 });
 
@@ -245,7 +246,7 @@ test('StatusBar: empty state returns null', () => {
 
 test('StatusBar: flash() with 0 timeout does not auto-clear', async () => {
   const statusBar = new StatusBar();
-  statusBar.flash('info', 'Persistent action', 0);
+  statusBar.flash(LogLevel.Info, 'transient', 0, 'Persistent action');
 
   await new Promise((resolve) => setTimeout(resolve, 100));
 
@@ -257,8 +258,8 @@ test('StatusBar: flash() with 0 timeout does not auto-clear', async () => {
 test('StatusBar: stacked transients restore previous after later expires', async () => {
   const statusBar = new StatusBar();
   // Flash A (longer), then B (shorter)
-  statusBar.flash('info', 'A', 200);
-  statusBar.flash('warn', 'B', 100);
+  statusBar.flash(LogLevel.Info, 'transient', 200, 'A');
+  statusBar.flash(LogLevel.Warn, 'transient', 100, 'B');
 
   // Initially B should be visible (latest)
   let current = statusBar.getCurrent();

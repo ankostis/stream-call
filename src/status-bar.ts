@@ -7,15 +7,14 @@
  */
 export {};
 
-import type { Logger } from './logger';
+import type { Logger, LogLevel } from './logger';
 
-export type StatusLevel = 'error' | 'warn' | 'info';
 // Free-form slot string; callers should reuse consistent names.
 export type StatusSlot = string;
 
 export interface StatusMessage {
   slot: StatusSlot;
-  level: StatusLevel;
+  level: LogLevel;
   message: string;
   messageArgs?: unknown[];
   timestamp: Date;
@@ -51,63 +50,62 @@ export class StatusBar {
   /**
    * Post persistent message in a slot (replaces older in same slot)
    */
-  post(slot: StatusSlot, level: StatusLevel, ...args: unknown[]): void {
-    const message = formatArgs(args);
-    const msg: StatusMessage = {
+  post(level: LogLevel, slot: StatusSlot, ...msg: unknown[]): void {
+    const message = formatArgs(msg);
+    const statusMsg: StatusMessage = {
       slot,
       level,
       message,
-      messageArgs: args,
+      messageArgs: msg,
       timestamp: new Date(),
       isTransient: false
     };
 
-    this.persistent.set(slot, msg);
-    this.logMessage(msg);
+    this.persistent.set(slot, statusMsg);
+    this.logMessage(statusMsg);
     this.notify();
   }
 
   /**
    * Flash a transient message (default timeout 3000ms). Uses stacking behavior.
    */
-  flash(level: StatusLevel, message: unknown, timeout: number = 3000, slot: StatusSlot = 'transient', ...restArgs: unknown[]): void {
-    const args = [message, ...restArgs];
-    const formatted = formatArgs(args);
-    const msg: StatusMessage = {
+  flash(level: LogLevel, slot: StatusSlot, timeout: number = 3000, ...msg: unknown[]): void {
+    const formatted = formatArgs(msg);
+    const statusMsg: StatusMessage = {
       slot,
       level,
       message: formatted,
-      messageArgs: args,
+      messageArgs: msg,
       timestamp: new Date(),
       timeout,
       isTransient: true
     };
 
-    this.transients.push(msg);
-    this.logMessage(msg);
+    this.transients.push(statusMsg);
+    this.logMessage(statusMsg);
     this.notify();
 
     if (timeout > 0) {
       const timer = setTimeout(() => {
         // Remove this transient
-        const idx = this.transients.indexOf(msg);
+        const idx = this.transients.indexOf(statusMsg);
         if (idx !== -1) this.transients.splice(idx, 1);
-        const t = this.transientTimers.get(msg);
+        const t = this.transientTimers.get(statusMsg);
         if (t) {
           clearTimeout(t);
-          this.transientTimers.delete(msg);
+          this.transientTimers.delete(statusMsg);
         }
         // Notify to reveal previous transient or persistent
         this.notify();
       }, timeout);
-      this.transientTimers.set(msg, timer);
+      this.transientTimers.set(statusMsg, timer);
     }
   }
 
   /**
    * Clear slot or all slots, optionally by level
    */
-  clear(slot?: StatusSlot, level?: StatusLevel): void {
+  clear(slot?: StatusSlot, level?: LogLevel): void {
     if (!slot) {
       // Clear all slots (optionally filtered by level)
       if (level) {

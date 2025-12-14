@@ -1,7 +1,7 @@
 export {};
 
 import { applyTemplate } from './template';
-import { Logger } from './logger';
+import { Logger, LogLevel } from './logger';
 import { StatusBar } from './status-bar';
 import { createLogAppender, createStatusRenderer, setupLogFiltering } from './logging-ui';
 import { ApiEndpoint, suggestEndpointName, validateEndpoints } from './endpoint';
@@ -130,7 +130,7 @@ function loadSettings() {
       renderList();
     })
     .catch((error) => {
-      statusBar.post('storage-error', 'error', 'Failed to load settings', error);
+      statusBar.post(LogLevel.Error, 'storage-error', 'Failed to load settings', error);
     });
 }
 
@@ -228,7 +228,7 @@ function buildEndpointFromForm(): ApiEndpoint | null {
   const includePageInfo = els.includePage().checked;
 
   if (!endpoint) {
-    statusBar.post('form-error', 'error', 'Endpoint URL is required');
+    statusBar.post(LogLevel.Error, 'form-error', 'Endpoint URL is required');
     return null;
   }
 
@@ -272,7 +272,7 @@ function saveEndpoint() {
 
   const validated = validateEndpoints(JSON.stringify(updated));
   if (!validated.valid) {
-    statusBar.post('endpoint-error', 'error', validated.errorMessage || 'Invalid API endpoint');
+    statusBar.post(LogLevel.Error, 'endpoint-error', validated.errorMessage || 'Invalid API endpoint');
     return;
   }
 
@@ -283,10 +283,10 @@ function saveEndpoint() {
     .then(() => {
       renderList();
       closeEditor();
-      statusBar.flash('info', '✅ API endpoint saved', 3000, 'last-action');
+      statusBar.flash(LogLevel.Info, 'last-action', 3000, '✅ API endpoint saved');
     })
     .catch((error) => {
-      statusBar.post('storage-error', 'error', 'Failed to save API endpoint', error);
+      statusBar.post(LogLevel.Error, 'storage-error', 'Failed to save API endpoint', error);
     });
 }
 
@@ -301,7 +301,7 @@ function deleteEndpoint(index: number) {
   const updated = endpoints.filter((_, i) => i !== index);
   const validated = validateEndpoints(JSON.stringify(updated));
   if (!validated.valid) {
-    statusBar.post('endpoint-error', 'error', validated.errorMessage || 'Failed to delete API endpoint');
+    statusBar.post(LogLevel.Error, 'endpoint-error', validated.errorMessage || 'Failed to delete API endpoint');
     return;
   }
 
@@ -312,10 +312,10 @@ function deleteEndpoint(index: number) {
     .then(() => {
       renderList();
       closeEditor();
-      statusBar.flash('info', 'API endpoint deleted', 3000, 'last-action');
+      statusBar.flash(LogLevel.Info, 'last-action', 3000, 'API endpoint deleted');
     })
     .catch((error) => {
-      statusBar.post('storage-error', 'error', 'Failed to delete API endpoint', error);
+      statusBar.post(LogLevel.Error, 'storage-error', 'Failed to delete API endpoint', error);
     });
 }
 
@@ -348,20 +348,20 @@ function previewEndpoint() {
       null,
       2
     )}\n\nBody:\n${body}`;
-    statusBar.flash('info', 'Preview generated', 2000, 'stat');
+    statusBar.flash(LogLevel.Info, 'stat', 2000, 'Preview generated');
   } catch (error: any) {
-    statusBar.post('interpolation-error', 'error', `Interpolation error: ${error?.message ?? 'Invalid placeholder'}`, error);
+    statusBar.post(LogLevel.Error, 'interpolation-error', `Interpolation error: ${error?.message ?? 'Invalid placeholder'}`, error);
   }
 }
 
 function testAPI() {
   if (endpoints.length === 0) {
-    statusBar.post('endpoint-error', 'error', 'Please add at least one API endpoint first');
+    statusBar.post(LogLevel.Error, 'endpoint-error', 'Please add at least one API endpoint first');
     return;
   }
 
   const firstEndpoint = endpoints[0];
-  statusBar.flash('info', 'Testing API connection...', 2000, 'stat');
+  statusBar.flash(LogLevel.Info, 'stat', 2000, 'Testing API connection...');
 
   const context = {
     streamUrl: 'https://example.com/test-stream.m3u8',
@@ -384,7 +384,7 @@ function testAPI() {
         );
   } catch (templateError: any) {
     const availableFields = Object.keys(context).filter((k) => context[k] !== undefined).join(', ');
-    statusBar.post('interpolation-error', 'error', `❌ Interpolation error: ${templateError?.message ?? 'Invalid placeholder'}. Fields: ${availableFields}.`, templateError);
+    statusBar.post(LogLevel.Error, 'interpolation-error', `❌ Interpolation error: ${templateError?.message ?? 'Invalid placeholder'}. Fields: ${availableFields}.`, templateError);
     return;
   }
 
@@ -404,13 +404,13 @@ function testAPI() {
   })
     .then((response) => {
       if (response.ok) {
-        statusBar.flash('info', `✅ API test successful! Status: ${response.status} ${response.statusText}`, 3000, 'last-action');
+        statusBar.flash(LogLevel.Info, 'last-action', 3000, `✅ API test successful! Status: ${response.status} ${response.statusText}`);
       } else {
-        statusBar.post('interpolation-error', 'warn', `⚠️ API returned status ${response.status}: ${response.statusText}`);
+        statusBar.post(LogLevel.Warn, 'interpolation-error', `⚠️ API returned status ${response.status}: ${response.statusText}`);
       }
     })
     .catch((error) => {
-      statusBar.post('interpolation-error', 'error', `❌ API test failed: ${error?.message ?? 'Unknown error'}`, error);
+      statusBar.post(LogLevel.Error, 'interpolation-error', `❌ API test failed: ${error?.message ?? 'Unknown error'}`, error);
     });
 }
 
@@ -418,7 +418,7 @@ function resetSettings() {
   if (!confirm('Reset API endpoints to defaults?')) return;
   const validated = validateEndpoints(DEFAULT_CONFIG.apiEndpoints);
   if (!validated.valid) {
-    statusBar.post('endpoint-error', 'error', 'Default config is invalid');
+    statusBar.post(LogLevel.Error, 'endpoint-error', 'Default config is invalid');
     return;
   }
   endpoints = validated.parsed;
@@ -427,16 +427,16 @@ function resetSettings() {
     .then(() => {
       renderList();
       closeEditor();
-      statusBar.flash('info', 'Defaults restored. Ready to save.', 2000, 'stat');
+      statusBar.flash(LogLevel.Info, 'stat', 2000, 'Defaults restored. Ready to save.');
     })
     .catch((error) => {
-      statusBar.post('storage-error', 'error', 'Failed to reset settings', error);
+      statusBar.post(LogLevel.Error, 'storage-error', 'Failed to reset settings', error);
     });
 }
 
 function exportEndpoints() {
   if (endpoints.length === 0) {
-    statusBar.post('endpoint-error', 'warn', 'No API endpoints to export');
+    statusBar.post(LogLevel.Warn, 'endpoint-error', 'No API endpoints to export');
     return;
   }
 
@@ -450,7 +450,7 @@ function exportEndpoints() {
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
-  statusBar.flash('info', '✅ API endpoints exported', 3000, 'last-action');
+  statusBar.flash(LogLevel.Info, 'last-action', 3000, '✅ API endpoints exported');
 }
 
 function handleFileSelect(e: Event) {
@@ -466,14 +466,14 @@ function handleFileSelect(e: Event) {
       const validated = validateEndpoints(JSON.stringify(parsed));
 
       if (!validated.valid) {
-        statusBar.post('endpoint-error', 'error', `Invalid file: ${validated.errorMessage}`);
+        statusBar.post(LogLevel.Error, 'endpoint-error', `Invalid file: ${validated.errorMessage}`);
         return;
       }
 
       pendingImportEndpoints = validated.parsed;
       showImportModal();
     } catch (error: any) {
-      statusBar.post('endpoint-error', 'error', `Failed to read file: ${error?.message ?? 'Invalid JSON'}`);
+      statusBar.post(LogLevel.Error, 'endpoint-error', `Failed to read file: ${error?.message ?? 'Invalid JSON'}`);
     }
   };
   reader.readAsText(file);
@@ -517,7 +517,7 @@ function performImport(merge: boolean) {
 
   const validated = validateEndpoints(JSON.stringify(updated));
   if (!validated.valid) {
-    statusBar.post('endpoint-error', 'error', `Invalid endpoints import: ${validated.errorMessage}`);
+    statusBar.post(LogLevel.Error, 'endpoint-error', `Invalid endpoints import: ${validated.errorMessage}`);
     return;
   }
 
@@ -528,10 +528,10 @@ function performImport(merge: boolean) {
     .then(() => {
       renderList();
       closeImportModal();
-      statusBar.flash('info', merge ? '✅ Endpoints merged' : '✅ Endpoints replaced', 3000, 'last-action');
+      statusBar.flash(LogLevel.Info, 'last-action', 3000, merge ? '✅ Endpoints merged' : '✅ Endpoints replaced');
     })
     .catch((error) => {
-      statusBar.post('storage-error', 'error', 'Failed to import endpoints', error);
+      statusBar.post(LogLevel.Error, 'storage-error', 'Failed to import endpoints', error);
     });
 }
 

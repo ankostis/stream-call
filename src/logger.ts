@@ -6,7 +6,12 @@
  */
 export {};
 
-export type LogLevel = 'error' | 'warn' | 'info' | 'debug';
+export enum LogLevel {
+  Error = 'error',
+  Warn = 'warn',
+  Info = 'info',
+  Debug = 'debug'
+}
 // Free-form category string; callers should reuse consistent names.
 export type LogCategory = string;
 
@@ -45,14 +50,14 @@ export class Logger {
   /**
    * Log a message at the specified level and category
    */
-  log(level: LogLevel, category: LogCategory, ...args: unknown[]): void {
-    const message = formatArgs(args);
+  log(level: LogLevel, category: LogCategory, ...msg: unknown[]): void {
+    const message = formatArgs(msg);
     const entry: LogEntry = {
       timestamp: new Date(),
       level,
       category,
       message,
-      args
+      args: msg
     };
 
     // Add to circular buffer
@@ -63,9 +68,12 @@ export class Logger {
 
     // Console passthrough
     const consoleMethods: Record<LogLevel, (...args: any[]) => void> = {
-      error: console.error, warn: console.warn, info: console.info, debug: console.debug,
+      [LogLevel.Error]: console.error,
+      [LogLevel.Warn]: console.warn,
+      [LogLevel.Info]: console.info,
+      [LogLevel.Debug]: console.debug
     };
-    consoleMethods[level](`[${category}]`, ...(args.length > 0 ? args : [message]));
+    consoleMethods[level](`[${category}]`, ...(msg.length > 0 ? msg : [message]));
 
     // Notify subscribers
     this.notify();
@@ -74,29 +82,29 @@ export class Logger {
   /**
    * Log an error message
    */
-  error(category: LogCategory, ...args: unknown[]): void {
-    this.log('error', category, ...args);
+  error(category: LogCategory, ...msg: unknown[]): void {
+    this.log(LogLevel.Error, category, ...msg);
   }
 
   /**
    * Log a warning message
    */
-  warn(category: LogCategory, ...args: unknown[]): void {
-    this.log('warn', category, ...args);
+  warn(category: LogCategory, ...msg: unknown[]): void {
+    this.log(LogLevel.Warn, category, ...msg);
   }
 
   /**
    * Log an info message
    */
-  info(category: LogCategory, ...args: unknown[]): void {
-    this.log('info', category, ...args);
+  info(category: LogCategory, ...msg: unknown[]): void {
+    this.log(LogLevel.Info, category, ...msg);
   }
 
   /**
    * Log a debug message
    */
-  debug(category: LogCategory, ...args: unknown[]): void {
-    this.log('debug', category, ...args);
+  debug(category: LogCategory, ...msg: unknown[]): void {
+    this.log(LogLevel.Debug, category, ...msg);
   }
 
   /**
