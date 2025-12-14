@@ -127,9 +127,13 @@ function loadSettings() {
       const validated = validateEndpoints((config as Config).apiEndpoints || '[]');
       endpoints = validated.valid ? validated.parsed : [];
       renderList();
+      if (endpoints.length === 0) {
+        statusBar.post(LogLevel.Info, 'storage-info', 'No API endpoints configured yet. Add your first endpoint below.');
+      }
     })
     .catch((error) => {
-      statusBar.post(LogLevel.Error, 'storage-error', 'Failed to load settings', error);
+      // Actual storage errors (not empty storage on first run)
+      statusBar.post(LogLevel.Error, 'storage-error', 'Failed to access browser storage', error);
     });
 }
 

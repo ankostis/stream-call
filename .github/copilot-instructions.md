@@ -32,8 +32,10 @@
   500ms.
 
 ## Conventions & pitfalls
-- Errors bubble to UI; avoid silent catches. See `notes/error-handling-audit.md`.
-  Storage errors deprioritized (young extension; devs handle manually).
+- **Exception handling**: Follow `notes/exception-handling-policy.md` strictly:
+  - DON'T swallow silently exceptions.
+  - Avoid early handling of exceptions, prefer to let them bubble to console via logger or statusbar,
+  - early handling of exceptions preferable only when fail cause is known or where remedy is possible.
 - Type isolation: each TS file `export {}` to avoid globals.
 - Endpoint keying: unique `name`; `suggestEndpointName()` derives from hostname;
   `parseEndpoints()` filters dups; `validateEndpoints()` surfaces dups.

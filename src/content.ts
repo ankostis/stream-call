@@ -1,5 +1,6 @@
 import { isStreamUrl as isStreamUrlShared, getStreamType as getStreamTypeShared } from './detect';
 import { debounce } from './debounce';
+import { Logger, LogLevel } from './logger';
 /**
  * stream-call Content Script
  * Detects streaming media on web pages
@@ -9,6 +10,7 @@ import { debounce } from './debounce';
 (() => {
   'use strict';
 
+  const logger = new Logger();
   const detectedStreams = new Set<string>();
 
   const getUrlString = (input: RequestInfo | URL): string | null => {
@@ -43,7 +45,7 @@ import { debounce } from './debounce';
     if (detectedStreams.has(url)) return;
 
     detectedStreams.add(url);
-    console.log('stream-call: Detected stream:', url);
+    logger.info(LogLevel.Info, 'stream-detection', 'Detected stream:', url);
 
     browser.runtime
       .sendMessage({
@@ -58,9 +60,9 @@ import { debounce } from './debounce';
         }
       })
       .catch((err) => {
-        console.error('stream-call: Failed to report stream to background worker:', err);
-        console.error('stream-call: Stream URL:', url, '| This detection will be missing from the popup.');
-        // In a future enhancement, could track failure count and surface via a diagnostic message
+        // Message send can fail during page navigation/unload - this is expected
+        logger.warn(LogLevel.Warn, 'stream-reporting', `Failed to report stream '${url}' to background worker`, err);
+        // In a future enhancement, could track failure count and surface via a UI overlay.
       });
   }
 
@@ -149,19 +151,19 @@ import { debounce } from './debounce';
     const anyWindow = window as any;
 
     if (anyWindow.Hls) {
-      console.log('stream-call: HLS.js detected');
+      logger.debug(LogLevel.Debug, 'player-detection', 'HLS.js detected');
     }
 
     if (anyWindow.videojs) {
-      console.log('stream-call: Video.js detected');
+      logger.debug(LogLevel.Debug, 'player-detection', 'Video.js detected');
     }
 
     if (anyWindow.jwplayer) {
-      console.log('stream-call: JW Player detected');
+      logger.debug(LogLevel.Debug, 'player-detection', 'JW Player detected');
     }
 
     if (anyWindow.shaka) {
-      console.log('stream-call: Shaka Player detected');
+      logger.debug(LogLevel.Debug, 'player-detection', 'Shaka Player detected');
     }
   }
 
@@ -182,7 +184,7 @@ import { debounce } from './debounce';
   }
 
   function initialize() {
-    console.log('stream-call: Content script initialized at', window.location.href);
+    logger.info(LogLevel.Info, 'initialization', 'Content script initialized at', window.location.href);
 
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', () => {

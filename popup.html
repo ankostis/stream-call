@@ -1,4 +1,9 @@
 <!DOCTYPE html>
+<!--
+  Popup: Display detected streams for current tab with integrated logging.
+  Features: List streams, call API, copy URL, visible status bar, log viewer.
+  Error feedback: StatusBar + Logger (both visible to user).
+-->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -216,6 +221,77 @@
         opacity: 1;
       }
     }
+
+    /* Status bar styling */
+    .status-bar-card {
+      background: white;
+      border-radius: 6px;
+      padding: 10px;
+      margin-bottom: 12px;
+      border-left: 4px solid #667eea;
+      font-size: 12px;
+    }
+
+    .status-content {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-icon {
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .status-text {
+      color: #333;
+      font-weight: 500;
+      word-break: break-word;
+    }
+
+    /* Log viewer styling */
+    .log-viewer {
+      background: #0b1021;
+      color: #e5e7eb;
+      border-radius: 4px;
+      padding: 8px;
+      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+      font-size: 11px;
+      max-height: 200px;
+      overflow-y: auto;
+      line-height: 1.4;
+      border: 1px solid #1e293b;
+      margin-bottom: 12px;
+      display: none;
+    }
+
+    .log-viewer > div {
+      margin-bottom: 2px;
+    }
+
+    .log-empty {
+      color: #6b7280;
+      font-style: italic;
+    }
+
+    .log-viewer.visible {
+      display: block;
+    }
+
+    .log-toggle {
+      font-size: 11px;
+      background: #f0f0f0;
+      color: #666;
+      padding: 6px 8px;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+      margin-bottom: 8px;
+    }
+
+    .log-toggle:hover {
+      background: #e0e0e0;
+    }
   </style>
 </head>
 <body>
@@ -228,6 +304,27 @@
     <div id="loading" class="loading">
       <p>Loading...</p>
     </div>
+
+    <!-- Status Bar -->
+    <div id="status-bar" class="status-bar-card" style="display:none;">
+      <div class="status-content">
+        <span id="status-icon" class="status-icon" aria-hidden="true">ℹ️</span>
+        <span id="status-message" class="status-text"></span>
+      </div>
+    </div>
+
+    <!-- Log Toggle & Viewer -->
+    <div style="display:flex; gap:4px; margin-bottom:8px; align-items:center;">
+      <button id="log-toggle" class="log-toggle" style="display:none;">📋 Show logs</button>
+      <button id="log-filter-toggle" class="log-toggle" style="display:none;">🔎 Filters</button>
+    </div>
+    <div id="log-filter-panel" style="display:none; margin-bottom:8px; font-size:11px;">
+      <label style="margin-right:6px;"><input type="checkbox" class="log-level-filter" value="error" checked> Error</label>
+      <label style="margin-right:6px;"><input type="checkbox" class="log-level-filter" value="warn" checked> Warn</label>
+      <label style="margin-right:6px;"><input type="checkbox" class="log-level-filter" value="info" checked> Info</label>
+      <label style="margin-right:6px;"><input type="checkbox" class="log-level-filter" value="debug" checked> Debug</label>
+    </div>
+    <div id="log-viewer" class="log-viewer"></div>
 
     <div id="status" class="status" style="display: none;">
       <div class="status-title">
