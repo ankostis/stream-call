@@ -12,14 +12,12 @@
     "<all_urls>"
   ],
   "background": {
-    "scripts": ["dist/background.js"],
-    "type": "module"
+    "scripts": ["dist/background.js"]
   },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
       "js": ["dist/content.js"],
-      "type": "module",
       "run_at": "document_end"
     }
   ],

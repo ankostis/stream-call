@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "clean": "rm -rf dist",
-    "build:ts": "tsc",
+    "build:ts": "esbuild src/background.ts src/content.ts src/popup.ts src/options.ts --bundle --outdir=dist --format=iife --target=firefox115 --platform=browser",
     "copy:static": "mkdir -p dist && cp popup.html options.html dist/",
     "build": "npm run clean && npm run build:ts && npm run copy:static",
     "test": "node --test --import tsx tests/unit/*.test.ts",
@@ -18,10 +18,11 @@
     "@types/jsdom": "^27.0.0",
     "@types/node": "^22.9.0",
     "chai": "^4.3.10",
+    "esbuild": "^0.27.1",
     "jsdom": "^27.3.0",
     "puppeteer": "^24.33.0",
     "tsx": "^4.7.2",
     "typescript": "^5.4.0",
-    "web-ext": "^7.7.0"
+    "web-ext": "^7.12.0"
   }
 }
