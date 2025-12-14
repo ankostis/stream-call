@@ -1,8 +1,7 @@
 export {};
 
 import { applyTemplate } from './template';
-import { Logger, LogLevel } from './logger';
-import { StatusBar } from './status-bar';
+import { Logger, LogLevel, StatusBar } from './logger';
 import { createLogAppender, createStatusRenderer, setupLogFiltering } from './logging-ui';
 import { ApiEndpoint, suggestEndpointName, validateEndpoints } from './endpoint';
 

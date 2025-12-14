@@ -1,6 +1,6 @@
 export {};
 
-import type { StatusBar, StatusLevel } from './status-bar';
+import type { StatusBar, StatusMessage, LogLevel } from './logger';
 
 // Lightweight UI helpers for rendering StatusBar and Logger output
 
@@ -9,7 +9,7 @@ export function createStatusRenderer(elements: {
   icon: HTMLSpanElement;
   message: HTMLSpanElement;
 }) {
-  return function renderStatus(msg: { level: StatusLevel; message: string } | null) {
+  return function renderStatus(msg: { level: LogLevel; message: string } | null) {
     const bar = elements.bar;
     if (!msg) {
       bar.style.display = 'none';
