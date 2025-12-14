@@ -14,9 +14,8 @@
   (web-ext, Firefox, local HTTP server on 9090).
 - Templating placeholders for endpoints/bodies: `streamUrl`, `pageUrl`,
   `pageTitle`, `timestamp`.
-- **Mobile Firefox Nightly**: Must support mobile browsers where options page
-  is separate from webpage. Future UI panels (Phase 5+) will reuse Logger &
-  StatusBar for in-page diagnostics. See `notes/logger-plan.md`.
+- **Mobile Firefox Nightly**: Must have good UX on mobile browsers where options UI panels
+  cannot float/dock alongside the webpage.
 
 ## Architecture principles
 - Message-based flow: content -> `STREAM_DETECTED`; popup -> PING + `GET_STREAMS`.
@@ -26,6 +25,8 @@
 - Shared utilities: `config.ts` (parse/validate endpoints), `template.ts` (interpolate placeholders),
   `detect.ts` (detection patterns), `debounce.ts` (throttle). Content imports patterns
   from `detect.ts` instead of duplicating.
+- All UI panels (hover-panel & options, Phase 5+) will reuse Logger & StatusBar
+  for in-page diagnostics (See `notes/logger-plan.md`).
 - Endpoint-first config: Only API endpoints, keyed by unique `name`. Names
   auto-suggested from endpoint host via `suggestEndpointName()`.
 - Debounced detection: media scan 1s delay/2s interval; DOM mutation debounce

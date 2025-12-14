@@ -52,6 +52,7 @@ async function run() {
   const detectionRegex = /Stream detected:/i;
   const badgeRegex = /setBadgeText|badge count/i;
   const apiRegex = /CALL_API|API request/i;
+  const storageErrorRegex = /temporary addon ID|storage API will not work/i;
 
   proc.stdout.on('data', (d) => {
     const s = d.toString();
@@ -89,9 +90,11 @@ async function run() {
   server.close();
 
   const fatalRegex = /Error:|TypeError:|ReferenceError:|Unhandled/;
+  const hasStorageError = storageErrorRegex.test(stdout) || storageErrorRegex.test(stderr);
   try {
     expect(addonInstalled, 'temporary add-on installed').to.equal(true);
     expect(fatalRegex.test(stderr), 'no fatal errors in stderr').to.equal(false);
+    expect(hasStorageError, 'no storage API errors (check manifest has explicit addon ID)').to.equal(false);
   } catch (err) {
     console.error('--- web-ext stdout ---');
     console.error(stdout);
@@ -105,6 +108,7 @@ async function run() {
   console.log('Extension Status:');
   console.log('  Installed:', addonInstalled ? '✓' : '✗');
   console.log('  Fatal errors:', fatalRegex.test(stderr) ? '✗ Found' : '✓ None');
+  console.log('  Storage API:', hasStorageError ? '✗ Error (missing addon ID)' : '✓ OK');
   if (detections > 0) {
     console.log('Detection Status:');
     console.log('  Detected streams:', detections);

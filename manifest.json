@@ -46,5 +46,11 @@
       "resources": ["dist/content.js"],
       "matches": ["<all_urls>"]
     }
-  ]
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "stream-call@dev.ankostis.com",
+      "strict_min_version": "115.0"
+    }
+  }
 }
