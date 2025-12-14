@@ -3,6 +3,7 @@
 
 const puppeteer = require('puppeteer');
 const { spawn } = require('node:child_process');
+const { once } = require('node:events');
 const { resolve } = require('node:path');
 const { setTimeout: delay } = require('node:timers/promises');
 const chai = require('chai');
@@ -17,8 +18,8 @@ async function run() {
 
   // Launch Firefox with web-ext and enable remote debugging
   console.log('🚀 Launching Firefox with extension and CDP enabled...');
-  const proc = spawn('npx', [
-    'web-ext',
+  const webExtPath = resolve(cwd, 'node_modules/.bin/web-ext');
+  const proc = spawn(webExtPath, [
     'run',
     '--source-dir', '.',
     '--start-url', TEST_URL,
@@ -131,6 +132,12 @@ async function run() {
       await browser.disconnect();
     }
     proc.kill('SIGINT');
+    try {
+      await Promise.race([
+        once(proc, 'exit'),
+        delay(5000).then(() => { proc.kill('SIGKILL'); })
+      ]);
+    } catch {}
     console.log('\n🛑 Firefox stopped\n');
   }
 }

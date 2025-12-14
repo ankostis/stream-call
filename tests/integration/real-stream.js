@@ -19,8 +19,8 @@ async function run() {
   console.log(`   Stream URL: ${TEST_URL}`);
   console.log(`   API Endpoint: ${HTTPBIN_URL}\n`);
 
+  const webExtPath = resolve(cwd, 'node_modules/.bin/web-ext');
   const args = [
-    'web-ext',
     'run',
     '--source-dir', '.',
     '--start-url', TEST_URL,
@@ -28,7 +28,7 @@ async function run() {
     '--no-input',
   ];
 
-  const proc = spawn('npx', args, { cwd });
+  const proc = spawn(webExtPath, args, { cwd });
 
   let stdout = '';
   let stderr = '';
@@ -130,7 +130,12 @@ async function run() {
   // Kill the process
   console.log('\n🛑 Stopping Firefox...\n');
   proc.kill('SIGINT');
-  try { await once(proc, 'exit'); } catch {}
+  try {
+    await Promise.race([
+      once(proc, 'exit'),
+      delay(5000).then(() => { proc.kill('SIGKILL'); })
+    ]);
+  } catch {}
 
   // Analyze results
   console.log('📊 Test Results:');
