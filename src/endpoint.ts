@@ -9,7 +9,8 @@ export type ApiEndpoint = {
   method?: string;
   headers?: Record<string, string>;
   bodyTemplate?: string;
-  includePageInfo?: boolean;
+  includeCookies?: boolean;
+  includePageHeaders?: boolean;
 };
 
 /**
@@ -45,7 +46,8 @@ export function parseEndpoints(raw: string): ApiEndpoint[] {
       method: p.method,
       headers: p.headers,
       bodyTemplate: p.bodyTemplate,
-      includePageInfo: p.includePageInfo
+      includeCookies: p.includeCookies,
+      includePageHeaders: p.includePageHeaders
     }))
     .filter((p) => {
       // Require endpoint and unique name
@@ -99,8 +101,7 @@ export function validateEndpoints(raw: string): {
           endpointTemplate: p.endpointTemplate,
           method: p.method || 'POST',
           headers: p.headers,
-          bodyTemplate: p.bodyTemplate,
-          includePageInfo: p.includePageInfo ?? true
+          bodyTemplate: p.bodyTemplate
         };
       })
       .filter(Boolean);

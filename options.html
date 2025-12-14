@@ -660,8 +660,16 @@
 
         <div class="form-group checkbox-group">
           <label>
-            <input type="checkbox" id="endpoint-include-page" checked /> Include page info (URL/title)
+            <input type="checkbox" id="endpoint-include-cookies" /> Include page cookies
           </label>
+          <div class="help-text">Send current page cookies with API request (requires cookies permission).</div>
+        </div>
+
+        <div class="form-group checkbox-group">
+          <label>
+            <input type="checkbox" id="endpoint-include-headers" /> Include page headers
+          </label>
+          <div class="help-text">Capture and send HTTP request headers from the page (User-Agent, Accept, Referer, etc).</div>
         </div>
 
         <div class="button-group">

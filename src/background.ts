@@ -27,6 +27,26 @@ type RuntimeMessage =
   | { type: 'PING' };
 
 const tabStreams = new Map<number, StreamInfo[]>();
+const tabHeaders = new Map<number, Record<string, string>>();
+
+// Capture page request headers using webRequest API
+browser.webRequest.onSendHeaders.addListener(
+  (details) => {
+    if (details.tabId >= 0 && details.type === 'main_frame') {
+      const headers: Record<string, string> = {};
+      if (details.requestHeaders) {
+        for (const header of details.requestHeaders) {
+          if (header.name && header.value) {
+            headers[header.name] = header.value;
+          }
+        }
+      }
+      tabHeaders.set(details.tabId, headers);
+    }
+  },
+  { urls: ['<all_urls>'] },
+  ['requestHeaders']
+);
 
 // Listen for messages from content scripts and popup
 browser.runtime.onMessage.addListener((message: RuntimeMessage, sender) => {
@@ -100,12 +120,14 @@ browser.runtime.onMessage.addListener((message: RuntimeMessage, sender) => {
 // Clean up when tabs are closed
 browser.tabs.onRemoved.addListener((tabId) => {
   tabStreams.delete(tabId);
+  tabHeaders.delete(tabId);
 });
 
 // Clean up when navigating away
 browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
   if (changeInfo.status === 'loading') {
     tabStreams.delete(tabId);
+    tabHeaders.delete(tabId);
     updateBadge(tabId, 0);
   }
 });
@@ -177,11 +199,7 @@ async function callStreamAPI({
       endpoint = applyTemplate(selectedEndpoint.endpointTemplate, requestContext);
       bodyJson = selectedEndpoint.bodyTemplate
         ? applyTemplate(selectedEndpoint.bodyTemplate, requestContext)
-        : JSON.stringify(
-            selectedEndpoint.includePageInfo
-              ? requestContext
-              : { streamUrl, timestamp: requestContext.timestamp }
-          );
+        : JSON.stringify(requestContext);
     } catch (templateError: any) {
       return {
         success: false,
@@ -194,6 +212,36 @@ async function callStreamAPI({
     let headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (selectedEndpoint.headers) {
       headers = { ...headers, ...selectedEndpoint.headers };
+    }
+
+    // Add cookies to headers if flag is enabled
+    if (selectedEndpoint.includeCookies && pageUrl) {
+      try {
+        const cookies = await browser.cookies.getAll({ url: pageUrl });
+        if (cookies.length > 0) {
+          const cookieHeader = cookies.map(c => `${c.name}=${c.value}`).join('; ');
+          headers['Cookie'] = cookieHeader;
+        }
+      } catch (cookieError: any) {
+        console.warn('Failed to get cookies:', cookieError);
+        // Continue without cookies rather than failing entire request
+      }
+    }
+
+    // Add page headers if flag is enabled
+    if (selectedEndpoint.includePageHeaders) {
+      const [activeTab] = await browser.tabs.query({ active: true, currentWindow: true });
+      if (activeTab?.id !== undefined) {
+        const pageHeaders = tabHeaders.get(activeTab.id);
+        if (pageHeaders) {
+          // Merge page headers, but don't override existing headers
+          for (const [key, value] of Object.entries(pageHeaders)) {
+            if (!(key in headers)) {
+              headers[key] = value;
+            }
+          }
+        }
+      }
     }
 
     const response = await fetch(endpoint, {

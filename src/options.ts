@@ -11,16 +11,14 @@ const DEFAULT_CONFIG = {
       {
         name: 'example.com GET',
         endpointTemplate: 'https://api.example.com/record?url={{streamUrl}}&time={{timestamp}}',
-        method: 'GET',
-        includePageInfo: false
+        method: 'GET'
       },
       {
         name: 'example.com JSON POST',
         endpointTemplate: 'https://api.example.com/stream',
         method: 'POST',
         bodyTemplate:
-          '{"streamUrl":"{{streamUrl}}","timestamp":"{{timestamp}}","pageUrl":"{{pageUrl}}","pageTitle":"{{pageTitle}}"}',
-        includePageInfo: true
+          '{"streamUrl":"{{streamUrl}}","timestamp":"{{timestamp}}","pageUrl":"{{pageUrl}}","pageTitle":"{{pageTitle}}"}'
       },
       {
         name: 'Echo httpbin.org',
@@ -28,8 +26,7 @@ const DEFAULT_CONFIG = {
         method: 'POST',
         headers: { 'X-Test': 'stream-call' },
         bodyTemplate:
-          '{"url":"{{streamUrl}}","title":"{{pageTitle}}","page":"{{pageUrl}}","time":"{{timestamp}}"}',
-        includePageInfo: true
+          '{"url":"{{streamUrl}}","title":"{{pageTitle}}","page":"{{pageUrl}}","time":"{{timestamp}}"}'
       }
     ],
     null,
@@ -56,7 +53,8 @@ const els = {
   method: () => document.getElementById('endpoint-method') as HTMLSelectElement,
   endpoint: () => document.getElementById('endpoint-endpoint') as HTMLInputElement,
   body: () => document.getElementById('endpoint-body') as HTMLTextAreaElement,
-  includePage: () => document.getElementById('endpoint-include-page') as HTMLInputElement,
+  includeCookies: () => document.getElementById('endpoint-include-cookies') as HTMLInputElement,
+  includeHeaders: () => document.getElementById('endpoint-include-headers') as HTMLInputElement,
   headersRows: () => document.getElementById('headers-rows') as HTMLDivElement,
   preview: () => document.getElementById('preview') as HTMLDivElement,
   logViewer: () => document.getElementById('log-viewer') as HTMLDivElement,
@@ -160,10 +158,6 @@ function renderList() {
     meta.className = 'endpoint-meta';
     meta.textContent = `${(endpoint.method || 'POST').toUpperCase()} → ${endpoint.endpointTemplate}`;
 
-    const pageInfo = document.createElement('div');
-    pageInfo.className = 'endpoint-meta';
-    pageInfo.textContent = endpoint.includePageInfo === false ? 'Page info: off' : 'Page info: on';
-
     const actions = document.createElement('div');
     actions.className = 'endpoint-actions';
 
@@ -182,7 +176,6 @@ function renderList() {
 
     card.appendChild(title);
     card.appendChild(meta);
-    card.appendChild(pageInfo);
     card.appendChild(actions);
     list.appendChild(card);
   });
@@ -208,7 +201,8 @@ function fillForm(endpoint: ApiEndpoint) {
   els.method().value = (endpoint.method || 'POST').toUpperCase();
   els.endpoint().value = endpoint.endpointTemplate || '';
   els.body().value = endpoint.bodyTemplate || '';
-  els.includePage().checked = endpoint.includePageInfo !== false;
+  els.includeCookies().checked = endpoint.includeCookies === true;
+  els.includeHeaders().checked = endpoint.includePageHeaders === true;
   setHeadersRows(endpoint.headers);
 }
 
@@ -219,7 +213,8 @@ function newEndpointDefaults(): ApiEndpoint {
     method: 'POST',
     headers: {},
     bodyTemplate: '',
-    includePageInfo: true
+    includeCookies: false,
+    includePageHeaders: false
   };
 }
 
@@ -228,7 +223,8 @@ function buildEndpointFromForm(): ApiEndpoint | null {
   const endpoint = els.endpoint().value.trim();
   const method = els.method().value.trim().toUpperCase() || 'POST';
   const bodyTemplate = els.body().value.trim();
-  const includePageInfo = els.includePage().checked;
+  const includeCookies = els.includeCookies().checked;
+  const includePageHeaders = els.includeHeaders().checked;
 
   if (!endpoint) {
     statusBar.post(LogLevel.Error, 'form-error', 'Endpoint URL is required');
@@ -256,7 +252,8 @@ function buildEndpointFromForm(): ApiEndpoint | null {
     method,
     headers: Object.keys(headers).length ? headers : undefined,
     bodyTemplate: bodyTemplate || undefined,
-    includePageInfo
+    includeCookies,
+    includePageHeaders
   };
 
   return apiEndpoint;
@@ -329,21 +326,15 @@ function previewEndpoint() {
   const context = {
     streamUrl: 'https://example.com/stream.m3u8',
     timestamp: new Date().toISOString(),
-    pageUrl: candidate.includePageInfo ? 'https://example.com/page' : undefined,
-    pageTitle: candidate.includePageInfo ? 'Example page' : undefined
+    pageUrl: 'https://example.com/page',
+    pageTitle: 'Example page'
   } as Record<string, unknown>;
 
   try {
     const endpoint = applyTemplate(candidate.endpointTemplate, context);
     const body = candidate.bodyTemplate
       ? applyTemplate(candidate.bodyTemplate, context)
-      : JSON.stringify(
-          candidate.includePageInfo
-            ? context
-            : { streamUrl: context.streamUrl, timestamp: context.timestamp },
-          null,
-          2
-        );
+      : JSON.stringify(context, null, 2);
 
     els.preview().style.display = 'block';
     els.preview().textContent = `Endpoint: ${endpoint}\nMethod: ${(candidate.method || 'POST').toUpperCase()}\n\nHeaders: ${JSON.stringify(
@@ -369,8 +360,8 @@ function testAPI() {
   const context = {
     streamUrl: 'https://example.com/test-stream.m3u8',
     timestamp: new Date().toISOString(),
-    pageUrl: firstEndpoint.includePageInfo ? 'https://example.com/test-page' : undefined,
-    pageTitle: firstEndpoint.includePageInfo ? 'Test Page - stream-call' : undefined
+    pageUrl: 'https://example.com/test-page',
+    pageTitle: 'Test Page - stream-call'
   } as Record<string, unknown>;
 
   let endpoint: string;
@@ -380,11 +371,7 @@ function testAPI() {
     endpoint = applyTemplate(firstEndpoint.endpointTemplate, context);
     body = firstEndpoint.bodyTemplate
       ? applyTemplate(firstEndpoint.bodyTemplate, context)
-      : JSON.stringify(
-          firstEndpoint.includePageInfo
-            ? context
-            : { streamUrl: context.streamUrl, timestamp: context.timestamp }
-        );
+      : JSON.stringify(context);
   } catch (templateError: any) {
     const availableFields = Object.keys(context).filter((k) => context[k] !== undefined).join(', ');
     statusBar.post(LogLevel.Error, 'interpolation-error', `❌ Interpolation error: ${templateError?.message ?? 'Invalid placeholder'}. Fields: ${availableFields}.`, templateError);

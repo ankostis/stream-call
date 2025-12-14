@@ -100,6 +100,46 @@ test('validateEndpoints: validates and formats', () => {
   assert.strictEqual(result.parsed[0].method, 'POST', 'Default method should be POST');
 });
 
+test('parseEndpoints: preserves includeCookies flag', () => {
+  const raw = JSON.stringify([
+    {
+      name: 'with-cookies',
+      endpointTemplate: 'https://api.example.com/stream',
+      includeCookies: true
+    },
+    {
+      name: 'without-cookies',
+      endpointTemplate: 'https://api.example.com/stream2',
+      includeCookies: false
+    }
+  ]);
+
+  const endpoints = parseEndpoints(raw);
+  assert.strictEqual(endpoints.length, 2);
+  assert.strictEqual(endpoints[0].includeCookies, true);
+  assert.strictEqual(endpoints[1].includeCookies, false);
+});
+
+test('parseEndpoints: preserves includePageHeaders flag', () => {
+  const raw = JSON.stringify([
+    {
+      name: 'with-headers',
+      endpointTemplate: 'https://api.example.com/stream',
+      includePageHeaders: true
+    },
+    {
+      name: 'without-headers',
+      endpointTemplate: 'https://api.example.com/stream2',
+      includePageHeaders: false
+    }
+  ]);
+
+  const endpoints = parseEndpoints(raw);
+  assert.strictEqual(endpoints.length, 2);
+  assert.strictEqual(endpoints[0].includePageHeaders, true);
+  assert.strictEqual(endpoints[1].includePageHeaders, false);
+});
+
 test('validateEndpoints: rejects non-array JSON', () => {
   const result = validateEndpoints('{"key": "value"}');
   assert(!result.valid);
