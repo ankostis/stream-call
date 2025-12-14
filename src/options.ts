@@ -3,7 +3,7 @@ export {};
 import { applyTemplate } from './template';
 import { Logger } from './logger';
 import { StatusBar } from './status-bar';
-import { createLogAppender, createStatusRenderer } from './logging-ui';
+import { createLogAppender, createStatusRenderer, setupLogFiltering } from './logging-ui';
 import { ApiEndpoint, suggestEndpointName, validateEndpoints } from './endpoint';
 
 const DEFAULT_CONFIG = {
@@ -59,7 +59,7 @@ const els = {
   body: () => document.getElementById('endpoint-body') as HTMLTextAreaElement,
   includePage: () => document.getElementById('endpoint-include-page') as HTMLInputElement,
   headersRows: () => document.getElementById('headers-rows') as HTMLDivElement,
-  preview: () => document.getElementById('preview') as HTMLDivElement
+  preview: () => document.getElementById('preview') as HTMLDivElement,
   logViewer: () => document.getElementById('log-viewer') as HTMLDivElement,
   logClear: () => document.getElementById('log-clear') as HTMLButtonElement,
   logExport: () => document.getElementById('log-export') as HTMLButtonElement
@@ -579,7 +579,16 @@ function initialize() {
   loadSettings();
   wireEvents();
   setHeadersRows();
-  // Wire log viewer controls
+
+  // Wire log viewer controls using reusable helpers
+  const logFilterToggle = document.getElementById('log-filter-toggle');
+  const logFilterPanel = document.getElementById('log-filter-panel') as HTMLDivElement;
+  const levelCheckboxes = document.querySelectorAll('.log-level-filter') as NodeListOf<HTMLInputElement>;
+
+  if (logFilterToggle && logFilterPanel) {
+    setupLogFiltering(els.logViewer(), logFilterPanel, logFilterToggle, levelCheckboxes);
+  }
+
   els.logClear()?.addEventListener('click', () => {
     logger.clear();
     const viewer = els.logViewer();

@@ -26,8 +26,39 @@ export function createLogAppender(viewer: HTMLDivElement) {
   return function appendLog(level: 'error'|'warn'|'info'|'debug', category: string, message: string) {
     const empty = viewer.querySelector('.log-empty');
     if (empty) empty.remove();
-    const line = document.createElement('div');
+    const line = viewer.ownerDocument.createElement('div');
     line.textContent = `[${new Date().toISOString()}] ${level.toUpperCase()} ${category}: ${message}`;
     viewer.appendChild(line);
   };
+}
+export function applyLogFilter(viewer: HTMLDivElement, levels: string[]) {
+  const allLines = viewer.querySelectorAll('div:not(.log-empty)');
+  allLines.forEach((line) => {
+    const text = line.textContent || '';
+    const hasMatch = levels.some(level => text.includes(`] ${level.toUpperCase()}`));
+    (line as HTMLElement).style.display = hasMatch ? 'block' : 'none';
+  });
+}
+
+export function setupLogFiltering(
+  viewer: HTMLDivElement,
+  filterPanel: HTMLDivElement,
+  filterToggle: HTMLElement,
+  levelCheckboxes: NodeListOf<HTMLInputElement>
+) {
+  // Toggle filter panel
+  filterToggle.addEventListener('click', () => {
+    const isHidden = filterPanel.style.display === 'none';
+    filterPanel.style.display = isHidden ? 'block' : 'none';
+  });
+
+  // Apply filter on checkbox change
+  levelCheckboxes.forEach(el => {
+    el.addEventListener('change', () => {
+      const selectedLevels = Array.from(levelCheckboxes)
+        .filter(checkbox => checkbox.checked)
+        .map(checkbox => checkbox.value);
+      applyLogFilter(viewer, selectedLevels);
+    });
+  });
 }

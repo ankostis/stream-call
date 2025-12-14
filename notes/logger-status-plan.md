@@ -1,22 +1,43 @@
 # Logger & Status Bar Plan: Options Page Audit + Real-Time Feedback
 
 **Goal**:
-1. Add a filterable in-memory audit log to options page for debugging pattern config, storage, import/export, and API test operations.
+1. Add a filterable in-memory audit log to options page for debugging endpoint config, storage, import/export, and API test operations.
 2. Add a status bar for real-time form validation and action feedback (persistent blocking errors, transient action confirmations).
 3. Keep network & API logs (background/popup) in console only.
+
+**Status** (Dec 2025): All core features complete; log viewer filters and status bar styling polished.
 
 ---
 
 ## Architecture Overview
 
 **Key architectural point**: Logger and StatusBar are designed as reusable UI abstractions to support both desktop (options page) and future mobile (in-page panel) contexts.
+## Implementation Status (Dec 2025)
 
-Recent updates (Dec 2025):
+**Completed**:
+1. ✅ Created `src/logger.ts` with Logger class (circular buffer, filtering, subscriptions, export)
+2. ✅ Created `src/status-bar.ts` with StatusBar class (persistent/transient messages, priority, stacking)
+3. ✅ Added comprehensive unit tests (77 tests, all passing)
+4. ✅ Updated `options.html` with status bar + log viewer + filter panel + polished CSS
+5. ✅ Integrated Logger + StatusBar into `src/options.ts` with live rendering
+6. ✅ Extracted reusable UI helpers into `src/logging-ui.ts`
+7. ✅ Added log level filter controls with toggle panel
+8. ✅ Polished status bar and log viewer styling (dark theme, level-based colors)
+
+**Pending** (future phases):
+- Form-level error badges and hover messages
+- Enhanced error messages in template operations
+- Storage error parsing with user-friendly messages
+
+---
+
+## Recent Updates (Dec 2025):
 - Logger categories are now free-form strings (no predefined list).
 - StatusBar slots are now free-form strings (no predefined list or mapping).
-- StatusBar methods were renamed: `set()` → `post()`, `action()` → `flash()`.
-- Transient stacking: later flashes don’t discard earlier; when the latest expires, the previous transient or persistent message is restored.
+- Transient stacking: later flashes don't discard earlier; when the latest expires, the previous transient or persistent message is restored.
 - Level continues to control visibility priority (error > warn > info) for both persistent and transient messages.
+- Log viewer now has level filters (error, warn, info, debug) with toggle control.
+- Status bar uses level-based icon/color rendering.
 
 ### Logger Utility (`src/logger.ts`)
 - Simple class with level methods: `error()`, `warn()`, `info()`, `debug()`
@@ -124,7 +145,7 @@ export class StatusBar {
   - If any transient exists, return the latest (highest priority)
   - Else, find persistent with highest level, return oldest in that level
   - Return null if empty
-- **Logging**: Each `set()` and `action()` also calls `logger.info(category, message)` (category derived from slot)
+- **Logging**: Each `post()` and `flash()` also calls `logger.info(category, message)` (category derived from slot)
 
 Notes:
 - Logging uses slot name as the logger category (free-form).
@@ -196,58 +217,33 @@ export class Logger {
 ---
 
 ### Task 2: Update Options HTML
-**File**: `options.html`
+**File**: `options.html` ✅ COMPLETED
 
-Add log viewer section:
-
-```html
-<div class="card" id="log-card">
-  <div class="card-header">
-    <h2 class="card-title">Activity Log</h2>
-    <div class="card-actions">
-      <button id="log-filter-toggle" class="btn-secondary">⚙️ Filter</button>
-      <button id="log-export" class="btn-secondary">⬇ Export</button>
-      <button id="log-clear" class="btn-secondary">🗑 Clear</button>
-    </div>
-  </div>
-
-  <!-- Filter panel (hidden by default) -->
-  <div id="log-filter-panel" style="display: none;">
-    <div class="filter-group">
-      <h3>Levels</h3>
-      <label><input type="checkbox" class="log-level-filter" value="error" checked /> Error</label>
-      <label><input type="checkbox" class="log-level-filter" value="warn" checked /> Warn</label>
-      <label><input type="checkbox" class="log-level-filter" value="info" checked /> Info</label>
-      <label><input type="checkbox" class="log-level-filter" value="debug" /> Debug</label>
-    </div>
-    <div class="filter-group">
-      <h3>Categories</h3>
-      <label><input type="checkbox" class="log-category-filter" value="pattern-parsing" checked /> Pattern Parsing</label>
-      <label><input type="checkbox" class="log-category-filter" value="pattern-list" checked /> Pattern List</label>
-      <label><input type="checkbox" class="log-category-filter" value="storage" checked /> Storage</label>
-      <label><input type="checkbox" class="log-category-filter" value="import-export" checked /> Import/Export</label>
-      <label><input type="checkbox" class="log-category-filter" value="api-test" checked /> API Test</label>
-      <label><input type="checkbox" class="log-category-filter" value="form-input" checked /> Form Input</label>
-    </div>
-  </div>
-
-  <!-- Log viewer -->
-  <div id="log-viewer" class="log-viewer">
-    <div class="log-empty">No logs yet</div>
-  </div>
-</div>
-```
+Implemented:
+- Status bar element with dynamic level-based styling (red=error, yellow=warn, blue=info)
+- Activity log viewer with filter panel (level checkboxes: Error, Warn, Info, Debug)
+- Filter toggle button, clear button, export button
+- Dark theme log viewer with monospace font, scrollable (max-height 300px)
+- Live filtering via `applyLogFilter()` helper from `src/logging-ui.ts`
 
 **CSS**:
-- **Status bar**: Sticky (top), level-based colors (red=error, yellow=warn, blue=info), emoji/smiley rendering, dismissible
-- **Log viewer**: Dark theme (monospace) with level-based colors, scrollable (max-height 300px), timestamp on left, category badge, message
+- **Status bar**: Border-left color based on level, icon selection (❌ error, ⚠️ warn, ℹ️ info)
+- **Log viewer**: Dark background (#0b1021), light text, ISO timestamps, category labels
 
 ---
 
 ### Task 3: Update Options Script
-**File**: `src/options.ts`
+**File**: `src/options.ts` ✅ COMPLETED
 
-Replace `showAlert()` calls with logger + status bar:
+Implemented:
+- Created `src/logging-ui.ts` with reusable UI helpers: `createStatusRenderer()`, `createLogAppender()`, `applyLogFilter()`, `setupLogFiltering()`
+- Instantiated Logger and StatusBar, wired `statusBar.setLogger(logger)`
+- Replaced all `showAlert()` calls with direct `statusBar.post()`/`statusBar.flash()` calls
+- Added live status bar rendering and log appending via subscriptions
+- Wired log filter toggle, level checkboxes, clear, and export buttons
+- Avoided double logging (StatusBar already logs via its logger integration)
+
+Usage pattern:
 - **Blocking errors** (form validation, endpoint conflicts) → `statusBar.post('form-error', 'error', message)`
 - **Action confirmations** (saved, deleted) → `statusBar.flash('info', '✅ Endpoint saved', 3000)`
 - **All operations** → also `logger.error()` / `logger.info()` for audit trail
@@ -255,7 +251,7 @@ Replace `showAlert()` calls with logger + status bar:
 Wire status bar UI:
 - Subscribe to status bar changes → render message + icon
 - Handle transient timeout → hide after timeout
-- Form input blur → validate → `statusBar.set('form-error', 'error', message)` or `statusBar.clear('form-error')`
+- Form input blur → validate → `statusBar.post('form-error', 'error', message)` or `statusBar.clear('form-error')`
 
 Example:
 ```typescript
@@ -340,27 +336,37 @@ try {
 
 ---
 
-## Testing Plan
+## Testing Plan ✅ COMPLETED
 
 ### Unit Tests
 
-**Logger**:
+**Logger** (`tests/unit/logger.test.ts`): ✅ 15 tests passing
 - Circular buffer: max 100 entries, drop oldest
 - Filter by level and category
 - Subscribe/notify
 - Export JSON format
+- Immutability of returned entries
 
-**Status Bar**:
-- `set(slot, level, message)`: stores in persistent, notifies
-- `action(level, message, timeout)`: sets transient, auto-clears
+**Status Bar** (`tests/unit/status-bar.test.ts`): ✅ 22 tests passing
+- `post(slot, level, message)`: stores in persistent, notifies
+- `flash(level, message, timeout, slot?)`: sets transient (stacked), auto-clears and restores previous
 - `clear(slot?, level?)`: removes from slot (or all) optionally filtered by level
 - **Priority logic** (overlay):
   - Transients always win
   - Highest level persistent visible if no transient
-  - Latest transient always shown
-  - Old persistent in highest-level slot shown if multiple
+  - Latest transient shown, earlier restored on expiry
+  - Oldest persistent in highest-level slot shown if multiple
 - Slot isolation: message in slot A doesn't affect slot B
-- Logging integration: messages logged to logger
+- Logging integration: messages logged to logger (slot used as category)
+- Zero-timeout transients, stacked transient behavior
+
+**Logging UI** (`tests/unit/logging-ui.test.ts`): ✅ 6 tests passing
+- `applyLogFilter()`: shows/hides log lines based on selected levels
+- Handles all-selected and empty filter arrays
+- Ignores `.log-empty` placeholder
+- `createLogAppender()`: appends log lines, removes empty placeholder on first log
+
+**Total**: 83 tests passing, 0 failures
 
 **Example test**:
 ```typescript
@@ -400,16 +406,7 @@ assert(statusBar.getCurrent() === null);
 
 ---
 
-## Implementation Sequence
-
-1. Create `src/logger.ts` with Logger class
-2. Create `src/status-bar.ts` with StatusBar class
-3. Add unit tests for logger and status bar
-4. Update `options.html` with status bar + log viewer + CSS
-5. Update `src/options.ts` to use logger + status bar
-6. Add form-level error badges and hover messages
-7. Enhance error messages in template operations (Task 4)
-8. Add storage error parsing (Task 5)
+---
 9. Integration test and manual QA
 
 ---

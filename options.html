@@ -366,6 +366,70 @@
       font-size: 13px;
       line-height: 1.6;
     }
+
+    /* Status bar styling */
+    .status-bar-card {
+      background: white;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 24px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      border-left: 5px solid #667eea;
+    }
+
+    .status-content {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .status-icon {
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .status-text {
+      color: #333;
+      font-weight: 500;
+    }
+
+    /* Log viewer styling */
+    .log-filter-panel {
+      background: #f8f9fa;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 12px;
+    }
+
+    .filter-group {
+      margin-bottom: 12px;
+    }
+
+    .filter-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .log-viewer {
+      background: #0b1021;
+      color: #e5e7eb;
+      border-radius: 6px;
+      padding: 12px;
+      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+      font-size: 12px;
+      max-height: 300px;
+      overflow-y: auto;
+      line-height: 1.5;
+      border: 1px solid #1e293b;
+    }
+
+    .log-viewer > div {
+      margin-bottom: 4px;
+    }
+
+    .log-empty {
+      color: #6b7280;
+      font-style: italic;
+    }
   </style>
 </head>
 <body>
@@ -378,10 +442,10 @@
     <div id="alert" class="alert" style="display:none"></div>
 
     <!-- Status Bar -->
-    <div id="status-bar" class="card" style="display:none; border-left: 4px solid #667eea;">
-      <div class="status-content" style="display:flex; align-items:center; gap:8px;">
-        <span id="status-icon" aria-hidden="true">ℹ️</span>
-        <span id="status-message"></span>
+    <div id="status-bar" class="status-bar-card" style="display:none;">
+      <div class="status-content">
+        <span id="status-icon" class="status-icon" aria-hidden="true">ℹ️</span>
+        <span id="status-message" class="status-text"></span>
       </div>
     </div>
 
@@ -411,11 +475,33 @@
       <div class="card-header">
         <h2 class="card-title">Activity Log</h2>
         <div class="card-actions">
+          <button id="log-filter-toggle" class="btn-secondary">⚙️ Filter</button>
           <button id="log-clear" class="btn-secondary">🗑 Clear</button>
           <button id="log-export" class="btn-secondary">⬇ Export</button>
         </div>
       </div>
-      <div id="log-viewer" class="preview" style="max-height:300px; overflow:auto;">
+      <!-- Log filter panel -->
+      <div id="log-filter-panel" class="log-filter-panel" style="display:none; margin-bottom:12px;">
+        <div class="filter-group">
+          <label style="font-size:12px; font-weight:600; display:block; margin-bottom:6px;">Levels</label>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <label style="display:flex; align-items:center; font-weight:normal; margin-bottom:0;">
+              <input type="checkbox" class="log-level-filter" value="error" checked /> Error
+            </label>
+            <label style="display:flex; align-items:center; font-weight:normal; margin-bottom:0;">
+              <input type="checkbox" class="log-level-filter" value="warn" checked /> Warn
+            </label>
+            <label style="display:flex; align-items:center; font-weight:normal; margin-bottom:0;">
+              <input type="checkbox" class="log-level-filter" value="info" checked /> Info
+            </label>
+            <label style="display:flex; align-items:center; font-weight:normal; margin-bottom:0;">
+              <input type="checkbox" class="log-level-filter" value="debug" /> Debug
+            </label>
+          </div>
+        </div>
+      </div>
+      <!-- Log viewer -->
+      <div id="log-viewer" class="log-viewer">
         <div class="log-empty">No logs yet</div>
       </div>
     </div>

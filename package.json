@@ -12,12 +12,14 @@
     "test:integration": "node tests/integration/run.js"
   },
   "devDependencies": {
-    "@types/firefox-webext-browser": "^143.0.0",
-    "@types/node": "^22.9.0",
-    "web-ext": "^7.7.0",
     "@types/chai": "^4.3.11",
+    "@types/firefox-webext-browser": "^143.0.0",
+    "@types/jsdom": "^27.0.0",
+    "@types/node": "^22.9.0",
     "chai": "^4.3.10",
+    "jsdom": "^27.3.0",
     "tsx": "^4.7.2",
-    "typescript": "^5.4.0"
+    "typescript": "^5.4.0",
+    "web-ext": "^7.7.0"
   }
 }
