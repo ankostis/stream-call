@@ -14,7 +14,27 @@ export interface LogEntry {
   timestamp: Date;
   level: LogLevel;
   category: LogCategory;
-  message: string;
+  message: string; // UI-friendly, formatted string
+  args: unknown[]; // Raw arguments as passed by callers
+}
+
+function formatArg(arg: unknown): string {
+  if (arg instanceof Error) {
+    return `${arg.name}: ${arg.message}`;
+  }
+  if (typeof arg === 'object' && arg !== null) {
+    try {
+      return JSON.stringify(arg);
+    } catch {
+      return String(arg);
+    }
+  }
+  return String(arg);
+}
+
+function formatArgs(args: unknown[]): string {
+  if (args.length === 0) return '';
+  return args.map(formatArg).join(' ');
 }
 
 export class Logger {
@@ -25,12 +45,14 @@ export class Logger {
   /**
    * Log a message at the specified level and category
    */
-  log(level: LogLevel, category: LogCategory, message: string): void {
+  log(level: LogLevel, category: LogCategory, ...args: unknown[]): void {
+    const message = formatArgs(args);
     const entry: LogEntry = {
       timestamp: new Date(),
       level,
       category,
-      message
+      message,
+      args
     };
 
     // Add to circular buffer
@@ -40,21 +62,10 @@ export class Logger {
     }
 
     // Console passthrough
-    const consoleMsg = `[${level.toUpperCase()}] [${category}] ${message}`;
-    switch (level) {
-      case 'error':
-        console.error(consoleMsg);
-        break;
-      case 'warn':
-        console.warn(consoleMsg);
-        break;
-      case 'info':
-        console.info(consoleMsg);
-        break;
-      case 'debug':
-        console.debug(consoleMsg);
-        break;
-    }
+    const consoleMethods: Record<LogLevel, (...args: any[]) => void> = {
+      error: console.error, warn: console.warn, info: console.info, debug: console.debug,
+    };
+    consoleMethods[level](`[${category}]`, ...(args.length > 0 ? args : [message]));
 
     // Notify subscribers
     this.notify();
@@ -63,29 +74,29 @@ export class Logger {
   /**
    * Log an error message
    */
-  error(category: LogCategory, message: string): void {
-    this.log('error', category, message);
+  error(category: LogCategory, ...args: unknown[]): void {
+    this.log('error', category, ...args);
   }
 
   /**
    * Log a warning message
    */
-  warn(category: LogCategory, message: string): void {
-    this.log('warn', category, message);
+  warn(category: LogCategory, ...args: unknown[]): void {
+    this.log('warn', category, ...args);
   }
 
   /**
    * Log an info message
    */
-  info(category: LogCategory, message: string): void {
-    this.log('info', category, message);
+  info(category: LogCategory, ...args: unknown[]): void {
+    this.log('info', category, ...args);
   }
 
   /**
    * Log a debug message
    */
-  debug(category: LogCategory, message: string): void {
-    this.log('debug', category, message);
+  debug(category: LogCategory, ...args: unknown[]): void {
+    this.log('debug', category, ...args);
   }
 
   /**
@@ -133,7 +144,8 @@ export class Logger {
       timestamp: entry.timestamp.toISOString(),
       level: entry.level,
       category: entry.category,
-      message: entry.message
+      message: entry.message,
+      args: entry.args.map(formatArg)
     }));
     return JSON.stringify(exportData, null, 2);
   }

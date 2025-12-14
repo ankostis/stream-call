@@ -17,9 +17,27 @@ export interface StatusMessage {
   slot: StatusSlot;
   level: StatusLevel;
   message: string;
+  messageArgs?: unknown[];
   timestamp: Date;
   timeout?: number; // ms; undefined = persistent
   isTransient: boolean;
+}
+
+function formatArgs(args: unknown[]): string {
+  if (!args || args.length === 0) return '';
+  return args
+    .map((arg) => {
+      if (arg instanceof Error) return `${arg.name}: ${arg.message}`;
+      if (typeof arg === 'object' && arg !== null) {
+        try {
+          return JSON.stringify(arg);
+        } catch {
+          return String(arg);
+        }
+      }
+      return String(arg);
+    })
+    .join(' ');
 }
 
 export class StatusBar {
@@ -33,11 +51,13 @@ export class StatusBar {
   /**
    * Post persistent message in a slot (replaces older in same slot)
    */
-  post(slot: StatusSlot, level: StatusLevel, message: string): void {
+  post(slot: StatusSlot, level: StatusLevel, ...args: unknown[]): void {
+    const message = formatArgs(args);
     const msg: StatusMessage = {
       slot,
       level,
       message,
+      messageArgs: args,
       timestamp: new Date(),
       isTransient: false
     };
@@ -50,11 +70,14 @@ export class StatusBar {
   /**
    * Flash a transient message (default timeout 3000ms). Uses stacking behavior.
    */
-  flash(level: StatusLevel, message: string, timeout: number = 3000, slot: StatusSlot = 'transient'): void {
+  flash(level: StatusLevel, message: unknown, timeout: number = 3000, slot: StatusSlot = 'transient', ...restArgs: unknown[]): void {
+    const args = [message, ...restArgs];
+    const formatted = formatArgs(args);
     const msg: StatusMessage = {
       slot,
       level,
-      message,
+      message: formatted,
+      messageArgs: args,
       timestamp: new Date(),
       timeout,
       isTransient: true
@@ -155,8 +178,8 @@ export class StatusBar {
 
     const category = msg.slot; // Use slot string directly as category
     const logLevel = msg.level; // error/warn/info affects visibility and logging
-
-    this.logger.log(logLevel, category, msg.message);
+    const args = msg.messageArgs && msg.messageArgs.length > 0 ? msg.messageArgs : [msg.message];
+    this.logger.log(logLevel, category, ...args);
   }
 
   /**
