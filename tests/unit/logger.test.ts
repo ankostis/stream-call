@@ -230,7 +230,7 @@ test('StatusBar: post() replaces older message in same slot', () => {
 
 test('StatusBar: flash() sets transient message', () => {
   const statusBar = new StatusBar();
-  statusBar.flash('info', 'transient', 5000, '✅ Saved');
+  statusBar.flash(LogLevel.Info, 'transient', 5000, '✅ Saved');
 
   const current = statusBar.getCurrent();
   assert(current !== null);
@@ -242,7 +242,7 @@ test('StatusBar: flash() sets transient message', () => {
 test('StatusBar: transient overrides persistent (priority)', () => {
   const statusBar = new StatusBar();
   statusBar.post(LogLevel.Error, 'form-error', 'Persistent error');
-  statusBar.flash('info', 'transient', 5000, '✅ Saved');
+  statusBar.flash(LogLevel.Info, 'transient', 5000, '✅ Saved');
 
   const current = statusBar.getCurrent();
   assert(current !== null);
@@ -252,7 +252,7 @@ test('StatusBar: transient overrides persistent (priority)', () => {
 
 test('StatusBar: transient auto-clears after timeout', async () => {
   const statusBar = new StatusBar();
-  statusBar.flash('info', 'transient', 100, 'Short timeout for testing');
+  statusBar.flash(LogLevel.Info, 'transient', 100, 'Short timeout for testing');
 
   let current = statusBar.getCurrent();
   assert(current !== null);
@@ -268,7 +268,7 @@ test('StatusBar: transient auto-clears after timeout', async () => {
 test('StatusBar: after transient clears, persistent becomes visible', async () => {
   const statusBar = new StatusBar();
   statusBar.post(LogLevel.Error, 'form-error', 'Persistent error');
-  statusBar.flash('info', 'transient', 100, 'Saved');
+  statusBar.flash(LogLevel.Info, 'transient', 100, 'Saved');
 
   // Wait for transient to clear
   await new Promise((resolve) => setTimeout(resolve, 150));
@@ -375,7 +375,7 @@ test('StatusBar: subscribe receives notification on flash()', () => {
     notified = true;
   });
 
-  statusBar.flash('info', 'transient', 3000, '✅ Saved');
+  statusBar.flash(LogLevel.Info, 'transient', 3000, '✅ Saved');
 
   assert.strictEqual(notified, true);
 });
@@ -430,7 +430,7 @@ test('StatusBar: logger integration for flash()', () => {
   const statusBar = new StatusBar();
   statusBar.setLogger(logger);
 
-  statusBar.flash('info', 'transient', 3000, '✅ Saved successfully');
+  statusBar.flash(LogLevel.Info, 'transient', 3000, '✅ Saved successfully');
 
   const entries = logger.getAll();
   assert.strictEqual(entries.length, 1);
