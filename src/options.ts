@@ -1,3 +1,6 @@
+/**
+ * stream-call options Script to define & CRUD endpoints (extension-context)
+ */
 export {};
 
 import { applyTemplate } from './template';

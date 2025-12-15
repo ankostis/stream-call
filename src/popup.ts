@@ -1,5 +1,5 @@
 /**
- * stream-call Popup Script
+ * stream-call Popup Script that calls the API endpoint (extension-context)
  */
 export {};
 

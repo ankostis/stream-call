@@ -1,10 +1,10 @@
+/**
+ * stream-call Content Script (page-context)
+ * Detects streaming media on web pages
+ */
 import { isStreamUrl as isStreamUrlShared, getStreamType as getStreamTypeShared } from './detect';
 import { debounce } from './debounce';
 import { Logger, LogLevel } from './logger';
-/**
- * stream-call Content Script
- * Detects streaming media on web pages
- */
 // Module content script (no exports needed)
 
 (() => {
