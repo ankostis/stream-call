@@ -407,13 +407,6 @@
     }
 
     /* Log viewer styling */
-    .log-filter-panel {
-      background: #f8f9fa;
-      border: 1px solid #e5e7eb;
-      border-radius: 6px;
-      padding: 12px;
-    }
-
     .filter-group {
       margin-bottom: 12px;
     }
@@ -429,19 +422,39 @@
       padding: 12px;
       font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
       font-size: 12px;
-      max-height: 300px;
-      overflow-y: auto;
       line-height: 1.5;
       border: 1px solid #1e293b;
+      display: flex;
+      flex-direction: column;
+      min-height: 200px;
+      max-height: 500px;
+      overflow-y: auto;
+    }
+
+    .log-viewer.visible {
+      flex: 1;
+      max-height: none;
     }
 
     .log-viewer > div {
       margin-bottom: 4px;
+      flex-shrink: 0;
     }
 
     .log-empty {
       color: #6b7280;
       font-style: italic;
+    }
+
+    /* Log filter panel visibility (toggle with logbox) */
+    .log-filter-panel {
+      display: none;
+    }
+
+    .log-filter-panel.visible {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
     }
 
     /* Responsive CSS for mobile/narrow viewports */
@@ -584,42 +597,7 @@
       <div id="endpoints-list" class="endpoints-list"></div>
     </div>
 
-    <!-- Activity Log -->
-    <div class="card" id="log-card">
-      <div class="card-header">
-        <h2 class="card-title">Activity Log</h2>
-        <div class="card-actions">
-          <button id="log-filter-toggle" class="btn-secondary">⚙️ Filter</button>
-          <button id="log-clear" class="btn-secondary">🗑 Clear</button>
-          <button id="log-export" class="btn-secondary">⬇ Export</button>
-        </div>
-      </div>
-      <!-- Log filter panel -->
-      <div id="log-filter-panel" class="log-filter-panel" style="display:none; margin-bottom:12px;">
-        <div class="filter-group">
-          <label style="font-size:12px; font-weight:600; display:block; margin-bottom:6px;">Levels</label>
-          <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <label style="display:flex; align-items:center; font-weight:normal; margin-bottom:0;">
-              <input type="checkbox" class="log-level-filter" value="error" checked /> Error
-            </label>
-            <label style="display:flex; align-items:center; font-weight:normal; margin-bottom:0;">
-              <input type="checkbox" class="log-level-filter" value="warn" checked /> Warn
-            </label>
-            <label style="display:flex; align-items:center; font-weight:normal; margin-bottom:0;">
-              <input type="checkbox" class="log-level-filter" value="info" checked /> Info
-            </label>
-            <label style="display:flex; align-items:center; font-weight:normal; margin-bottom:0;">
-              <input type="checkbox" class="log-level-filter" value="debug" /> Debug
-            </label>
-          </div>
-        </div>
-      </div>
-      <!-- Log viewer -->
-      <div id="log-viewer" class="log-viewer">
-        <div class="log-empty">No logs yet</div>
-      </div>
-    </div>
-
+    <!-- API Endpoint Editor -->
     <div class="card" id="editor-card" style="display: none;">
       <h2 class="card-title" id="editor-title">Add API endpoint</h2>
       <div class="form-grid">
@@ -654,7 +632,7 @@
 
         <div class="form-group">
           <label for="endpoint-body">Body template (optional)</label>
-          <textarea id="endpoint-body" placeholder='{"url":"{{streamUrl}}"}'></textarea>
+          <textarea id="endpoint-body" placeholder='{"url":"{{streamUrl}}"}' ></textarea>
           <div class="help-text">Leave empty to send defaults (URL + timestamp, and page info if enabled).</div>
         </div>
 
@@ -679,6 +657,37 @@
         </div>
 
         <div id="preview" class="preview" style="display: none;"></div>
+      </div>
+    </div>
+
+    <!-- Activity Log -->
+    <div class="card" id="log-card">
+      <div class="card-header">
+        <div style="display:flex; align-items:center; gap:16px; flex:1;">
+          <h2 class="card-title" style="margin:0;">Activity Log</h2>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; font-size:12px;">
+            <label style="display:flex; align-items:center; font-weight:normal; margin:0;">
+              <input type="checkbox" class="log-level-filter" value="error" checked /> Error
+            </label>
+            <label style="display:flex; align-items:center; font-weight:normal; margin:0;">
+              <input type="checkbox" class="log-level-filter" value="warn" checked /> Warn
+            </label>
+            <label style="display:flex; align-items:center; font-weight:normal; margin:0;">
+              <input type="checkbox" class="log-level-filter" value="info" checked /> Info
+            </label>
+            <label style="display:flex; align-items:center; font-weight:normal; margin:0;">
+              <input type="checkbox" class="log-level-filter" value="debug" /> Debug
+            </label>
+          </div>
+        </div>
+        <div class="card-actions">
+          <button id="log-clear" class="btn-secondary">🗑 Clear</button>
+          <button id="log-export" class="btn-secondary">⬇ Export</button>
+        </div>
+      </div>
+      <!-- Log viewer -->
+      <div id="log-viewer" class="log-viewer">
+        <div class="log-empty">No logs yet</div>
       </div>
     </div>
 

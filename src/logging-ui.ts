@@ -40,18 +40,10 @@ export function applyLogFilter(viewer: HTMLDivElement, levels: string[]) {
   });
 }
 
-export function setupLogFiltering(
+export function applyLogFiltering(
   viewer: HTMLDivElement,
-  filterPanel: HTMLDivElement,
-  filterToggle: HTMLElement,
   levelCheckboxes: NodeListOf<HTMLInputElement>
 ) {
-  // Toggle filter panel
-  filterToggle.addEventListener('click', () => {
-    const isHidden = filterPanel.style.display === 'none';
-    filterPanel.style.display = isHidden ? 'block' : 'none';
-  });
-
   // Apply filter on checkbox change
   levelCheckboxes.forEach(el => {
     el.addEventListener('change', () => {

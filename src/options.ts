@@ -2,7 +2,7 @@ export {};
 
 import { applyTemplate } from './template';
 import { Logger, LogLevel, StatusBar } from './logger';
-import { createLogAppender, createStatusRenderer, setupLogFiltering } from './logging-ui';
+import { createLogAppender, createStatusRenderer, applyLogFiltering } from './logging-ui';
 import { ApiEndpoint, suggestEndpointName, validateEndpoints } from './endpoint';
 
 const DEFAULT_CONFIG = {
@@ -554,13 +554,11 @@ function initialize() {
   setHeadersRows();
 
   // Wire log viewer controls using reusable helpers
-  const logFilterToggle = document.getElementById('log-filter-toggle');
-  const logFilterPanel = document.getElementById('log-filter-panel') as HTMLDivElement;
+  const logViewer = els.logViewer();
   const levelCheckboxes = document.querySelectorAll('.log-level-filter') as NodeListOf<HTMLInputElement>;
 
-  if (logFilterToggle && logFilterPanel) {
-    setupLogFiltering(els.logViewer(), logFilterPanel, logFilterToggle, levelCheckboxes);
-  }
+  // Wire log filtering (filters always visible in header)
+  applyLogFiltering(logViewer, levelCheckboxes);
 
   els.logClear()?.addEventListener('click', () => {
     logger.clear();

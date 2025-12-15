@@ -5,7 +5,7 @@ export {};
 
 import { parseEndpoints, type ApiEndpoint } from './endpoint';
 import { Logger, StatusBar, LogLevel } from './logger';
-import { createStatusRenderer, createLogAppender, setupLogFiltering } from './logging-ui';
+import { createStatusRenderer, createLogAppender, applyLogFiltering } from './logging-ui';
 
 type StreamInfo = {
   url: string;
@@ -45,7 +45,6 @@ async function initialize() {
   const statusMsgEl = document.getElementById('status-message') as HTMLSpanElement;
   const logViewerEl = document.getElementById('log-viewer') as HTMLDivElement;
   const logToggleEl = document.getElementById('log-toggle') as HTMLButtonElement;
-  const logFilterToggleEl = document.getElementById('log-filter-toggle') as HTMLButtonElement;
   const logFilterPanelEl = document.getElementById('log-filter-panel') as HTMLDivElement;
 
   // Wire status bar rendering
@@ -62,15 +61,14 @@ async function initialize() {
     entries.slice(-1).forEach((e) => appendLog(e.level, e.category as any, e.message));
   });
 
-  // Wire log toggle
+  // Wire log toggle (expand/collapse log viewer and filters)
   logToggleEl.addEventListener('click', () => {
     logViewerEl.classList.toggle('visible');
-    logToggleEl.textContent = logViewerEl.classList.contains('visible') ? '📋 Hide logs' : '📋 Show logs';
+    logFilterPanelEl.classList.toggle('visible');
+    logToggleEl.textContent = logViewerEl.classList.contains('visible') ? '📋 Hide' : '📋 Logs';
   });
 
-  // Wire log filtering
-  const levelCheckboxes = document.querySelectorAll('.log-level-filter') as NodeListOf<HTMLInputElement>;
-  setupLogFiltering(logViewerEl, logFilterPanelEl, logFilterToggleEl, levelCheckboxes);
+  // Wire log filtering (filter panel always visible)\n  const levelCheckboxes = document.querySelectorAll('.log-level-filter') as NodeListOf<HTMLInputElement>;\n  applyLogFiltering(logViewerEl, levelCheckboxes);
 
   // Load data
   await loadEndpoints();
@@ -79,14 +77,14 @@ async function initialize() {
   // Wire action buttons
   document.getElementById('refresh-btn')?.addEventListener('click', handleRefresh);
   document.getElementById('options-btn')?.addEventListener('click', handleOptions);
+
+  logger.debug('init', 'Popup initialized successfully');
 }
 
 // Helper to show log controls
 function showLogControls() {
   const logToggleEl = document.getElementById('log-toggle') as HTMLButtonElement;
-  const logFilterToggleEl = document.getElementById('log-filter-toggle') as HTMLButtonElement;
   if (logToggleEl) logToggleEl.style.display = 'block';
-  if (logFilterToggleEl) logFilterToggleEl.style.display = 'block';
 }
 
 async function loadEndpoints() {
@@ -97,6 +95,7 @@ async function loadEndpoints() {
   const stored = (await browser.storage.sync.get(defaults)) as typeof defaults;
   try {
     apiEndpoints = parseEndpoints(stored.apiEndpoints);
+    logger.debug('config-load', `Loaded ${apiEndpoints.length} API endpoints`);
   } catch (error: any) {
     // Parse error is expected if config is corrupted - show to user via statusBar (which logs internally)
     statusBar.post(LogLevel.Error, 'config-error', 'Invalid API endpoints configured. Check options.', error);
@@ -124,12 +123,23 @@ async function loadStreams() {
     return;
   }
 
-  const response = await browser.runtime.sendMessage({
-    type: 'GET_STREAMS',
-    tabId: currentTabId
-  });
+  let response;
+  try {
+    response = await browser.runtime.sendMessage({
+      type: 'GET_STREAMS',
+      tabId: currentTabId
+    });
+  } catch (error) {
+    // Message passing error - log and display
+    statusBar.post(LogLevel.Error, 'messaging-error', 'Failed to fetch streams from background', error);
+    const loadingEl = document.getElementById('loading');
+    if (loadingEl) loadingEl.style.display = 'none';
+    showLogControls();
+    return;
+  }
 
   const streams = (response?.streams as StreamInfo[] | undefined) || [];
+  logger.debug('stream-fetch', `Loaded ${streams.length} streams for tab ${currentTabId}`);
 
   const loadingEl = document.getElementById('loading');
   if (loadingEl) loadingEl.style.display = 'none';
@@ -264,24 +274,35 @@ async function handleCallAPI(stream: StreamInfo, endpointName?: string) {
 
   // statusBar.flash handles logging internally
   statusBar.flash(LogLevel.Info, 'api-status', 3000, 'Sending stream URL to API...');
+  logger.info('api-call', `Calling API: endpoint=${endpointName}, streamUrl=${stream.url}`);
 
-  const response = await browser.runtime.sendMessage({
-    type: 'CALL_API',
-    streamUrl: stream.url,
-    pageUrl: stream.pageUrl,
-    pageTitle: stream.pageTitle,
-    endpointName
-  });
+  let response;
+  try {
+    response = await browser.runtime.sendMessage({
+      type: 'CALL_API',
+      streamUrl: stream.url,
+      pageUrl: stream.pageUrl,
+      pageTitle: stream.pageTitle,
+      endpointName
+    });
+  } catch (error) {
+    // Message passing error - log and display
+    statusBar.post(LogLevel.Error, 'api-error', 'Failed to send API request', error);
+    showLogControls();
+    return;
+  }
 
   if (response?.success) {
     // statusBar.flash handles logging internally
     statusBar.flash(LogLevel.Info, 'api-status', 3000, '✅ Stream URL sent successfully!');
+    logger.info('api-call', `API call succeeded: ${response.details || 'no details'}`);
   } else {
     // statusBar.post handles logging internally
-    statusBar.post(LogLevel.Error, 'api-error', `❌ Error: ${response?.error ?? 'Unknown error'}`);
+    const errorMsg = response?.error ?? 'Unknown error';
+    statusBar.post(LogLevel.Error, 'api-error', `❌ Error: ${errorMsg}`);
+    logger.error('api-call', `API call failed: ${errorMsg}`, response);
     showLogControls();
   }
-  // Note: Other errors (storage.get, sendMessage) bubble to event handler caller
 }
 
 /**
@@ -292,6 +313,7 @@ async function handleCopyUrl(url: string) {
     await navigator.clipboard.writeText(url);
     // statusBar.flash handles logging internally
     statusBar.flash(LogLevel.Info, 'last-action', 3000, '📋 URL copied to clipboard');
+    logger.debug('ui-action', `Copied URL to clipboard: ${url}`);
   } catch (error) {
     // Clipboard write may fail due to permissions; statusBar.post handles logging
     statusBar.post(LogLevel.Warn, 'clipboard-error', '⚠️ Failed to copy URL', error);
@@ -303,19 +325,29 @@ async function handleCopyUrl(url: string) {
  * Handle refresh
  */
 async function handleRefresh() {
-  const loading = document.getElementById('loading');
-  if (loading) loading.style.display = 'block';
+  try {
+    const loading = document.getElementById('loading');
+    if (loading) loading.style.display = 'block';
 
-  const container = document.getElementById('streams-container');
-  if (container) container.innerHTML = '';
+    const container = document.getElementById('streams-container');
+    if (container) container.innerHTML = '';
 
-  await loadStreams();
+    logger.debug('ui-action', 'Refresh button clicked');
+    await loadStreams();
+  } catch (error) {
+    // Unexpected error in refresh - log and display
+    statusBar.post(LogLevel.Error, 'refresh-error', 'Failed to refresh streams', error);
+    const loading = document.getElementById('loading');
+    if (loading) loading.style.display = 'none';
+    showLogControls();
+  }
 }
 
 /**
  * Handle options button
  */
 function handleOptions() {
+  logger.debug('ui-action', 'Options button clicked');
   browser.runtime.openOptionsPage();
 }
 
@@ -325,4 +357,14 @@ function handleOptions() {
 // Inline notification UI removed; delegate to StatusBar/Logger for feedback
 
 // Initialize when popup opens
-document.addEventListener('DOMContentLoaded', initialize);
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    await initialize();
+  } catch (error) {
+    // Top-level exception handler - log and display to user
+    statusBar.post(LogLevel.Error, 'init-error', 'Failed to initialize popup', error);
+    const loadingEl = document.getElementById('loading');
+    if (loadingEl) loadingEl.style.display = 'none';
+    showLogControls();
+  }
+});

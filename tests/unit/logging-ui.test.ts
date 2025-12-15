@@ -7,6 +7,30 @@ import { applyLogFilter, createLogAppender } from '../../src/logging-ui';
 function createMockViewer(): HTMLDivElement {
   const dom = new JSDOM('<!DOCTYPE html><div id="viewer"></div>');
   const viewer = dom.window.document.getElementById('viewer') as HTMLDivElement;
+
+  // Add scroll properties for auto-scroll tests
+  Object.defineProperty(viewer, 'scrollHeight', {
+    value: 0,
+    writable: true,
+    configurable: true
+  });
+  Object.defineProperty(viewer, 'scrollTop', {
+    value: 0,
+    writable: true,
+    configurable: true
+  });
+  Object.defineProperty(viewer, 'clientHeight', {
+    value: 0,
+    writable: true,
+    configurable: true
+  });
+  Object.defineProperty(viewer, 'addEventListener', {
+    value: function(event: string, listener: any) {
+      // Mock addEventListener to prevent scroll listener from breaking tests
+    },
+    writable: true
+  });
+
   return viewer;
 }
 
