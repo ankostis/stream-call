@@ -4,7 +4,7 @@
 
 ## Next Generation Architecture (Mobile-First)
 
-**Goal**: Convert popup from browser_action to in-page hover panel for optimal mobile UX.
+**Goal**: Offer popup from browser_action to in-page hover panel for optimal mobile UX.
 
 ### Key Changes
 1. **In-Page Hover Panel** (replaces browser_action popup):
@@ -18,11 +18,6 @@
    - Move endpoint CRUD UI from options to browser_action popup
    - Keep options page for internal configs only
    - Quick access to endpoint management
-
-3. **Background Service**:
-   - Reverse message direction: extension→page (if needed)
-   - Stream detection stays in page context
-   - May become optional or minimal
 
 ### Benefits
 - ✅ Mobile-friendly: full-screen overlay, no popup size limits

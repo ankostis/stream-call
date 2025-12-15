@@ -39,7 +39,7 @@
   - early handling of exceptions preferable only when fail cause is known or where remedy is possible.
 - Type isolation: each TS file `export {}` to avoid globals.
 - Endpoint keying: unique `name`; `suggestEndpointName()` derives from hostname;
-  `parseEndpoints()` filters dups; `validateEndpoints()` surfaces dups.
+  `parseEndpoints()` filters dupes; `validateEndpoints()` surfaces dups.
 - Template errors: handled separately in `callStreamAPI()`/`testAPI()` to
   distinguish placeholder issues from network errors.
 - Detection patterns: extend `STREAM_PATTERNS` and `getStreamType()` together;
@@ -48,18 +48,14 @@
   them in `dist/`. Icons via `icons/generate-icons.html`.
 
 ## Testing & debugging
-- Unit: `npm test` (25 tests: config parsing, template interpolation, detection).
-- Integration: `npm run test:integration` (web-ext, serves `tests/test-page.html`
-  on :9090; asserts detections and no fatal errors).
+- Unit & Integrations are launched by the `package.json:scripts`.
 - Manual API: use https://httpbin.org/anything to validate templating; tweak
   `DEFAULT_CONFIG` in `src/options.ts` for quick tests.
 - Debugging: background via about:debugging > Inspect; content in page console;
-  PING handler for popup health checks.
+  PING handler for popup health checks; use logs.
 
 ## Quick references
 - Build: `npm run build` (clean + tsc + copy HTML)
-- Dev load: about:debugging#/runtime/this-firefox -> Load Temporary Add-on ->
-  manifest.json (expects `dist/` populated)
 - Package: `npm run build && zip -r stream-call.zip manifest.json dist icons -x
   "icons/generate-icons.html"`
 - Tests: `npm test`; `npm run test:integration`
@@ -69,9 +65,22 @@
   3), polish (Phase 4). Phase 1 (ID→name) done.
 - `error-handling-audit.md`: Silent error sinks fixed (PING checks, template
   error separation, better UI feedback).
+- `refact-options-ui.md`: fiddle architecture to optimize UX and execution-context boundaries.
 
 ## Ask when unclear
 - Confirm target browser (Firefox vs Chrome) before changing APIs or types.
 - Verify new permissions/host permissions before adding to manifest.
 - If touching shared utilities (`config.ts`, `template.ts`, `detect.ts`), update
   related tests.
+
+## Be succinct when coding, creative when elaborating
+- Too much code is hard to guard.
+- Terseness is more important for documentation - long code is slow, long docs are a waste.
+- Keep it DRY.
+- Don't forget the tests & documentation.
+
+## Skillful Git artisan
+- Segregate changes for distinct commits by functionality (not location).
+- Don't `git add` files, i may plan to derive multiple commits from existing workspace changes.
+- I frequently rewrite my history to hide the [Sausage Making](https://gist.github.com/SethRobertson/1540906/de2387189cc924c2b24ad867e6f81b29a9ced1a7#sausage-making).  Read history and help.
+- Ask me if a commit has finished, when you can't tell.
