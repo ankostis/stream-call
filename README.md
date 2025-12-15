@@ -297,19 +297,20 @@ The extension uses a message-driven architecture via `browser.runtime.sendMessag
 
 ### Logging Categories
 
-So far...
+Both Logger (audit trail) and StatusBar (UI feedback) use unified categories:
 
 | Category | Occurrences | Purpose |
 |----------|:-----------:|---------|
-| endpoint | 14 | ✅ Endpoint operations (save/delete/validate/config parsing/form) |
-| page     |  9 | ✅ Page script operations (detection/injection/initialization) |
-| storage  |  8 | ✅ Storage operations (save/load/reset/export/import/info) |
-| apicall  |  7 | ✅ API call operations (HTTP requests/responses/tracking) |
-| popup    |  5 | ✅ Popup component operations (init/refresh/UI actions) |
-| stat     |  3 | ✅ General status updates |
-| messaging | 2 | ✅ Message passing between components |
-| interpolation | 2 | ✅ Template interpolation (preview + test API) |
-| clipboard | 2 | ✅ Clipboard operations |
+| endpoint | 15 | ✅ Endpoint operations (config/validation/save/delete) |
+| apicall  | 10 | ✅ API call operations (HTTP requests/responses/testing) |
+| storage  |  9 | ✅ Storage operations (load/save/reset/export/import/initialization) |
+| popup    |  7 | ✅ Popup component operations (initialization/refresh/UI actions) |
+| page     |  6 | ✅ Page script operations (stream detection/player detection/UI injection) |
+| background | 6 | ✅ Background worker operations (stream management/tab lifecycle/initialization) |
+| messaging | 5 | ✅ Cross-component message passing (GET_STREAMS/CALL_API/PING) |
+| stat     |  3 | ✅ General status/progress messages |
+| interpolation | 2 | ✅ Template placeholder interpolation |
+| clipboard | 2 | ✅ Clipboard copy operations |
 
 
 ## Privacy

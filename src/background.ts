@@ -7,6 +7,9 @@
 export {};
 
 import { callEndpointAPI, DEFAULT_CONFIG } from './endpoint';
+import { Logger, LogLevel } from './logger';
+
+const logger = new Logger();
 
 // Limit streams per tab to prevent unbounded memory growth
 const MAX_STREAMS_PER_TAB = 200;
@@ -18,7 +21,7 @@ browser.runtime.onInstalled.addListener(async (details) => {
     const stored = await browser.storage.sync.get('apiEndpoints');
     if (!stored.apiEndpoints) {
       await browser.storage.sync.set({ apiEndpoints: DEFAULT_CONFIG.apiEndpoints });
-      console.log('[stream-call] Initialized storage with 3 demo endpoints');
+      logger.info('storage', 'Initialized storage with 3 demo endpoints');
     }
   }
 });
@@ -89,8 +92,9 @@ browser.runtime.onMessage.addListener((message: RuntimeMessage, sender) => {
       // Enforce cap: remove oldest entry if limit exceeded
       if (streams.length > MAX_STREAMS_PER_TAB) {
         streams.shift();
+        logger.debug('background', `Tab ${tabId}: stream cap reached, removed oldest`);
       }
-      console.log('Stream detected:', streamInfo);
+      logger.info('background', `Stream detected: ${streamInfo.url} (${streamInfo.type})`);
       updateBadge(tabId, streams.length);
     }
 
@@ -100,6 +104,7 @@ browser.runtime.onMessage.addListener((message: RuntimeMessage, sender) => {
     if (message.type === 'GET_STREAMS') {
       const tabId = message.tabId;
       const streams = tabStreams.get(tabId) || [];
+      logger.debug('messaging', `GET_STREAMS for tab ${tabId}: ${streams.length} streams`);
       return { streams };
     }
 
@@ -108,6 +113,7 @@ browser.runtime.onMessage.addListener((message: RuntimeMessage, sender) => {
       const [activeTab] = await browser.tabs.query({ active: true, currentWindow: true });
       const pageHeaders = activeTab?.id !== undefined ? tabHeaders.get(activeTab.id) : undefined;
 
+      logger.info('messaging', `CALL_API: endpoint=${message.endpointName || 'default'}, url=${message.streamUrl}`);
       return callEndpointAPI({
         streamUrl: message.streamUrl,
         pageUrl: message.pageUrl,
@@ -119,14 +125,17 @@ browser.runtime.onMessage.addListener((message: RuntimeMessage, sender) => {
 
   if (message.type === 'CLEAR_STREAMS') {
     const tabId = message.tabId;
+    const count = tabStreams.get(tabId)?.length || 0;
     tabStreams.delete(tabId);
     updateBadge(tabId, 0);
+    logger.debug('background', `Cleared ${count} streams for tab ${tabId}`);
     return Promise.resolve({ success: true });
   }
 
   if (message.type === 'PING') {
     // Test integration: respond with current detection state
     const totalDetected = Array.from(tabStreams.values()).reduce((sum, streams) => sum + streams.length, 0);
+    logger.debug('messaging', `PING: ${totalDetected} streams across ${tabStreams.size} tabs`);
     return {
       pong: true,
       totalDetected,
@@ -140,16 +149,24 @@ browser.runtime.onMessage.addListener((message: RuntimeMessage, sender) => {
 
 // Clean up when tabs are closed
 browser.tabs.onRemoved.addListener((tabId) => {
+  const count = tabStreams.get(tabId)?.length || 0;
   tabStreams.delete(tabId);
   tabHeaders.delete(tabId);
+  if (count > 0) {
+    logger.debug('background', `Tab ${tabId} closed: cleaned ${count} streams`);
+  }
 });
 
 // Clean up when navigating away
 browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
   if (changeInfo.status === 'loading') {
+    const count = tabStreams.get(tabId)?.length || 0;
     tabStreams.delete(tabId);
     tabHeaders.delete(tabId);
     updateBadge(tabId, 0);
+    if (count > 0) {
+      logger.debug('background', `Tab ${tabId} navigated: cleared ${count} streams`);
+    }
   }
 });
 
@@ -174,4 +191,4 @@ function updateBadge(tabId: number, count: number) {
   }
 }
 
-console.log('stream-call: background service worker loaded');
+logger.info('background', 'Background service worker loaded');

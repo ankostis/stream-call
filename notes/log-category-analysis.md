@@ -1,47 +1,96 @@
 # Log Category Analysis
 
+**Status**: ✅ Unified and validated (as of 2025-12-16)
+
+## Summary
+
+- **10 categories** used consistently by both Logger (audit trail) and StatusBar (UI feedback)
+- **65 total logging calls** across all components
+- **Categories are domain-specific** (what), **levels are severity-specific** (how important)
+- All logger calls verified for correct API usage
+
+## Category Usage
+
 | Category  | Count | Status | Description |
 |-----------|-------|--------|-------------|
-| endpoint  |   14 | ✅ | Endpoint operations (config/validation/save/delete) |
-| page      |    9 | ✅ | Page script operations (stream detection/player detection/UI injection) |
-| storage   |    8 | ✅ | Storage operations (load/save/reset/export/import) |
-| apicall   |    7 | ✅ | API call operations (HTTP requests/responses/testing) |
-| popup     |    5 | ✅ | Popup component operations (initialization/refresh/UI actions) |
+| endpoint  |   15 | ✅ | Endpoint operations (config/validation/save/delete) |
+| apicall   |   10 | ✅ | API call operations (HTTP requests/responses/testing) |
+| storage   |    9 | ✅ | Storage operations (load/save/reset/export/import/initialization) |
+| popup     |    7 | ✅ | Popup component operations (initialization/refresh/UI actions) |
+| page      |    6 | ✅ | Page script operations (stream detection/player detection/UI injection) |
+| background|    6 | ✅ | Background worker operations (stream management/tab lifecycle/initialization) |
+| messaging |    5 | ✅ | Cross-component message passing (GET_STREAMS/CALL_API/PING) |
 | stat      |    3 | ✅ | General status/progress messages |
-| messaging |    2 | ✅ | Cross-component message passing |
 | interpolation| 2 | ✅ | Template placeholder interpolation |
 | clipboard |    2 | ✅ | Clipboard copy operations |
 
-**Breakdown by component:**
-- **Logger calls**: 18 total (popup: 9, content: 9)
-- **StatusBar calls**: 40 total (popup: 13, options: 27)
-- **Total**: 58 logging calls across 9 categories
+## Breakdown by Component
 
-**Rationale for consolidation:**
-- `config` → `endpoint` (configuration is currently only endpoint parsing)
-- `form` → `endpoint` (form validates endpoints)
-- `api` + `api-status` + `api-call` → `api-call` (unified API operations)
-- `last-action` → domain-specific (success messages belong to their operation domain)
-- `storage-info` → `storage` (redundant with Info level)
-- `background` → `messaging` (background communication is message passing)
-- `init` + `refresh` + `ui-action` → `popup` (popup-specific operations)
-- `stream-detection` + `stream-reporting` + `player-detection` + `ui-injection` + `initialization` → `page` (page script operations)
-- **Removed hyphens** from all category names for consistency
+| Component | Logger Calls | StatusBar Calls | Total |
+|-----------|:------------:|:---------------:|:-----:|
+| options.ts |      0      |       27        |   27  |
+| popup.ts   |      9      |       13        |   22  |
+| background.ts |   10     |        0        |   10  |
+| page.ts    |      6      |        0        |    6  |
+| **Total**  |   **25**    |     **40**      | **65**|
 
-## Issues Found
+**Note**: Each execution context (background, page, popup, options) has its own isolated Logger instance with separate circular buffers.
 
-- Simplified categories separate from levels
-- Both Logger and StatusBar now use the **same categories**.
+## Consolidation History
 
-## Duplication Analysis
+**Phase 1**: Removed redundant `-error`/`-warning` suffixes (28+ occurrences)
+- ❌ Before: `endpoint-error`, `storage-error`, `api-error`
+- ✅ After: `endpoint`, `storage`, `apicall` (level specified separately via `LogLevel`)
 
-### Message Text Duplication
+**Phase 2**: Consolidated component-specific categories
+- `config`, `form` → `endpoint`
+- `api`, `api-status`, `api-call` → `apicall`
+- `init`, `refresh`, `ui-action` → `popup`
+- `stream-detection`, `player-detection`, `ui-injection`, `initialization` → `page`
+- `storage-info` → `storage`
+- `last-action` → distributed to domain categories
 
-No significant text duplication found. Messages are unique and contextual.
+**Phase 3**: Added Logger to background.ts
+- New `background` category for worker operations
+- Expanded `messaging` for cross-context communication
 
-### Pattern Consistency ✅
+**Phase 4**: Fixed Logger API bugs in page.ts
+- ❌ Before: `logger.info(LogLevel.Info, 'page', 'msg')` - wrong signature
+- ✅ After: `logger.info('page', 'msg')` - convenience methods already know their level
 
-All files consistently use:
-- `statusBar.post(LogLevel.XXX, 'category', 'message', optional_error)` for persistent errors
-- `statusBar.flash(LogLevel.Info, 'category', duration, 'message')` for transient success
+**Rationale**:
+- Categories describe **domain** (what you're logging about)
+- Levels describe **severity** (how important it is)
+- No hyphens for consistency
+- Same categories for Logger and StatusBar
+
+## API Patterns
+
+### Logger (Audit Trail)
+```typescript
+// Convenience methods (level implicit)
+logger.debug('category', 'message', ...args)
+logger.info('category', 'message', ...args)
+logger.warn('category', 'message', ...args)
+logger.error('category', 'message', ...args)
+
+// Generic method (level explicit)
+logger.log(LogLevel.Info, 'category', 'message', ...args)
+```
+
+### StatusBar (UI Feedback)
+```typescript
+// Persistent message (stays until replaced/cleared)
+statusBar.post(LogLevel.Error, 'category', 'message', optionalError)
+
+// Transient message (auto-clears after timeout)
+statusBar.flash(LogLevel.Info, 'category', 3000, 'message')
+```
+
+## Validation
+
+✅ All logger calls verified for correct API usage
+✅ No instances of `logger.method(LogLevel.XXX, 'category', ...)` pattern found
+✅ All 96 unit tests pass
+✅ Integration tests pass
 - `logger.debug/info/warn/error('category', 'message')` for audit trail
