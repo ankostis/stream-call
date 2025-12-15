@@ -45,7 +45,7 @@ import { Logger, LogLevel } from './logger';
     if (detectedStreams.has(url)) return;
 
     detectedStreams.add(url);
-    logger.info(LogLevel.Info, 'page', 'Detected stream:', url);
+    logger.info('page', 'Detected stream:', url);
 
     // Inject hover panel on first stream detection
     if (detectedStreams.size === 1) {
@@ -66,7 +66,7 @@ import { Logger, LogLevel } from './logger';
       })
       .catch((err) => {
         // Message send can fail during page navigation/unload - this is expected
-        logger.warn(LogLevel.Warn, 'page', `Failed to report stream '${url}' to background worker`, err);
+        logger.warn('page', `Failed to report stream '${url}' to background worker`, err);
         // In a future enhancement, could track failure count and surface via a UI overlay.
       });
   }
@@ -164,7 +164,7 @@ import { Logger, LogLevel } from './logger';
 
     const detected = frameworks.filter(fw => anyWindow[fw.key]).map(fw => fw.name);
     if (detected.length > 0) {
-      logger.debug(LogLevel.Debug, 'page', `Frameworks detected: ${detected.join(', ')}`);
+      logger.debug('page', `Frameworks detected: ${detected.join(', ')}`);
     }
   }
 
@@ -209,7 +209,7 @@ import { Logger, LogLevel } from './logger';
     `;
 
     document.body.appendChild(iframe);
-    logger.debug(LogLevel.Debug, 'page', 'Hover panel iframe injected');
+    logger.debug('page', 'Hover panel iframe injected');
 
     // Listen for close message from iframe
     window.addEventListener('message', (event) => {
@@ -256,11 +256,11 @@ import { Logger, LogLevel } from './logger';
     });
 
     document.body.appendChild(toggleBtn);
-    logger.debug(LogLevel.Debug, 'page', 'Toggle button added');
+    logger.debug('page', 'Toggle button added');
   }
 
   function initialize() {
-    logger.info(LogLevel.Info, 'page', 'Page script initialized at', window.location.href);
+    logger.info('page', 'Page script initialized at', window.location.href);
 
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', () => {
