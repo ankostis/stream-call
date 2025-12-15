@@ -586,7 +586,7 @@ Rationale:
 
 ## Logging Pattern Analysis (Codebase Scan)
 
-**Scanned files**: `src/background.ts`, `src/content.ts`, `src/popup.ts`, `src/options.ts`
+**Scanned files**: `src/background.ts`, `src/page.ts`, `src/popup.ts`, `src/options.ts`
 
 ### Discovered Logging Categories by Context
 
@@ -595,7 +595,7 @@ Rationale:
 - `API call failed` (error) - Network/fetch failure or template error
 - Background worker loaded (debug)
 
-**Content Script** (`src/content.ts`):
+**Content Script** (`src/page.ts`):
 - `Detected stream` (info) - URL found via media element or player library
 - `Failed to report stream to background` (error) - Message passing failure
 - `HLS.js/Video.js/JW Player/Shaka Player detected` (debug) - Player library identification

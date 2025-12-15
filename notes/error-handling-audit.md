@@ -7,8 +7,8 @@ Identify places where errors are caught and consumed silently without propagatin
 
 ## Silent Error Sinks Found
 
-### 1. **Content Script: Stream Reporting** (`src/content.ts`)
-**Location:** [src/content.ts](src/content.ts#L69-L71)
+### 1. **Content Script: Stream Reporting** (`src/page.ts`)
+**Location:** [src/page.ts](src/page.ts#L69-L71)
 
 **Issue:** `.catch()` silently logs errors when `browser.runtime.sendMessage()` fails during `STREAM_DETECTED` reporting.
 
@@ -40,9 +40,9 @@ browser.runtime
 
 ---
 
-### 2. **Content Script: Media Element Monitoring** (`src/content.ts`)
+### 2. **Content Script: Media Element Monitoring** (`src/page.ts`)
 
-**Location:** [src/content.ts](src/content.ts#L90-L107)
+**Location:** [src/page.ts](src/page.ts#L90-L107)
 
 **Issue:** `try/catch` in `monitorMediaElements()` silently catches URL parsing errors in `isStreamUrl()` without surfacing them.
 
@@ -261,8 +261,8 @@ export function isStreamUrl(url: string | null | undefined, base?: string): bool
 
 | Error Sink | Location | Severity | UI Benefit | Fix Approach |
 |---|---|---|---|---|
-| Stream report failure | content.ts:69–71 | Medium | loadStreams() UI | Heartbeat + failure counter |
-| Media element parsing | content.ts | Low | Pop-up diagnostic | Aggregate error counts |
+| Stream report failure | page.ts:69–71 | Medium | loadStreams() UI | Heartbeat + failure counter |
+| Media element parsing | page.ts | Low | Pop-up diagnostic | Aggregate error counts |
 | Template interpolation context | background.ts:148–210 | Medium | popup error display | Wrap applyTemplate() separately; error codes |
 | Storage read errors | options.ts:47–52 | Low | Specific error messages | Parse error type in catch |
 | Template in test | options.ts:89–137 | Medium | Test feedback clarity | Enhanced error context in applyTemplate() |

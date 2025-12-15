@@ -138,7 +138,7 @@ Compare both UIs on mobile and report:
 ## Next Steps After Testing
 
 **If hover panel wins:**
-1. Merge popup.ts + content.ts → `page-actions.ts` (single file)
+1. Merge popup.ts + page.ts → `page-actions.ts` (single file)
 2. Remove browser_action popup
 3. Move endpoint CRUD to new browser_action (settings icon)
 4. Update manifest: remove popup, keep browser_action for settings only

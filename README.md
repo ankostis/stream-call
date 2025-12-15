@@ -133,7 +133,7 @@ stream-call/
 ├── hover-panel.html          # WIP in-page overlay UI (copied to dist/)
 ├── src/                      # TypeScript sources
 │   ├── background.ts         # Background service worker
-│   ├── content.ts            # Content script for stream detection
+│   ├── page.ts               # Page script for stream detection
 │   ├── popup.ts              # Popup logic
 │   ├── options.ts            # Options page logic
 │   ├── hover-panel.ts        # WIP hover panel logic
@@ -197,8 +197,8 @@ The extension architecture revolves around six core concepts that work together 
 
 ### 1. Detection Patterns
 - **What**: Regular expression patterns (`STREAM_PATTERNS`) that match known streaming media URLs
-- **Where**: Defined in `src/detect.ts` (separate from `content.ts` for modularity, reuse, and stateless testability)
-- **Purpose**: Content script uses them to identify stream URLs (HLS, DASH, MP3, RTMP, Icecast, etc.)
+- **Where**: Defined in `src/detect.ts` (separate from `page.ts` for modularity, reuse, and stateless testability)
+- **Purpose**: Page script uses them to identify stream URLs (HLS, DASH, MP3, RTMP, Icecast, etc.)
 - **Examples**: `/\.(m3u8|mpd)/i`, `/rtmp:/`, `/icecast|shoutcast/i`
 - **Not configurable by users** — built-in to the extension
 - **Testing**: Validated via `tests/unit/content.test.ts` (detection patterns and stream type classification)
@@ -238,7 +238,7 @@ The extension architecture revolves around six core concepts that work together 
 ### 5. Execution Contexts
 - **What**: Isolated JavaScript environments where extension code runs
 - **Two contexts**:
-  - **Page Context** (`content.ts`): Runs inside the webpage DOM, has access to page resources (images, media, scripts) but **isolated memory** from extension
+  - **Page Context** (`page.ts`): Runs inside the webpage DOM, has access to page resources (images, media, scripts) but **isolated memory** from extension
   - **Extension Context** (`background.ts`, `popup.ts`, `options.ts`): Runs in browser's extension sandbox, has access to `browser.*` APIs, storage, and network requests
 - **Why it matters**: Content scripts cannot directly call functions in background/popup or access their variables — they are in **separate JavaScript worlds**
 - **Root cause of messages**: This isolation is why `browser.runtime.sendMessage()` exists — it's the **only way** to pass data between contexts
@@ -248,7 +248,7 @@ The extension architecture revolves around six core concepts that work together 
 ### 6. Runtime Messages
 - **What**: Cross-component communication protocol via `browser.runtime.sendMessage()`
 - **Where**: `RuntimeMessage` type in `src/background.ts`
-- **Purpose**: Message-passing between content scripts (page context), background worker, and popup (extension context)
+- **Purpose**: Message-passing between page script (page context), background worker, and popup (extension context)
 - **Message Types**:
   - `STREAM_DETECTED` (content → background): Reports newly detected stream URL with type
   - `GET_STREAMS` (popup → background): Requests all streams for current tab
@@ -267,7 +267,7 @@ The extension uses a message-driven architecture via `browser.runtime.sendMessag
 │  ┌─────────────┐  STREAM_DETECTED  │  │  ┌────────────────┐  GET_STREAMS   │
 │  │   Content   ├───────────────────┼──┼─>│  Background    │<──────────┐    │
 │  │   Script    │                   │  │  │  (background.ts│           │    │
-│  │ (content.ts)│                   │  │  │   endpoint.ts) │           │    │
+│  │   (page.ts) │                   │  │  │   endpoint.ts) │           │    │
 │  └─────────────┘                   │  │  └────────┬───────┘           │    │
 │       ▲                            │  │           │                   │    │
 │       │ Detects streams via        │  │           │ Stores streams    │    │
@@ -302,7 +302,7 @@ So far...
 | Category | Occurrences | Purpose |
 |----------|:-----------:|---------|
 | endpoint | 14 | ✅ Endpoint operations (save/delete/validate/config parsing/form) |
-| content  |  9 | ✅ Content script operations (detection/injection/initialization) |
+| page     |  9 | ✅ Page script operations (detection/injection/initialization) |
 | storage  |  8 | ✅ Storage operations (save/load/reset/export/import/info) |
 | apicall  |  7 | ✅ API call operations (HTTP requests/responses/tracking) |
 | popup    |  5 | ✅ Popup component operations (init/refresh/UI actions) |

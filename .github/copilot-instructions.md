@@ -3,7 +3,7 @@
 ## Project essentials
 - Firefox WebExtension; manifest points to built assets in `dist/` (tsc + copy,
   no bundler). Keep manifest paths in sync with `dist` outputs.
-- TypeScript sources in `src/` (`background.ts`, `content.ts`, `popup.ts`,
+- TypeScript sources in `src/` (`background.ts`, `page.ts`, `popup.ts`,
   `options.ts`); `popup.html` and `options.html` are copied to `dist/`.
 - Build: `npm install` then `npm run build` (clean + tsc + copy HTML). Package:
   `npm run build && zip -r stream-call.zip manifest.json dist icons -x
@@ -74,10 +74,9 @@
   related tests.
 
 ## Be succinct when coding, creative when elaborating
-- Too much code is hard to guard.
-- Terseness is more important for documentation - long code is slow, long docs are a waste.
-- Keep it DRY.
-- Don't forget the tests & documentation.
+- Terseness is important both for code and documentation; long code is slow and hard to maintain,
+  long docs are confusing in addition.
+- Don't forget the tests & documentation when making updates.
 
 ## Skillful Git artisan
 - Segregate changes for distinct commits by functionality (not location).

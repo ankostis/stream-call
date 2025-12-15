@@ -1,7 +1,7 @@
 /**
  * Pure helpers for stream URL detection and typing.
  *
- * Separated from content.ts for:
+ * Separated from page.ts for:
  * - Modularity: Detection logic isolated from DOM/messaging concerns
  * - Reuse: Background/popup/diagnostics can import patterns without page context
  * - Testability: Pure functions easy to unit test (see content.test.ts)

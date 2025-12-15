@@ -3,7 +3,7 @@
 | Category  | Count | Status | Description |
 |-----------|-------|--------|-------------|
 | endpoint  |   14 | ✅ | Endpoint operations (config/validation/save/delete) |
-| content   |    9 | ✅ | Content script operations (stream detection/player detection/UI injection) |
+| page      |    9 | ✅ | Page script operations (stream detection/player detection/UI injection) |
 | storage   |    8 | ✅ | Storage operations (load/save/reset/export/import) |
 | apicall   |    7 | ✅ | API call operations (HTTP requests/responses/testing) |
 | popup     |    5 | ✅ | Popup component operations (initialization/refresh/UI actions) |
@@ -25,7 +25,7 @@
 - `storage-info` → `storage` (redundant with Info level)
 - `background` → `messaging` (background communication is message passing)
 - `init` + `refresh` + `ui-action` → `popup` (popup-specific operations)
-- `stream-detection` + `stream-reporting` + `player-detection` + `ui-injection` + `initialization` → `content` (content script operations)
+- `stream-detection` + `stream-reporting` + `player-detection` + `ui-injection` + `initialization` → `page` (page script operations)
 - **Removed hyphens** from all category names for consistency
 
 ## Issues Found

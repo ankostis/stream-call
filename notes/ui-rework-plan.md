@@ -9,7 +9,7 @@
 ### Key Changes
 1. **In-Page Hover Panel** (replaces browser_action popup):
    - Injected `<div>` with `position: fixed` overlay
-   - Merge `content.ts` + `popup.ts` → `page-ui.ts` (single context, no messaging)
+   - Merge `page.ts` + `popup.ts` → `page-ui.ts` (single context, no messaging)
    - Logger singleton (no cross-context messaging needed)
    - Toggle button/keyboard shortcut to show/hide
    - Better mobile experience: full screen width, no popup constraints
