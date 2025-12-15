@@ -6,41 +6,10 @@
  */
 export {};
 
-import { applyTemplate } from './template';
-import { parseEndpoints } from './endpoint';
+import { callEndpointAPI, DEFAULT_CONFIG } from './endpoint';
 
 // Limit streams per tab to prevent unbounded memory growth
 const MAX_STREAMS_PER_TAB = 200;
-
-// Default configuration with 3 demo endpoints
-const DEFAULT_CONFIG = {
-  apiEndpoints: JSON.stringify(
-    [
-      {
-        name: 'example.com GET',
-        endpointTemplate: 'https://api.example.com/record?url={{streamUrl}}&time={{timestamp}}',
-        method: 'GET'
-      },
-      {
-        name: 'example.com JSON POST',
-        endpointTemplate: 'https://api.example.com/stream',
-        method: 'POST',
-        bodyTemplate:
-          '{"streamUrl":"{{streamUrl}}","timestamp":"{{timestamp}}","pageUrl":"{{pageUrl}}","pageTitle":"{{pageTitle}}"}'
-      },
-      {
-        name: 'Echo httpbingo.org',
-        endpointTemplate: 'https://httpbingo.org/anything',
-        method: 'POST',
-        headers: { 'X-Test': 'stream-call' },
-        bodyTemplate:
-          '{"url":"{{streamUrl}}","title":"{{pageTitle}}","page":"{{pageUrl}}","time":"{{timestamp}}"}'
-      }
-    ],
-    null,
-    2
-  )
-} as const;
 
 // Initialize storage with default config on first install
 browser.runtime.onInstalled.addListener(async (details) => {
@@ -135,11 +104,16 @@ browser.runtime.onMessage.addListener((message: RuntimeMessage, sender) => {
     }
 
     if (message.type === 'CALL_API') {
-      return callStreamAPI({
+      // Get page headers for current tab if available
+      const [activeTab] = await browser.tabs.query({ active: true, currentWindow: true });
+      const pageHeaders = activeTab?.id !== undefined ? tabHeaders.get(activeTab.id) : undefined;
+
+      return callEndpointAPI({
         streamUrl: message.streamUrl,
         pageUrl: message.pageUrl,
         pageTitle: message.pageTitle,
-        endpointName: message.endpointName
+        endpointName: message.endpointName,
+        tabHeaders: pageHeaders
       });
     }
 
@@ -198,146 +172,6 @@ function updateBadge(tabId: number, count: number) {
       tabId
     });
   }
-}
-
-/**
- * Call the configured HTTP API with stream information
- */
-async function callStreamAPI({
-  streamUrl,
-  pageUrl,
-  pageTitle,
-  endpointName
-}: {
-  streamUrl: string;
-  pageUrl?: string;
-  pageTitle?: string;
-  endpointName?: string;
-}) {
-  try {
-    const defaults = { apiEndpoints: '[]' } as const;
-    const config = (await browser.storage.sync.get(defaults)) as typeof defaults;
-
-    let endpoints: ReturnType<typeof parseEndpoints>;
-    try {
-      endpoints = parseEndpoints(config.apiEndpoints);
-    } catch (parseError: any) {
-      return {
-        success: false,
-        error: `Failed to parse API endpoints: ${parseError?.message ?? 'Unknown error'}`
-      };
-    }
-
-    const selectedEndpoint = endpointName ? endpoints.find((e) => e.name === endpointName) : endpoints[0];
-
-    if (!selectedEndpoint) {
-      return {
-        success: false,
-        error: 'No API endpoints configured. Please add an endpoint in the extension options.'
-      };
-    }
-
-    const requestContext = buildContext({ streamUrl, pageUrl, pageTitle });
-
-    // Separate template error handling for actionable error messages
-    let endpoint: string;
-    let bodyJson: string;
-    try {
-      endpoint = applyTemplate(selectedEndpoint.endpointTemplate, requestContext);
-      bodyJson = selectedEndpoint.bodyTemplate
-        ? applyTemplate(selectedEndpoint.bodyTemplate, requestContext)
-        : JSON.stringify(requestContext);
-    } catch (templateError: any) {
-      return {
-        success: false,
-        error: `Interpolation error in endpoint "${selectedEndpoint.name}": ${templateError?.message ?? 'Invalid placeholder'}. Check endpoint/body templates and placeholders.`
-      };
-    }
-
-    const method = (selectedEndpoint.method || 'POST').toUpperCase();
-
-    let headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (selectedEndpoint.headers) {
-      headers = { ...headers, ...selectedEndpoint.headers };
-    }
-
-    // Add cookies to headers if flag is enabled
-    if (selectedEndpoint.includeCookies && pageUrl) {
-      try {
-        const cookies = await browser.cookies.getAll({ url: pageUrl });
-        if (cookies.length > 0) {
-          const cookieHeader = cookies.map(c => `${c.name}=${c.value}`).join('; ');
-          headers['Cookie'] = cookieHeader;
-        }
-      } catch (cookieError: any) {
-        console.warn('Failed to get cookies:', cookieError);
-        // Continue without cookies rather than failing entire request
-      }
-    }
-
-    // Add page headers if flag is enabled
-    if (selectedEndpoint.includePageHeaders) {
-      const [activeTab] = await browser.tabs.query({ active: true, currentWindow: true });
-      if (activeTab?.id !== undefined) {
-        const pageHeaders = tabHeaders.get(activeTab.id);
-        if (pageHeaders) {
-          // Merge page headers, but don't override existing headers
-          for (const [key, value] of Object.entries(pageHeaders)) {
-            if (!(key in headers)) {
-              headers[key] = value;
-            }
-          }
-        }
-      }
-    }
-
-    // Build fetch options - GET and HEAD cannot have a body
-    const fetchOptions: RequestInit = {
-      method,
-      headers
-    };
-
-    if (method !== 'GET' && method !== 'HEAD') {
-      fetchOptions.body = bodyJson;
-    }
-
-    const response = await fetch(endpoint, fetchOptions);
-
-    if (!response.ok) {
-      throw new Error(`API returned ${response.status}: ${response.statusText}`);
-    }
-
-    const result = await response.text();
-
-    return {
-      success: true,
-      message: 'Stream URL sent successfully',
-      response: result
-    };
-  } catch (error: any) {
-    console.error('API call failed:', error);
-    return {
-      success: false,
-      error: error?.message ?? 'Unknown error'
-    };
-  }
-}
-
-function buildContext({
-  streamUrl,
-  pageUrl,
-  pageTitle
-}: {
-  streamUrl: string;
-  pageUrl?: string;
-  pageTitle?: string;
-}) {
-  return {
-    streamUrl,
-    pageUrl,
-    pageTitle,
-    timestamp: Date.now()
-  };
 }
 
 console.log('stream-call: background service worker loaded');

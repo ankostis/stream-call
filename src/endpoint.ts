@@ -1,6 +1,6 @@
 /**
- * Configuration utilities for stream-call
- * Centralized endpoint parsing, validation, and normalization
+ * Configuration and templating utilities for stream-call
+ * Centralized endpoint parsing, validation, normalization, and template interpolation
  */
 
 export type ApiEndpoint = {
@@ -12,6 +12,39 @@ export type ApiEndpoint = {
   includeCookies?: boolean;
   includePageHeaders?: boolean;
 };
+
+/**
+ * Default configuration with 3 demo endpoints
+ * Single source of truth for default endpoints
+ */
+export const DEFAULT_CONFIG = {
+  apiEndpoints: JSON.stringify(
+    [
+      {
+        name: 'httpbingo GET',
+        endpointTemplate: 'https://httpbingo.org/anything?url={{streamUrl}}&time={{timestamp}}',
+        method: 'GET'
+      },
+      {
+        name: 'httpbingo POST',
+        endpointTemplate: 'https://httpbingo.org/anything',
+        method: 'POST',
+        bodyTemplate:
+          '{"streamUrl":"{{streamUrl}}","timestamp":"{{timestamp}}","pageUrl":"{{pageUrl}}","pageTitle":"{{pageTitle}}"}'
+      },
+      {
+        name: 'httpbingo GET+page-cookies',
+        endpointTemplate: 'https://httpbingo.org/anything',
+        method: 'GET',
+        headers: { 'X-Test': 'stream-call' },
+        includeCookies: true,
+        includePageHeaders: true,
+      }
+    ],
+    null,
+    2
+  )
+} as const;
 
 /**
  * Suggest an endpoint name from an endpoint URL (extract hostname)
@@ -117,6 +150,220 @@ export function validateEndpoints(raw: string): {
       parsed: [],
       formatted: '[]',
       errorMessage: e?.message
+    };
+  }
+}
+
+/**
+ * Apply template with placeholder interpolation
+ * Supports {{placeholder}}, {{placeholder|url}}, {{placeholder|json}}
+ * Case-insensitive placeholder matching
+ */
+export function applyTemplate(
+  template: string,
+  context: Record<string, unknown>,
+  options: { onMissing?: 'leave' | 'empty' | 'throw' } = { onMissing: 'leave' }
+): string {
+  const onMissing = options.onMissing ?? 'leave';
+  const placeholderRe = /\{\{(\w+)(?:\|(url|json))?\}\}/gi;
+
+  // Case-insensitive matching
+  const normalizedContext = Object.fromEntries(
+    Object.entries(context).map(([k, v]) => [k.toLowerCase(), v])
+  );
+
+  const encodeJsonString = (val: unknown) => JSON.stringify(String(val));
+  const applyFilter = (val: unknown, filter?: 'url' | 'json') => {
+    if (filter === 'url') return encodeURIComponent(String(val ?? ''));
+    if (filter === 'json') return encodeJsonString(val);
+    return String(val ?? '');
+  };
+
+  return template.replace(placeholderRe, (_m, key: string, filter?: 'url' | 'json') => {
+    const value = normalizedContext[key.toLowerCase()];
+    const hasValue = value !== undefined && value !== null;
+    if (!hasValue) {
+      if (onMissing === 'empty') return '';
+      if (onMissing === 'throw') throw new Error(`Missing placeholder: ${key}`);
+      return `{{${key}${filter ? '|' + filter : ''}}}`;
+    }
+    return applyFilter(value, filter);
+  });
+}
+
+/**
+ * Build request context with stream metadata
+ */
+function buildContext({
+  streamUrl,
+  pageUrl,
+  pageTitle
+}: {
+  streamUrl: string;
+  pageUrl?: string;
+  pageTitle?: string;
+}) {
+  return {
+    streamUrl,
+    pageUrl,
+    pageTitle,
+    timestamp: Date.now()
+  };
+}
+
+/**
+ * Call API endpoint with stream information
+ * Handles template interpolation, headers, cookies, and fetch execution
+ * Returns success/error result with detailed error messages
+ */
+export async function callEndpointAPI({
+  streamUrl,
+  pageUrl,
+  pageTitle,
+  endpointName,
+  tabHeaders
+}: {
+  streamUrl: string;
+  pageUrl?: string;
+  pageTitle?: string;
+  endpointName?: string;
+  tabHeaders?: Record<string, string>;
+}) {
+  // Declare variables at function scope for error logging
+  let selectedEndpoint: ReturnType<typeof parseEndpoints>[0] | undefined;
+  let endpoint: string | undefined;
+  let method: string | undefined;
+
+  try {
+    const defaults = { apiEndpoints: '[]' } as const;
+    const config = (await browser.storage.sync.get(defaults)) as typeof defaults;
+
+    let endpoints: ReturnType<typeof parseEndpoints>;
+    try {
+      endpoints = parseEndpoints(config.apiEndpoints);
+    } catch (parseError: any) {
+      return {
+        success: false,
+        error: `Failed to parse API endpoints: ${parseError?.message ?? 'Unknown error'}`
+      };
+    }
+
+    selectedEndpoint = endpointName ? endpoints.find((e) => e.name === endpointName) : endpoints[0];
+
+    if (!selectedEndpoint) {
+      return {
+        success: false,
+        error: 'No API endpoints configured. Please add an endpoint in the extension options.'
+      };
+    }
+
+    const requestContext = buildContext({ streamUrl, pageUrl, pageTitle });
+
+    // Separate template error handling for actionable error messages
+    let bodyJson: string;
+    try {
+      endpoint = applyTemplate(selectedEndpoint.endpointTemplate, requestContext);
+      bodyJson = selectedEndpoint.bodyTemplate
+        ? applyTemplate(selectedEndpoint.bodyTemplate, requestContext)
+        : JSON.stringify(requestContext);
+    } catch (templateError: any) {
+      return {
+        success: false,
+        error: `Interpolation error in endpoint "${selectedEndpoint.name}": ${templateError?.message ?? 'Invalid placeholder'}. Check endpoint/body templates and placeholders.`
+      };
+    }
+
+    method = (selectedEndpoint.method || 'POST').toUpperCase();
+
+    let headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (selectedEndpoint.headers) {
+      headers = { ...headers, ...selectedEndpoint.headers };
+    }
+
+    // Add cookies to headers if flag is enabled
+    if (selectedEndpoint.includeCookies && pageUrl) {
+      try {
+        const cookies = await browser.cookies.getAll({ url: pageUrl });
+        if (cookies.length > 0) {
+          const cookieHeader = cookies.map((c) => `${c.name}=${c.value}`).join('; ');
+          headers['Cookie'] = cookieHeader;
+        }
+      } catch (cookieError: any) {
+        console.warn('Failed to get cookies:', cookieError);
+        // Continue without cookies rather than failing entire request
+      }
+    }
+
+    // Add page headers if flag is enabled
+    if (selectedEndpoint.includePageHeaders && tabHeaders) {
+      // Merge page headers, but don't override existing headers
+      for (const [key, value] of Object.entries(tabHeaders)) {
+        if (!(key in headers)) {
+          headers[key] = value;
+        }
+      }
+    }
+
+    // Build fetch options - GET and HEAD cannot have a body
+    const fetchOptions: RequestInit = {
+      method,
+      headers
+    };
+
+    if (method !== 'GET' && method !== 'HEAD') {
+      fetchOptions.body = bodyJson;
+    }
+
+    console.log('[stream-call] === API Request ===');
+    console.log('Endpoint name:', selectedEndpoint.name);
+    console.log('Method:', method);
+    console.log('URL:', endpoint);
+    console.log('Headers:', headers);
+    if (fetchOptions.body) {
+      console.log('Body:', fetchOptions.body.substring(0, 200) + (fetchOptions.body.length > 200 ? '...' : ''));
+    } else {
+      console.log('Body: (none - GET/HEAD)');
+    }
+    console.log('======================');
+
+    const response = await fetch(endpoint, fetchOptions);
+
+    if (!response.ok) {
+      // Try to get error details from response body
+      let errorDetail = response.statusText;
+      try {
+        const errorBody = await response.text();
+        if (errorBody && errorBody.length < 500) {
+          errorDetail = errorBody;
+        }
+      } catch {
+        // Ignore if we can't read error body
+      }
+      throw new Error(`API returned ${response.status}: ${errorDetail}`);
+    }
+
+    const result = await response.text();
+
+    return {
+      success: true,
+      message: 'Stream URL sent successfully',
+      response: result
+    };
+  } catch (error: any) {
+    console.error('API call failed:', error);
+    if (selectedEndpoint) console.error('Endpoint:', selectedEndpoint.name);
+    if (endpoint) console.error('URL:', endpoint);
+    if (method) console.error('Method:', method);
+
+    // Provide more specific error context
+    let errorMsg = error?.message ?? 'Unknown error';
+    if (errorMsg.includes('NetworkError') || errorMsg.includes('fetch')) {
+      errorMsg += ` (Check: 1) Server is reachable, 2) CORS/host permissions, 3) HTTP vs HTTPS)`;
+    }
+
+    return {
+      success: false,
+      error: errorMsg
     };
   }
 }

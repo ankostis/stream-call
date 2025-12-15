@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert';
-import { parseEndpoints, validateEndpoints, suggestEndpointName } from '../../src/endpoint';
+import { parseEndpoints, validateEndpoints, suggestEndpointName, applyTemplate } from '../../src/endpoint';
 
 test('suggestEndpointName: extracts hostname from URL', () => {
   assert.strictEqual(suggestEndpointName('https://api.example.com/stream'), 'api.example.com');
@@ -199,4 +199,55 @@ test('validateEndpoints: returns formatted JSON', () => {
   // Should be nicely formatted
   assert(result.formatted.includes('\n'));
   assert(result.formatted.includes('  '));
+});
+
+// ============================================================================
+// Template tests (applyTemplate function)
+// ============================================================================
+
+test('applyTemplate: replaces plain placeholders', () => {
+  const tpl = 'Hello {{name}}!';
+  const out = applyTemplate(tpl, { name: 'world' });
+  assert.strictEqual(out, 'Hello world!');
+});
+
+test('applyTemplate: leaves missing placeholders by default', () => {
+  const tpl = 'URL={{streamUrl}}';
+  const out = applyTemplate(tpl, {});
+  assert.strictEqual(out, 'URL={{streamUrl}}');
+});
+
+test('applyTemplate: throws on missing when configured', () => {
+  const tpl = 'URL={{streamUrl}}';
+  assert.throws(() => applyTemplate(tpl, {}, { onMissing: 'throw' }));
+});
+
+test('applyTemplate: empties missing when configured', () => {
+  const tpl = 'URL={{streamUrl}}';
+  const out = applyTemplate(tpl, {}, { onMissing: 'empty' });
+  assert.strictEqual(out, 'URL=');
+});
+
+test('applyTemplate: applies url filter', () => {
+  const tpl = 'q={{pageTitle|url}}';
+  const out = applyTemplate(tpl, { pageTitle: 'A B&C' });
+  assert.strictEqual(out, 'q=A%20B%26C');
+});
+
+test('applyTemplate: applies json filter', () => {
+  const tpl = '{"t": {{pageTitle|json}}}';
+  const out = applyTemplate(tpl, { pageTitle: 'Hello "World"' });
+  assert.strictEqual(out, '{"t": "Hello \\\"World\\\""}');
+});
+
+test('applyTemplate: matches placeholders case-insensitively', () => {
+  const tpl = '{{StreamUrl}} - {{PAGETITLE}} - {{pageurl}}';
+  const out = applyTemplate(tpl, { streamUrl: 'http://ex.com/s.mpd', pageTitle: 'Video', pageUrl: 'http://ex.com' });
+  assert.strictEqual(out, 'http://ex.com/s.mpd - Video - http://ex.com');
+});
+
+test('applyTemplate: matches placeholders case-insensitively with filters', () => {
+  const tpl = '{{StreamUrl|url}} {{PAGETITLE|json}}';
+  const out = applyTemplate(tpl, { streamUrl: 'http://ex.com/s&t.mpd', pageTitle: 'A "B"' });
+  assert.strictEqual(out, 'http%3A%2F%2Fex.com%2Fs%26t.mpd "A \\\"B\\\""');
 });

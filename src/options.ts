@@ -3,39 +3,9 @@
  */
 export {};
 
-import { applyTemplate } from './template';
 import { Logger, LogLevel, StatusBar } from './logger';
 import { createLogAppender, createStatusRenderer, applyLogFiltering } from './logging-ui';
-import { ApiEndpoint, suggestEndpointName, validateEndpoints } from './endpoint';
-
-const DEFAULT_CONFIG = {
-  apiEndpoints: JSON.stringify(
-    [
-      {
-        name: 'example.com GET',
-        endpointTemplate: 'https://api.example.com/record?url={{streamUrl}}&time={{timestamp}}',
-        method: 'GET'
-      },
-      {
-        name: 'example.com JSON POST',
-        endpointTemplate: 'https://api.example.com/stream',
-        method: 'POST',
-        bodyTemplate:
-          '{"streamUrl":"{{streamUrl}}","timestamp":"{{timestamp}}","pageUrl":"{{pageUrl}}","pageTitle":"{{pageTitle}}"}'
-      },
-      {
-        name: 'Echo httpbin.org',
-        endpointTemplate: 'https://httpbin.org/anything',
-        method: 'POST',
-        headers: { 'X-Test': 'stream-call' },
-        bodyTemplate:
-          '{"url":"{{streamUrl}}","title":"{{pageTitle}}","page":"{{pageUrl}}","time":"{{timestamp}}"}'
-      }
-    ],
-    null,
-    2
-  )
-} as const;
+import { applyTemplate, ApiEndpoint, suggestEndpointName, validateEndpoints, DEFAULT_CONFIG } from './endpoint';
 
 type Config = typeof DEFAULT_CONFIG;
 
@@ -414,13 +384,13 @@ function resetSettings() {
     statusBar.post(LogLevel.Error, 'endpoint-error', 'Default config is invalid');
     return;
   }
-  endpoints = validated.parsed;
   browser.storage.sync
     .set({ apiEndpoints: validated.formatted })
     .then(() => {
-      renderList();
+      // Reload from storage to ensure consistency between memory and storage
+      loadSettings();
       closeEditor();
-      statusBar.flash(LogLevel.Info, 'stat', 2000, 'Defaults restored. Ready to save.');
+      statusBar.flash(LogLevel.Info, 'stat', 2000, '✅ Defaults restored and saved.');
     })
     .catch((error) => {
       statusBar.post(LogLevel.Error, 'storage-error', 'Failed to reset settings', error);
