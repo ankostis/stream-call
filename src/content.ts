@@ -47,6 +47,11 @@ import { Logger, LogLevel } from './logger';
     detectedStreams.add(url);
     logger.info(LogLevel.Info, 'stream-detection', 'Detected stream:', url);
 
+    // Inject hover panel on first stream detection
+    if (detectedStreams.size === 1) {
+      injectHoverPanel();
+    }
+
     browser.runtime
       .sendMessage({
         type: 'STREAM_DETECTED',
@@ -184,11 +189,11 @@ import { Logger, LogLevel } from './logger';
   }
 
   /**
-   * Inject hover panel (WIP for mobile testing)
+   * Inject hover panel (WIP for mobile testing) - only called after streams detected
    */
   function injectHoverPanel() {
     // Only inject once
-    if (document.getElementById('stream-call-hover-panel')) return;
+    if (document.getElementById('stream-call-toggle-btn')) return;
 
     const iframe = document.createElement('iframe');
     iframe.id = 'stream-call-hover-frame';
@@ -257,11 +262,11 @@ import { Logger, LogLevel } from './logger';
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', () => {
         startDetection();
-        setTimeout(injectHoverPanel, 500); // Delay to ensure body exists
+        // Hover panel will be injected automatically when first stream is detected
       });
     } else {
       startDetection();
-      setTimeout(injectHoverPanel, 500);
+      // Hover panel will be injected automatically when first stream is detected
     }
   }
 
