@@ -174,30 +174,37 @@ async function loadStreams() {
 }
 
 /**
- * Display streams in the UI
+ * Display streams in the UI (master-detail pattern)
  */
 function displayStreams(streams: StreamInfo[]) {
-  const container = document.getElementById('streams-container');
-  if (!container) return;
+  const listContainer = document.getElementById('streams-list-container');
+  const list = document.getElementById('streams-list');
+  const panel = document.getElementById('stream-panel');
 
-  container.innerHTML = '';
-  const streamsList = document.createElement('div');
-  streamsList.className = 'streams-list';
+  if (!list || !listContainer || !panel) return;
+
+  list.innerHTML = '';
 
   streams.forEach((stream, index) => {
-    const streamItem = createStreamItem(stream, index);
-    streamsList.appendChild(streamItem);
+    const item = createStreamListItem(stream, index, streams);
+    list.appendChild(item);
   });
 
-  container.appendChild(streamsList);
+  listContainer.style.display = 'block';
+
+  // Auto-select first stream
+  if (streams.length > 0) {
+    populatePanel(streams[0], 0, streams);
+  }
 }
 
 /**
- * Create stream item element
+ * Create compact stream list item (master)
  */
-function createStreamItem(stream: StreamInfo, index: number): HTMLElement {
+function createStreamListItem(stream: StreamInfo, index: number, allStreams: StreamInfo[]): HTMLElement {
   const item = document.createElement('div');
-  item.className = 'stream-item';
+  item.className = 'stream-list-item';
+  if (index === 0) item.classList.add('selected');
   item.setAttribute('data-index', index.toString());
 
   const type = document.createElement('span');
@@ -209,8 +216,37 @@ function createStreamItem(stream: StreamInfo, index: number): HTMLElement {
   url.textContent = stream.url;
   url.title = stream.url;
 
-  const actions = document.createElement('div');
-  actions.className = 'stream-actions';
+  item.appendChild(type);
+  item.appendChild(url);
+
+  // Click to populate detail panel
+  item.addEventListener('click', () => {
+    // Update selected state
+    document.querySelectorAll('.stream-list-item').forEach(el => el.classList.remove('selected'));
+    item.classList.add('selected');
+    populatePanel(stream, index, allStreams);
+  });
+
+  return item;
+}
+
+/**
+ * Populate the detail panel with selected stream (detail)
+ */
+function populatePanel(stream: StreamInfo, index: number, allStreams: StreamInfo[]) {
+  const panel = document.getElementById('stream-panel');
+  const panelType = document.getElementById('panel-type');
+  const panelUrl = document.getElementById('panel-url');
+  const panelActions = document.getElementById('panel-actions');
+
+  if (!panel || !panelType || !panelUrl || !panelActions) return;
+
+  panelType.textContent = stream.type;
+  panelUrl.textContent = stream.url;
+  panelUrl.title = stream.url;
+
+  // Rebuild actions
+  panelActions.innerHTML = '';
 
   let endpointName: string | undefined = apiEndpoints[0]?.name;
 
@@ -227,7 +263,7 @@ function createStreamItem(stream: StreamInfo, index: number): HTMLElement {
       const target = e.target as HTMLSelectElement;
       endpointName = target.value;
     });
-    actions.appendChild(select);
+    panelActions.appendChild(select);
   }
 
   const callBtn = document.createElement('button');
@@ -240,14 +276,10 @@ function createStreamItem(stream: StreamInfo, index: number): HTMLElement {
   copyBtn.textContent = '📋 Copy';
   copyBtn.addEventListener('click', () => handleCopyUrl(stream.url));
 
-  actions.appendChild(callBtn);
-  actions.appendChild(copyBtn);
+  panelActions.appendChild(callBtn);
+  panelActions.appendChild(copyBtn);
 
-  item.appendChild(type);
-  item.appendChild(url);
-  item.appendChild(actions);
-
-  return item;
+  panel.style.display = 'block';
 }
 
 /**
