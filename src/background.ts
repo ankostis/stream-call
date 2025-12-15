@@ -1,7 +1,8 @@
 /**
- * stream-call Background Service Worker
+ * stream-call Background Service Worker (extension-context)
  * Handles communication between content scripts and popup,
  * manages detected streams, and triggers API calls
+ *
  */
 export {};
 
@@ -290,11 +291,17 @@ async function callStreamAPI({
       }
     }
 
-    const response = await fetch(endpoint, {
+    // Build fetch options - GET and HEAD cannot have a body
+    const fetchOptions: RequestInit = {
       method,
-      headers,
-      body: bodyJson
-    });
+      headers
+    };
+
+    if (method !== 'GET' && method !== 'HEAD') {
+      fetchOptions.body = bodyJson;
+    }
+
+    const response = await fetch(endpoint, fetchOptions);
 
     if (!response.ok) {
       throw new Error(`API returned ${response.status}: ${response.statusText}`);
