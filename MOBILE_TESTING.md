@@ -1,5 +1,12 @@
 # Testing Stream call on Mobile Firefox
 
+## Quick Start
+
+1. **Package ready**: `stream-call-mobile.zip` (48KB) in project root
+2. **Transfer to mobile**: USB, cloud, or local server (see below)
+3. **Install in Firefox Nightly**: Method A (remote debug) or B (direct install)
+4. **Test both UIs**: Browser action (🎵 icon) vs Hover panel (🎵 button on page)
+
 ## Prerequisites
 
 **Firefox Nightly for Android** (required for unsigned extensions):
@@ -16,57 +23,49 @@ npm run build
 zip -r stream-call-mobile.zip manifest.json dist icons -x "icons/generate-icons.html"
 ```
 
-This creates `stream-call-mobile.zip` (~100KB) in the project root.
+This creates `stream-call-mobile.zip` (48KB) in the project root.
 
 ### 2. Transfer to Mobile Device
 
-**Option A: Direct USB transfer**
+#### Option A: Direct USB transfer
 ```bash
 # Connect phone via USB, enable File Transfer mode
 adb push stream-call-mobile.zip /sdcard/Download/
 ```
 
-**Option B: Cloud storage**
-- Upload `stream-call-mobile.zip` to Google Drive / Dropbox / etc
+#### Option B: Cloud storage
+- Upload `stream-call-mobile.zip` to Google Drive / Dropbox / Telegram / etc
 - Download on mobile device
 
-**Option C: Local web server**
+#### Option C: Local web server
 ```bash
-# On desktop (in project directory)
-python3 -m http.server 8080
+# Start server (serves on port 9090)
+npx serve -l 9090
 
 # On mobile Firefox, navigate to:
-http://<your-desktop-ip>:8080/stream-call-mobile.zip
+http://<your-desktop-ip>:9090/stream-call-mobile.zip
 ```
 
-### 3. Enable Remote Debugging
+### 3. Enable Firefox Debugging
 
-**On mobile device:**
 1. Open Firefox Nightly
 2. Settings → About Firefox Nightly → Tap logo 5× (enables debug menu)
-3. Settings → Advanced → Remote debugging via USB → Enable
 
-**On desktop:**
-1. Open Firefox
-2. Navigate to `about:debugging#/setup`
-3. Enable "USB Devices"
-4. Connect phone via USB
-5. Click your device name in sidebar
-6. Accept debug connection prompt on phone
+> 💡 Note: you'd have to redo this step every time the browser restarts.
+
 
 ### 4. Install Extension (Temporary)
 
-**Method A: Via about:debugging (Desktop)**
-1. In Firefox desktop `about:debugging` → Your Device
-2. Click "Load Temporary Add-on"
-3. Navigate to the .zip file on your phone's storage
-4. Extension installs on mobile Firefox
-
-**Method B: Via about:debugging (Mobile)**
+#### Method A: Direct Install
+1. On mobile Firefox Nightly, navigate to `about:config` and set `xpinstall.signatures.required` → false
+2. From Firefox settings select "Install extension from file" (needs "Firefox Debugging", see above).
+3. Navigate to the .zip file location and tap to install
+#### Method B: Via about:debugging (Mobile)
 1. On mobile Firefox Nightly, navigate to `about:debugging#/runtime/this-firefox`
 2. Click "Load Temporary Add-on"
 3. Select `stream-call-mobile.zip` from Downloads
 4. Grant permissions
+
 
 ## Testing the Hover Panel
 
@@ -101,12 +100,12 @@ http://<your-desktop-ip>:8080/stream-call-mobile.zip
 ## Troubleshooting
 
 **Extension doesn't appear:**
-- Check USB debugging is enabled on both devices
-- Verify phone is in File Transfer mode
+- Check USB debugging is enabled on mobile device
+- Verify remote debugging via USB is enabled in Firefox Nightly settings
 - Try Method B (direct install on phone)
 
 **Floating button not visible:**
-- Check console: `about:debugging` → mobile device → Inspect content script
+- Check console: `about:debugging#/runtime/this-firefox` on mobile
 - Verify `content.js` loaded successfully
 - Try refreshing the page
 
@@ -125,33 +124,41 @@ Temporary extensions auto-remove on browser restart. To remove manually:
 2. Find "Stream call"
 3. Remove
 
-## Desktop Testing (Faster Iteration)
+## Testing Checklist
 
-Before packaging for mobile, test on desktop:
-```bash
-npm run build
-npx web-ext run
-```
+Compare both UIs on mobile and report:
 
-- Resize browser window to 400px width to simulate mobile
-- Use Firefox Responsive Design Mode (Ctrl+Shift+M)
-- Test hover panel interactions
+- [ ] **Hover panel** feels more natural on mobile?
+- [ ] **Browser action** popup works better?
+- [ ] Which is easier to access during video playback?
+- [ ] Panel sliding animation smooth (300ms)?
+- [ ] Statusbar positioning correct in both?
+- [ ] Log viewer usable in both contexts?
 
-## Next Steps
+## Next Steps After Testing
 
-After mobile testing confirms hover panel UX is superior:
-1. Merge popup.ts logic into content.ts (single context)
+**If hover panel wins:**
+1. Merge popup.ts + content.ts → `page-actions.ts` (single file)
 2. Remove browser_action popup
-3. Move endpoint CRUD to new browser_action (settings)
-4. Update manifest: remove popup, keep browser_action for settings
-5. Simplify architecture (no cross-context messaging for UI)
+3. Move endpoint CRUD to new browser_action (settings icon)
+4. Update manifest: remove popup, keep browser_action for settings only
+5. Simplify: no cross-context messaging for UI
+
+**If browser action wins:**
+- Keep current architecture
+- Remove hover-panel code
+- Focus on improving popup mobile responsiveness
+
+**Hybrid approach:**
+- Detect platform: desktop = popup, mobile = hover panel
+- Keep both implementations
 
 ## Notes
 
 - **Signed extensions** (for release) require Mozilla AMO approval
 - **Temporary extensions** (for dev) work only in Nightly/Developer Edition
-- **about:debugging** is your friend for remote inspection
-- **console.log** messages appear in desktop Firefox when debugging mobile
+- **about:debugging** on mobile shows extension status and console logs
+- Navigate to `about:debugging#/runtime/this-firefox` on mobile to inspect
 
 ## References
 
