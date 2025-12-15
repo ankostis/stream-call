@@ -215,6 +215,13 @@ import { Logger, LogLevel } from './logger';
     document.body.appendChild(iframe);
     logger.debug(LogLevel.Debug, 'ui-injection', 'Hover panel iframe injected');
 
+    // Listen for close message from iframe
+    window.addEventListener('message', (event) => {
+      if (event.data.type === 'CLOSE_HOVER_PANEL') {
+        iframe.style.transform = 'translateX(100%)';
+      }
+    });
+
     // Add toggle button
     const toggleBtn = document.createElement('button');
     toggleBtn.id = 'stream-call-toggle-btn';

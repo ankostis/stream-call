@@ -1,19 +1,17 @@
 /**
  * Hover Panel Script (WIP)
  * In-page overlay version of popup for mobile UX testing
- * Injected by content.ts, uses same logic as popup.ts
+ * Loaded in iframe by content.ts, communicates with parent to close
  */
 export {};
 
 // This is a minimal stub for now - will be populated with popup.ts logic
 console.log('[stream-call] Hover panel loaded (WIP)');
 
-// Close button handler
+// Close button handler - sends message to parent page to close the iframe
 document.getElementById('panel-close')?.addEventListener('click', () => {
-  const panel = document.getElementById('stream-call-hover-panel');
-  if (panel) {
-    panel.classList.remove('visible');
-  }
+  // Since we're in an iframe, send message to parent (content.ts) to close
+  window.parent.postMessage({ type: 'CLOSE_HOVER_PANEL' }, '*');
 });
 
 // Show a dummy message for testing
