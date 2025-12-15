@@ -29,8 +29,8 @@ const DEFAULT_CONFIG = {
           '{"streamUrl":"{{streamUrl}}","timestamp":"{{timestamp}}","pageUrl":"{{pageUrl}}","pageTitle":"{{pageTitle}}"}'
       },
       {
-        name: 'Echo httpbin.org',
-        endpointTemplate: 'https://httpbin.org/anything',
+        name: 'Echo httpbingo.org',
+        endpointTemplate: 'https://httpbingo.org/anything',
         method: 'POST',
         headers: { 'X-Test': 'stream-call' },
         bodyTemplate:
