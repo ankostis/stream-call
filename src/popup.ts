@@ -91,10 +91,13 @@ async function loadEndpoints() {
   // Return cached endpoints if available (avoids repeated storage reads during popup lifetime)
   if (endpointsCached) return;
 
-  const defaults = { apiEndpoints: '[]' } as const;
-  const stored = (await browser.storage.sync.get(defaults)) as typeof defaults;
+  // Use empty object as defaults - browser.storage.sync.get returns stored values or empty object
+  // On first run (no stored config), storage is empty, so we get no defaults
+  const stored = await browser.storage.sync.get('apiEndpoints');
+  const apiEndpointsStr = stored.apiEndpoints || '[]';
+
   try {
-    apiEndpoints = parseEndpoints(stored.apiEndpoints);
+    apiEndpoints = parseEndpoints(apiEndpointsStr);
     logger.debug('config-load', `Loaded ${apiEndpoints.length} API endpoints`);
   } catch (error: any) {
     // Parse error is expected if config is corrupted - show to user via statusBar (which logs internally)

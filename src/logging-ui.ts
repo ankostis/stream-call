@@ -36,14 +36,14 @@ export function createLogAppender(viewer: HTMLDivElement) {
   return function appendLog(level: 'error'|'warn'|'info'|'debug', category: string, message: string) {
     const empty = viewer.querySelector('.log-empty');
     if (empty) empty.remove();
-    
+
     // Check if user has scrolled up before adding new content
     const wasAtBottom = viewer.scrollHeight - viewer.scrollTop - viewer.clientHeight < 5;
-    
+
     const line = viewer.ownerDocument.createElement('div');
     line.textContent = `[${new Date().toISOString()}] ${level.toUpperCase()} ${category}: ${message}`;
     line.dataset.level = level;
-    
+
     // Apply color by level
     if (level === 'error') {
       line.style.color = '#f87171';
@@ -54,9 +54,9 @@ export function createLogAppender(viewer: HTMLDivElement) {
     } else {
       line.style.color = '#9ca3af';
     }
-    
+
     viewer.appendChild(line);
-    
+
     // Auto-scroll only if user was at bottom
     if (wasAtBottom) {
       viewer.scrollTop = viewer.scrollHeight;

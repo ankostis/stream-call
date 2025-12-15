@@ -11,6 +11,48 @@ import { parseEndpoints } from './endpoint';
 // Limit streams per tab to prevent unbounded memory growth
 const MAX_STREAMS_PER_TAB = 200;
 
+// Default configuration with 3 demo endpoints
+const DEFAULT_CONFIG = {
+  apiEndpoints: JSON.stringify(
+    [
+      {
+        name: 'example.com GET',
+        endpointTemplate: 'https://api.example.com/record?url={{streamUrl}}&time={{timestamp}}',
+        method: 'GET'
+      },
+      {
+        name: 'example.com JSON POST',
+        endpointTemplate: 'https://api.example.com/stream',
+        method: 'POST',
+        bodyTemplate:
+          '{"streamUrl":"{{streamUrl}}","timestamp":"{{timestamp}}","pageUrl":"{{pageUrl}}","pageTitle":"{{pageTitle}}"}'
+      },
+      {
+        name: 'Echo httpbin.org',
+        endpointTemplate: 'https://httpbin.org/anything',
+        method: 'POST',
+        headers: { 'X-Test': 'stream-call' },
+        bodyTemplate:
+          '{"url":"{{streamUrl}}","title":"{{pageTitle}}","page":"{{pageUrl}}","time":"{{timestamp}}"}'
+      }
+    ],
+    null,
+    2
+  )
+} as const;
+
+// Initialize storage with default config on first install
+browser.runtime.onInstalled.addListener(async (details) => {
+  if (details.reason === 'install') {
+    // First install - populate storage with demo endpoints
+    const stored = await browser.storage.sync.get('apiEndpoints');
+    if (!stored.apiEndpoints) {
+      await browser.storage.sync.set({ apiEndpoints: DEFAULT_CONFIG.apiEndpoints });
+      console.log('[stream-call] Initialized storage with 3 demo endpoints');
+    }
+  }
+});
+
 type StreamInfo = {
   url: string;
   type: string;
