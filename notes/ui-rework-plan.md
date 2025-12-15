@@ -1,6 +1,40 @@
-# Options UI Rework Plan
+# UI Architecture Rework Plan
 
-**Goal**: Make pattern editing easy for non-technical users, remove the need to edit raw JSON or escape strings, and add bulk import/export with overwrite-by-name semantics.
+**Current Status**: Phase 1 complete (ID→name migration). Mobile UX testing in progress.
+
+## Next Generation Architecture (Mobile-First)
+
+**Goal**: Convert popup from browser_action to in-page hover panel for optimal mobile UX.
+
+### Key Changes
+1. **In-Page Hover Panel** (replaces browser_action popup):
+   - Injected `<div>` with `position: fixed` overlay
+   - Merge `content.ts` + `popup.ts` → `page-ui.ts` (single context, no messaging)
+   - Logger singleton (no cross-context messaging needed)
+   - Toggle button/keyboard shortcut to show/hide
+   - Better mobile experience: full screen width, no popup constraints
+
+2. **Browser Action → Settings Panel**:
+   - Move endpoint CRUD UI from options to browser_action popup
+   - Keep options page for internal configs only
+   - Quick access to endpoint management
+
+3. **Background Service**:
+   - Reverse message direction: extension→page (if needed)
+   - Stream detection stays in page context
+   - May become optional or minimal
+
+### Benefits
+- ✅ Mobile-friendly: full-screen overlay, no popup size limits
+- ✅ Simpler architecture: single page context, no messaging overhead
+- ✅ Better UX: instant access, keyboard shortcuts
+- ✅ Logger clarity: single instance, no cross-context sync
+
+---
+
+## Previous Work (Phase 1: Completed)
+
+**Endpoint Management** - Form-based editor with name-keyed storage:
 
 ## UX Plan (3 key recommendations)
 - **Form-Based Editor**: Simple form with fields for **Name**, **Method**, **Endpoint**, **Body Template**, **Headers (key/value rows)**, and **Include Page Info**. Live validation. No JSON required.

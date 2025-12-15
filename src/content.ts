@@ -183,15 +183,85 @@ import { Logger, LogLevel } from './logger';
     }, 2000);
   }
 
+  /**
+   * Inject hover panel (WIP for mobile testing)
+   */
+  function injectHoverPanel() {
+    // Only inject once
+    if (document.getElementById('stream-call-hover-panel')) return;
+
+    const iframe = document.createElement('iframe');
+    iframe.id = 'stream-call-hover-frame';
+    iframe.src = browser.runtime.getURL('dist/hover-panel.html');
+    iframe.style.cssText = `
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: 400px;
+      max-width: 90vw;
+      height: 100vh;
+      border: none;
+      z-index: 999999;
+      transform: translateX(100%);
+      transition: transform 0.3s ease-in-out;
+      box-shadow: -4px 0 12px rgba(0,0,0,0.3);
+    `;
+
+    document.body.appendChild(iframe);
+    logger.debug(LogLevel.Debug, 'ui-injection', 'Hover panel iframe injected');
+
+    // Add toggle button
+    const toggleBtn = document.createElement('button');
+    toggleBtn.id = 'stream-call-toggle-btn';
+    toggleBtn.innerHTML = '🎵';
+    toggleBtn.title = 'Toggle Stream call panel (WIP)';
+    toggleBtn.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+      z-index: 999998;
+      transition: all 0.2s;
+    `;
+
+    toggleBtn.addEventListener('click', () => {
+      const isVisible = iframe.style.transform === 'translateX(0px)';
+      iframe.style.transform = isVisible ? 'translateX(100%)' : 'translateX(0px)';
+    });
+
+    toggleBtn.addEventListener('mouseenter', () => {
+      toggleBtn.style.transform = 'scale(1.1)';
+      toggleBtn.style.boxShadow = '0 6px 16px rgba(102, 126, 234, 0.5)';
+    });
+
+    toggleBtn.addEventListener('mouseleave', () => {
+      toggleBtn.style.transform = 'scale(1)';
+      toggleBtn.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.4)';
+    });
+
+    document.body.appendChild(toggleBtn);
+    logger.debug(LogLevel.Debug, 'ui-injection', 'Toggle button added');
+  }
+
   function initialize() {
     logger.info(LogLevel.Info, 'initialization', 'Content script initialized at', window.location.href);
 
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', () => {
         startDetection();
+        setTimeout(injectHoverPanel, 500); // Delay to ensure body exists
       });
     } else {
       startDetection();
+      setTimeout(injectHoverPanel, 500);
     }
   }
 
