@@ -1,8 +1,7 @@
 <!DOCTYPE html>
 <!--
   Hover Panel: In-page overlay version of popup for mobile UX testing.
-  Injected by content.ts as a <div> with position:fixed.
-  This is a WIP clone of popup.html for comparison.
+  Loaded in iframe by content.ts. This is a WIP clone of popup.html for comparison.
 -->
 <html lang="en">
 <head>
@@ -10,33 +9,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Stream call Hover Panel</title>
   <style>
-    /* Reset for overlay content */
-    #stream-call-hover-panel * {
+    /* Reset - iframe body becomes the container */
+    * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     }
 
-    /* Overlay container */
-    #stream-call-hover-panel {
-      position: fixed;
-      top: 0;
-      right: 0;
-      width: 400px;
-      max-width: 90vw;
-      height: 100vh;
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-size: 14px;
+      color: #333;
       background: #f5f5f5;
-      box-shadow: -4px 0 12px rgba(0,0,0,0.3);
-      z-index: 999999;
+    }
+
+    body {
       display: flex;
       flex-direction: column;
-      transform: translateX(100%);
-      transition: transform 0.3s ease-in-out;
-    }
-
-    #stream-call-hover-panel.visible {
-      transform: translateX(0);
     }
 
     /* Close button */
@@ -351,18 +344,17 @@
   </style>
 </head>
 <body>
-  <div id="stream-call-hover-panel">
-    <button class="panel-close" id="panel-close" title="Close panel">✕</button>
+  <button class="panel-close" id="panel-close" title="Close panel">✕</button>
 
-    <div class="header">
-      <h1>🎵 <em>Stream call</em></h1>
-      <p>In-Page Panel (WIP)</p>
+  <div class="header">
+    <h1>🎵 <em>Stream call</em></h1>
+    <p>In-Page Panel (WIP)</p>
+  </div>
+
+  <div class="content">
+    <div id="loading" class="loading">
+      <p>Loading streams...</p>
     </div>
-
-    <div class="content">
-      <div id="loading" class="loading">
-        <p>Loading streams...</p>
-      </div>
 
       <div id="status" class="status" style="display: none;">
         <div class="status-title">
@@ -407,14 +399,13 @@
         <label><input type="checkbox" class="log-level-filter" value="debug" checked> Debug</label>
       </div>
       <div id="log-viewer" class="log-viewer"></div>
-    </div>
+  </div>
 
-    <!-- Status Bar -->
-    <div id="status-bar" class="status-bar-card" style="display:none;">
-      <div class="status-content">
-        <span id="status-icon" class="status-icon" aria-hidden="true">ℹ️</span>
-        <span id="status-message" class="status-text"></span>
-      </div>
+  <!-- Status Bar -->
+  <div id="status-bar" class="status-bar-card" style="display:none;">
+    <div class="status-content">
+      <span id="status-icon" class="status-icon" aria-hidden="true">ℹ️</span>
+      <span id="status-message" class="status-text"></span>
     </div>
   </div>
 
