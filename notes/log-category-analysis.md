@@ -5,9 +5,10 @@
 ## Summary
 
 - **10 categories** used consistently by both Logger (audit trail) and StatusBar (UI feedback)
-- **65 total logging calls** across all components
+- **61 total logging calls** across all components (21 Logger, 40 StatusBar)
 - **Categories are domain-specific** (what), **levels are severity-specific** (how important)
 - All logger calls verified for correct API usage
+- No duplicate statusBar+logger pairs (cleaned up 4 in popup.ts)
 
 ## Category Usage
 
@@ -29,10 +30,10 @@
 | Component | Logger Calls | StatusBar Calls | Total |
 |-----------|:------------:|:---------------:|:-----:|
 | options.ts |      0      |       27        |   27  |
-| popup.ts   |      9      |       13        |   22  |
+| popup.ts   |      5      |       13        |   18  |
 | background.ts |   10     |        0        |   10  |
 | page.ts    |      6      |        0        |    6  |
-| **Total**  |   **25**    |     **40**      | **65**|
+| **Total**  |   **21**    |     **40**      | **61**|
 
 **Note**: Each execution context (background, page, popup, options) has its own isolated Logger instance with separate circular buffers.
 
@@ -57,6 +58,11 @@
 **Phase 4**: Fixed Logger API bugs in page.ts
 - ❌ Before: `logger.info(LogLevel.Info, 'page', 'msg')` - wrong signature
 - ✅ After: `logger.info('page', 'msg')` - convenience methods already know their level
+
+**Phase 5**: Removed duplicate logging in popup.ts (4 pairs)
+- StatusBar with `setLogger()` already logs internally, so consecutive statusBar+logger calls are redundant
+- Consolidated by merging variable details (URL, endpoint, response) into statusBar messages
+- **Removed**: 4 redundant logger calls (debug×2, info×2) → down from 25 to 21 total logger calls
 
 **Rationale**:
 - Categories describe **domain** (what you're logging about)

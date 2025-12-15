@@ -308,8 +308,7 @@ async function handleCallAPI(stream: StreamInfo, endpointName?: string) {
   }
 
   // statusBar.flash handles logging internally
-  statusBar.flash(LogLevel.Info, 'apicall', 3000, 'Sending stream URL to API...');
-  logger.info('apicall', `Calling API: endpoint=${endpointName}, streamUrl=${stream.url}`);
+  statusBar.flash(LogLevel.Info, 'apicall', 3000, `Calling API: ${endpointName || 'default'} → ${stream.url}`);
 
   let response;
   try {
@@ -329,13 +328,11 @@ async function handleCallAPI(stream: StreamInfo, endpointName?: string) {
 
   if (response?.success) {
     // statusBar.flash handles logging internally
-  statusBar.flash(LogLevel.Info, 'apicall', 3000, '✅ Stream URL sent successfully!');
-    logger.info('apicall', `API call succeeded: ${response.details || 'no details'}`);
+  statusBar.flash(LogLevel.Info, 'apicall', 3000, `✅ Success: ${response.details || 'Stream URL sent'}`);
   } else {
     // statusBar.post handles logging internally
     const errorMsg = response?.error ?? 'Unknown error';
-    statusBar.post(LogLevel.Error, 'apicall', `❌ Error: ${errorMsg}`);
-    logger.error('apicall', `API call failed: ${errorMsg}`, response);
+    statusBar.post(LogLevel.Error, 'apicall', `❌ API call failed: ${errorMsg}`, response);
     showLogControls();
   }
 }
@@ -347,8 +344,7 @@ async function handleCopyUrl(url: string) {
   try {
     await navigator.clipboard.writeText(url);
     // statusBar.flash handles logging internally
-    statusBar.flash(LogLevel.Info, 'clipboard', 3000, '📋 URL copied to clipboard');
-    logger.debug('popup', `Copied URL to clipboard: ${url}`);
+    statusBar.flash(LogLevel.Info, 'clipboard', 3000, `📋 URL copied: ${url}`);
   } catch (error) {
     // Clipboard write may fail due to permissions; statusBar.post handles logging
     statusBar.post(LogLevel.Warn, 'clipboard', '⚠️ Failed to copy URL', error);
