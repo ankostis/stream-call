@@ -293,6 +293,25 @@ The extension uses a message-driven architecture via `browser.runtime.sendMessag
 - `CALL_API` (popup → background): Triggers an API call with stream data to a configured endpoint
 - `PING` (popup → background): Health check to verify background worker is alive
 - `CLEAR_STREAMS` (popup → background): Clears stored streams for a tab
+
+
+### Logging Categories
+
+So far...
+
+| Category | Occurrences | Purpose |
+|----------|:-----------:|---------|
+| endpoint | 14 | ✅ Endpoint operations (save/delete/validate/config parsing/form) |
+| content  |  9 | ✅ Content script operations (detection/injection/initialization) |
+| storage  |  8 | ✅ Storage operations (save/load/reset/export/import/info) |
+| apicall  |  7 | ✅ API call operations (HTTP requests/responses/tracking) |
+| popup    |  5 | ✅ Popup component operations (init/refresh/UI actions) |
+| stat     |  3 | ✅ General status updates |
+| messaging | 2 | ✅ Message passing between components |
+| interpolation | 2 | ✅ Template interpolation (preview + test API) |
+| clipboard | 2 | ✅ Clipboard operations |
+
+
 ## Privacy
 
 *Stream call*:

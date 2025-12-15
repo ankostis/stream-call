@@ -99,7 +99,7 @@ function loadSettings() {
       endpoints = validated.valid ? validated.parsed : [];
       renderList();
       if (endpoints.length === 0) {
-        statusBar.post(LogLevel.Info, 'storage-info', 'No API endpoints configured yet. Add your first endpoint below.');
+        statusBar.post(LogLevel.Info, 'storage', 'No API endpoints configured yet. Add your first endpoint below.');
       }
     })
     .catch((error) => {
@@ -200,7 +200,7 @@ function buildEndpointFromForm(): ApiEndpoint | null {
   const includePageHeaders = els.includeHeaders().checked;
 
   if (!endpoint) {
-    statusBar.post(LogLevel.Error, 'form', 'Endpoint URL is required');
+    statusBar.post(LogLevel.Error, 'endpoint', 'Endpoint URL is required');
     return null;
   }
 
@@ -256,7 +256,7 @@ function saveEndpoint() {
     .then(() => {
       renderList();
       closeEditor();
-      statusBar.flash(LogLevel.Info, 'last-action', 3000, '✅ API endpoint saved');
+      statusBar.flash(LogLevel.Info, 'endpoint', 3000, '✅ API endpoint saved');
     })
     .catch((error) => {
       statusBar.post(LogLevel.Error, 'storage', 'Failed to save API endpoint', error);
@@ -285,7 +285,7 @@ function deleteEndpoint(index: number) {
     .then(() => {
       renderList();
       closeEditor();
-      statusBar.flash(LogLevel.Info, 'last-action', 3000, 'API endpoint deleted');
+      statusBar.flash(LogLevel.Info, 'endpoint', 3000, 'API endpoint deleted');
     })
     .catch((error) => {
       statusBar.post(LogLevel.Error, 'storage', 'Failed to delete API endpoint', error);
@@ -367,13 +367,13 @@ function testAPI() {
   })
     .then((response) => {
       if (response.ok) {
-        statusBar.flash(LogLevel.Info, 'last-action', 3000, `✅ API test successful! Status: ${response.status} ${response.statusText}`);
+        statusBar.flash(LogLevel.Info, 'apicall', 3000, `✅ API test successful! Status: ${response.status} ${response.statusText}`);
       } else {
-        statusBar.post(LogLevel.Warn, 'api', `⚠️ API returned status ${response.status}: ${response.statusText}`);
+        statusBar.post(LogLevel.Warn, 'apicall', `⚠️ API returned status ${response.status}: ${response.statusText}`);
       }
     })
     .catch((error) => {
-      statusBar.post(LogLevel.Error, 'api', `❌ API test failed: ${error?.message ?? 'Unknown error'}`, error);
+      statusBar.post(LogLevel.Error, 'apicall', `❌ API test failed: ${error?.message ?? 'Unknown error'}`, error);
     });
 }
 
@@ -413,7 +413,7 @@ function exportEndpoints() {
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
-  statusBar.flash(LogLevel.Info, 'last-action', 3000, '✅ API endpoints exported');
+  statusBar.flash(LogLevel.Info, 'storage', 3000, '✅ API endpoints exported');
 }
 
 function handleFileSelect(e: Event) {
@@ -491,7 +491,7 @@ function performImport(merge: boolean) {
     .then(() => {
       renderList();
       closeImportModal();
-      statusBar.flash(LogLevel.Info, 'last-action', 3000, merge ? '✅ Endpoints merged' : '✅ Endpoints replaced');
+      statusBar.flash(LogLevel.Info, 'storage', 3000, merge ? '✅ Endpoints merged' : '✅ Endpoints replaced');
     })
     .catch((error) => {
       statusBar.post(LogLevel.Error, 'storage', 'Failed to import endpoints', error);

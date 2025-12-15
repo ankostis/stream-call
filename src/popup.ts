@@ -78,7 +78,7 @@ async function initialize() {
   document.getElementById('refresh-btn')?.addEventListener('click', handleRefresh);
   document.getElementById('options-btn')?.addEventListener('click', handleOptions);
 
-  logger.debug('init', 'Popup initialized successfully');
+  logger.debug('popup', 'Popup initialized successfully');
 }
 
 // Helper to show log controls
@@ -98,10 +98,10 @@ async function loadEndpoints() {
 
   try {
     apiEndpoints = parseEndpoints(apiEndpointsStr);
-    logger.debug('config-load', `Loaded ${apiEndpoints.length} API endpoints`);
+    logger.debug('endpoint', `Loaded ${apiEndpoints.length} API endpoints`);
   } catch (error: any) {
     // Parse error is expected if config is corrupted - show to user via statusBar (which logs internally)
-    statusBar.post(LogLevel.Error, 'config', 'Invalid API endpoints configured. Check options.', error);
+    statusBar.post(LogLevel.Error, 'endpoint', 'Invalid API endpoints configured. Check options.', error);
     apiEndpoints = [];
   }
   endpointsCached = true;
@@ -119,7 +119,7 @@ async function loadStreams() {
     await browser.runtime.sendMessage({ type: 'PING' });
   } catch (pingError) {
     // Known issue: background worker crashed or not loaded - statusBar.post handles logging
-    statusBar.post(LogLevel.Error, 'background', '⚠️ Extension background service not responding. Try reloading the extension.', pingError);
+    statusBar.post(LogLevel.Error, 'messaging', '⚠️ Extension background service not responding. Try reloading the extension.', pingError);
     const loadingEl = document.getElementById('loading');
     if (loadingEl) loadingEl.style.display = 'none';
     showLogControls();
@@ -142,7 +142,7 @@ async function loadStreams() {
   }
 
   const streams = (response?.streams as StreamInfo[] | undefined) || [];
-  logger.debug('stream-fetch', `Loaded ${streams.length} streams for tab ${currentTabId}`);
+  logger.debug('popup', `Loaded ${streams.length} streams for tab ${currentTabId}`);
 
   const loadingEl = document.getElementById('loading');
   if (loadingEl) loadingEl.style.display = 'none';
@@ -292,14 +292,14 @@ async function handleCallAPI(stream: StreamInfo, endpointName?: string) {
     endpoints = parseEndpoints(config.apiEndpoints || '[]');
   } catch (parseError: any) {
     // Parse error is a known configuration issue - statusBar.post handles logging
-    statusBar.post(LogLevel.Error, 'config', 'Invalid endpoint configuration. Check options.', parseError);
+    statusBar.post(LogLevel.Error, 'endpoint', 'Invalid endpoint configuration. Check options.', parseError);
     showLogControls();
     return;
   }
 
   if (endpoints.length === 0) {
     // statusBar.post handles logging internally
-    statusBar.post(LogLevel.Warn, 'config', 'Please configure API endpoints in options first');
+    statusBar.post(LogLevel.Warn, 'endpoint', 'Please configure API endpoints in options first');
     showLogControls();
     setTimeout(() => {
       browser.runtime.openOptionsPage();
@@ -308,8 +308,8 @@ async function handleCallAPI(stream: StreamInfo, endpointName?: string) {
   }
 
   // statusBar.flash handles logging internally
-  statusBar.flash(LogLevel.Info, 'api-status', 3000, 'Sending stream URL to API...');
-  logger.info('api-call', `Calling API: endpoint=${endpointName}, streamUrl=${stream.url}`);
+  statusBar.flash(LogLevel.Info, 'apicall', 3000, 'Sending stream URL to API...');
+  logger.info('apicall', `Calling API: endpoint=${endpointName}, streamUrl=${stream.url}`);
 
   let response;
   try {
@@ -322,20 +322,20 @@ async function handleCallAPI(stream: StreamInfo, endpointName?: string) {
     });
   } catch (error) {
     // Message passing error - log and display
-    statusBar.post(LogLevel.Error, 'api', 'Failed to send API request', error);
+    statusBar.post(LogLevel.Error, 'apicall', 'Failed to send API request', error);
     showLogControls();
     return;
   }
 
   if (response?.success) {
     // statusBar.flash handles logging internally
-    statusBar.flash(LogLevel.Info, 'api-status', 3000, '✅ Stream URL sent successfully!');
-    logger.info('api-call', `API call succeeded: ${response.details || 'no details'}`);
+  statusBar.flash(LogLevel.Info, 'apicall', 3000, '✅ Stream URL sent successfully!');
+    logger.info('apicall', `API call succeeded: ${response.details || 'no details'}`);
   } else {
     // statusBar.post handles logging internally
     const errorMsg = response?.error ?? 'Unknown error';
-    statusBar.post(LogLevel.Error, 'api', `❌ Error: ${errorMsg}`);
-    logger.error('api-call', `API call failed: ${errorMsg}`, response);
+    statusBar.post(LogLevel.Error, 'apicall', `❌ Error: ${errorMsg}`);
+    logger.error('apicall', `API call failed: ${errorMsg}`, response);
     showLogControls();
   }
 }
@@ -347,8 +347,8 @@ async function handleCopyUrl(url: string) {
   try {
     await navigator.clipboard.writeText(url);
     // statusBar.flash handles logging internally
-    statusBar.flash(LogLevel.Info, 'last-action', 3000, '📋 URL copied to clipboard');
-    logger.debug('ui-action', `Copied URL to clipboard: ${url}`);
+    statusBar.flash(LogLevel.Info, 'clipboard', 3000, '📋 URL copied to clipboard');
+    logger.debug('popup', `Copied URL to clipboard: ${url}`);
   } catch (error) {
     // Clipboard write may fail due to permissions; statusBar.post handles logging
     statusBar.post(LogLevel.Warn, 'clipboard', '⚠️ Failed to copy URL', error);
@@ -367,11 +367,11 @@ async function handleRefresh() {
     const container = document.getElementById('streams-container');
     if (container) container.innerHTML = '';
 
-    logger.debug('ui-action', 'Refresh button clicked');
+    logger.debug('popup', 'Refresh button clicked');
     await loadStreams();
   } catch (error) {
     // Unexpected error in refresh - log and display
-    statusBar.post(LogLevel.Error, 'refresh', 'Failed to refresh streams', error);
+    statusBar.post(LogLevel.Error, 'popup', 'Failed to refresh streams', error);
     const loading = document.getElementById('loading');
     if (loading) loading.style.display = 'none';
     showLogControls();
@@ -382,7 +382,7 @@ async function handleRefresh() {
  * Handle options button
  */
 function handleOptions() {
-  logger.debug('ui-action', 'Options button clicked');
+  logger.debug('popup', 'Options button clicked');
   browser.runtime.openOptionsPage();
 }
 
@@ -397,7 +397,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await initialize();
   } catch (error) {
     // Top-level exception handler - log and display to user
-    statusBar.post(LogLevel.Error, 'init', 'Failed to initialize popup', error);
+    statusBar.post(LogLevel.Error, 'popup', 'Failed to initialize popup', error);
     const loadingEl = document.getElementById('loading');
     if (loadingEl) loadingEl.style.display = 'none';
     showLogControls();
