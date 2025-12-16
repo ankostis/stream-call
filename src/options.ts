@@ -35,7 +35,8 @@ const els = {
   logViewer: () => document.getElementById('log-viewer') as HTMLDivElement,
   logClear: () => document.getElementById('log-clear') as HTMLButtonElement,
   logExport: () => document.getElementById('log-export') as HTMLButtonElement,
-  enableHoverPanel: () => document.getElementById('enable-hover-panel') as HTMLInputElement
+  enableHoverPanel: () => document.getElementById('enable-hover-panel') as HTMLInputElement,
+  aboutVersion: () => document.getElementById('about-version') as HTMLElement
 };
 
 // Logging utilities
@@ -696,6 +697,10 @@ function wireEvents() {
 }
 
 function initialize() {
+  // Display version from manifest
+  const manifest = browser.runtime.getManifest();
+  els.aboutVersion().textContent = `Version ${manifest.version}`;
+
   loadSettings();
   wireEvents();
   setHeadersRows();
