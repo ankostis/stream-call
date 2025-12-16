@@ -86,10 +86,6 @@ function addHeaderRow(key = '', value = '') {
 function setHeadersRows(headers?: Record<string, string>) {
   els.headersRows().innerHTML = '';
   const entries = headers ? Object.entries(headers) : [];
-  if (entries.length === 0) {
-    addHeaderRow();
-    return;
-  }
   entries.forEach(([key, value]) => addHeaderRow(key, value));
 }
 
@@ -141,24 +137,22 @@ function renderList() {
     const name = document.createElement('span');
     name.className = 'endpoint-name';
     name.textContent = endpoint.name;
-    name.title = endpoint.name;
+    name.title = 'Click to edit';
+    name.style.cursor = 'pointer';
+    name.addEventListener('click', () => openEditor(index));
 
     const actionsSpan = document.createElement('span');
     actionsSpan.className = 'endpoint-actions';
-
-    const editBtn = document.createElement('button');
-    editBtn.className = 'btn-icon';
-    editBtn.textContent = '✏️';
-    editBtn.title = 'Edit';
-    editBtn.addEventListener('click', () => openEditor(index));
 
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'btn-icon btn-danger';
     deleteBtn.textContent = '🗑️';
     deleteBtn.title = 'Delete';
-    deleteBtn.addEventListener('click', () => deleteEndpoint(index));
+    deleteBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteEndpoint(index);
+    });
 
-    actionsSpan.appendChild(editBtn);
     actionsSpan.appendChild(deleteBtn);
 
     header.appendChild(activeCheckbox);
@@ -313,7 +307,6 @@ function saveEndpoint() {
     .set({ apiEndpoints: validated.formatted })
     .then(() => {
       renderList();
-      closeEditor();
       statusBar.flash(LogLevel.Info, 'endpoint', 3000, '✅ Saved');
     })
     .catch((error) => {
@@ -357,7 +350,6 @@ function saveAsNew() {
     .set({ apiEndpoints: validated.formatted })
     .then(() => {
       renderList();
-      closeEditor();
       statusBar.flash(LogLevel.Info, 'endpoint', 3000, `✅ Saved as "${newName}"`);
     })
     .catch((error) => {
@@ -674,13 +666,12 @@ function performImport(merge: boolean) {
 }
 
 function wireEvents() {
-  document.getElementById('add-endpoint-btn')?.addEventListener('click', () => openEditor(null));
   document.getElementById('save-endpoint-btn')?.addEventListener('click', saveEndpoint);
   document.getElementById('save-new-btn')?.addEventListener('click', saveAsNew);
-  document.getElementById('cancel-edit-btn')?.addEventListener('click', closeEditor);
+  document.getElementById('clear-edit-btn')?.addEventListener('click', closeEditor);
   document.getElementById('preview-btn')?.addEventListener('click', previewEndpoint);
   document.getElementById('add-header-row')?.addEventListener('click', () => addHeaderRow());
-  document.getElementById('validate-btn')?.addEventListener('click', testAPI);
+  document.getElementById('call-btn')?.addEventListener('click', testAPI);
   document.getElementById('reset-btn')?.addEventListener('click', resetBuiltIns);
   document.getElementById('clear-all-btn')?.addEventListener('click', clearAllEndpoints);
   document.getElementById('export-btn')?.addEventListener('click', exportEndpoints);

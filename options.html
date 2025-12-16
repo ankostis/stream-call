@@ -21,40 +21,73 @@
       font-size: 14px;
       color: #333;
       background: #f5f5f5;
-      padding: 0;
-      padding-bottom: 48px; /* Space for fixed status bar */
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
     }
 
     .header {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
-      padding: 32px;
+      padding: 24px 32px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      flex-shrink: 0;
     }
 
     .header h1 {
-      font-size: 28px;
+      font-size: 24px;
       font-weight: 600;
-      margin-bottom: 8px;
+      margin-bottom: 4px;
     }
 
     .header p {
-      font-size: 14px;
+      font-size: 13px;
       opacity: 0.9;
     }
 
     .container {
-      max-width: 800px;
-      margin: 32px auto;
-      padding: 0 16px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 16px;
+      gap: 16px;
+      overflow: hidden;
+    }
+
+    .main-content {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    .column {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      overflow: hidden;
+      min-height: 0;
     }
 
     .card {
       background: white;
       border-radius: 8px;
-      padding: 24px;
-      margin-bottom: 24px;
+      padding: 20px;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    #log-card {
+      min-height: 15em;
     }
 
     .card-header {
@@ -72,14 +105,15 @@
     }
 
     .card-title {
-      font-size: 18px;
+      font-size: 16px;
       font-weight: 600;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
       color: #667eea;
+      flex-shrink: 0;
     }
 
     .form-group {
-      margin-bottom: 20px;
+      margin-bottom: 0.75em;
     }
 
     .form-group:last-child {
@@ -89,7 +123,7 @@
     label {
       display: block;
       font-weight: 600;
-      margin-bottom: 8px;
+      margin-bottom: 0.25em;
     }
 
     .label-description {
@@ -101,9 +135,13 @@
 
     input[type="text"],
     input[type="url"],
-    textarea,
-    select {
+    textarea {
       width: 100%;
+    }
+
+    select {
+      width: auto;
+      min-width: 5em;
       padding: 10px 12px;
       border: 1px solid #ddd;
       border-radius: 4px;
@@ -121,9 +159,14 @@
     }
 
     textarea {
-      min-height: 100px;
+      min-height: 60px;
       resize: vertical;
       font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    }
+
+    #endpoint-endpoint {
+      min-height: 3em;
+      font-family: inherit;
     }
 
     input[type="checkbox"] {
@@ -136,6 +179,8 @@
     .checkbox-group {
       display: flex;
       align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
     }
 
     .checkbox-group label {
@@ -147,12 +192,12 @@
 
     .button-group {
       display: flex;
-      gap: 12px;
-      margin-top: 24px;
+      gap: 0.75em;
+      margin-top: 1em;
     }
 
     button {
-      padding: 12px 24px;
+      padding: 0.5em 1em;
       border: none;
       border-radius: 4px;
       font-size: 14px;
@@ -258,6 +303,32 @@
       display: none !important;
     }
 
+    .scrollable-content {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      min-height: 0;
+      padding-right: 4px;
+    }
+
+    .scrollable-content::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .scrollable-content::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 4px;
+    }
+
+    .scrollable-content::-webkit-scrollbar-thumb {
+      background: #888;
+      border-radius: 4px;
+    }
+
+    .scrollable-content::-webkit-scrollbar-thumb:hover {
+      background: #555;
+    }
+
     .example-box {
       background: #f8f9fa;
       border-left: 4px solid #667eea;
@@ -273,13 +344,13 @@
     .endpoints-list {
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 0.5em;
     }
 
     .endpoint-item {
       border: 1px solid #e5e7eb;
       border-radius: 6px;
-      padding: 12px;
+      padding: 0.5em 0.75em;
       background: #fafafa;
       transition: all 0.2s;
     }
@@ -297,8 +368,8 @@
     .endpoint-header {
       display: flex;
       align-items: center;
-      gap: 10px;
-      margin-bottom: 6px;
+      gap: 0.5em;
+      margin-bottom: 0.25em;
     }
 
     .endpoint-active {
@@ -412,6 +483,11 @@
       font-size: 12px;
       white-space: pre-wrap;
       line-height: 1.5;
+      margin-top: 1em;
+    }
+
+    .preview:empty {
+      display: none;
     }
 
     .modal {
@@ -507,14 +583,10 @@
       border: 1px solid #1e293b;
       display: flex;
       flex-direction: column;
-      min-height: 200px;
-      max-height: 500px;
-      overflow-y: auto;
-    }
-
-    .log-viewer.visible {
-      flex: 1;
-      max-height: none;
+      resize: vertical;
+      overflow: auto;
+      min-height: 10em;
+      max-height: 40em;
     }
 
     .log-viewer > div {
@@ -539,17 +611,69 @@
     }
 
     /* Responsive CSS for mobile/narrow viewports */
-    @media (max-width: 768px) {
-      .container {
-        padding: 16px 12px;
+    @media (max-width: 1024px) {
+      .main-content {
+        grid-template-columns: 1fr;
       }
 
+      body {
+        height: auto;
+        overflow: auto;
+      }
+
+      .container {
+        overflow: visible;
+      }
+
+      .main-content {
+        display: flex;
+        flex-direction: column;
+        overflow: visible;
+      }
+
+      .column {
+        overflow: visible;
+      }
+
+      .card {
+        overflow: visible;
+        max-height: none;
+      }
+
+      .scrollable-content {
+        overflow: visible;
+        max-height: none;
+      }
+
+      /* Keep endpoint list scrollable on mobile */
+      #endpoints-list {
+        max-height: 40vh;
+        overflow-y: auto;
+      }
+
+      /* Limit log viewer height on mobile for autoscroll to work */
+      .log-viewer {
+        max-height: 30vh;
+        overflow-y: auto;
+      }
+
+      #log-card {
+        min-height: 10em;
+      }
+    }
+
+    @media (max-width: 768px) {
       .header {
-        padding: 24px 16px;
+        padding: 16px;
       }
 
       .header h1 {
-        font-size: 24px;
+        font-size: 20px;
+      }
+
+      .container {
+        padding: 8px;
+        gap: 12px;
       }
 
       .card {
@@ -594,7 +718,6 @@
       }
 
       .log-viewer {
-        max-height: 200px;
         font-size: 10px;
       }
 
@@ -647,8 +770,6 @@
   </div>
 
   <div class="container">
-    <div id="alert" class="alert" style="display:none"></div>
-
     <!-- Status Bar -->
     <div id="status-bar" class="status-bar-card" style="display:none;">
       <div class="status-content">
@@ -657,12 +778,17 @@
       </div>
     </div>
 
+    <div id="alert" class="alert" style="display:none"></div>
+
+    <div class="main-content">
+      <!-- Left Column: Endpoints List & Editor -->
+      <div class="column">
+
     <div class="card">
       <div class="card-header">
         <h2 class="card-title">API Endpoints</h2>
         <div class="card-actions">
-          <button id="add-endpoint-btn" class="btn-primary">＋ Add API endpoint</button>
-          <button id="reset-btn" class="btn-secondary">↺ Reset built-ins</button>
+          <button id="reset-btn" class="btn-secondary">↺ Reset</button>
           <button id="clear-all-btn" class="btn-danger">✖ Clear all</button>
           <button id="export-btn" class="btn-secondary">⬇ Export</button>
           <button id="import-file-btn" class="btn-secondary">⬆ Import file</button>
@@ -676,32 +802,22 @@
         <p style="font-size: 12px; margin-top: 8px;">Click “Add API endpoint” to create one.</p>
       </div>
 
-      <div id="endpoints-list" class="endpoints-list"></div>
+      <div id="endpoints-list" class="scrollable-content"></div>
     </div>
 
     <!-- API Endpoint Editor -->
     <div class="card" id="editor-card">
-      <h2 class="card-title" id="editor-title">Add API endpoint</h2>
-      <div class="form-grid">
+      <h2 class="card-title" id="editor-title">API endpoint</h2>
+      <div class="scrollable-content">
+        <div class="form-grid">
         <div class="form-group">
           <label for="endpoint-name">Endpoint name *<span class="help-icon" title="Must be unique. Auto-suggested from endpoint host.">ℹ</span></label>
           <input type="text" id="endpoint-name" placeholder="example.com POST" />
         </div>
 
         <div class="form-group">
-          <label for="endpoint-method">HTTP method *</label>
-          <select id="endpoint-method">
-            <option value="POST">POST</option>
-            <option value="GET">GET</option>
-            <option value="PUT">PUT</option>
-            <option value="PATCH">PATCH</option>
-            <option value="DELETE">DELETE</option>
-          </select>
-        </div>
-
-        <div class="form-group">
           <label for="endpoint-endpoint">Endpoint URL *<span class="help-icon" title="Supports placeholders like {{streamUrl|url}}, {{PAGEURL}}, {{pageTitle|json}}, {{timestamp}}.">ℹ</span></label>
-          <input type="url" id="endpoint-endpoint" placeholder="https://api.example.com/stream" />
+          <textarea id="endpoint-endpoint" placeholder="https://api.example.com/stream"></textarea>
         </div>
 
         <div class="form-group">
@@ -716,29 +832,38 @@
         </div>
 
         <div class="form-group checkbox-group">
+          <label for="endpoint-method">HTTP method *</label>
+          <select id="endpoint-method">
+            <option value="POST">POST</option>
+            <option value="GET">GET</option>
+            <option value="PUT">PUT</option>
+            <option value="PATCH">PATCH</option>
+            <option value="DELETE">DELETE</option>
+          </select>
           <label>
-            <input type="checkbox" id="endpoint-include-cookies" /> Include page cookies<span class="help-icon" title="Send current page cookies with API request (requires cookies permission).">ℹ</span>
+            <input type="checkbox" id="endpoint-include-cookies" /> Page cookies<span class="help-icon" title="Send current page cookies with API request (requires cookies permission).">ℹ</span>
           </label>
-        </div>
-
-        <div class="form-group checkbox-group">
           <label>
-            <input type="checkbox" id="endpoint-include-headers" /> Include page headers<span class="help-icon" title="Capture and send HTTP request headers from the page (User-Agent, Accept, Referer, etc).">ℹ</span>
+            <input type="checkbox" id="endpoint-include-headers" /> Page headers<span class="help-icon" title="Capture and send HTTP request headers from the page (User-Agent, Accept, Referer, etc).">ℹ</span>
           </label>
         </div>
 
         <div class="button-group">
-          <button id="cancel-edit-btn" class="btn-secondary" type="button">✖ Cancel</button>
+          <button id="clear-edit-btn" class="btn-secondary" type="button">🆕 Clear</button>
           <button id="preview-btn" class="btn-test" type="button">👁 Preview</button>
-          <button id="validate-btn" class="btn-test" type="button">🧪 Validate</button>
+          <button id="call-btn" class="btn-test" type="button">📤 Call</button>
           <button id="save-endpoint-btn" class="btn-primary" type="submit">💾 Save</button>
           <button id="save-new-btn" class="btn-primary" type="button">➕ Save New</button>
         </div>
 
         <div id="preview" class="preview"></div>
+        </div>
       </div>
     </div>
+      </div> <!-- End left column -->
 
+      <!-- Right Column: Activity Log & About -->
+      <div class="column">
     <!-- Activity Log -->
     <div class="card" id="log-card">
       <div class="card-header">
@@ -765,12 +890,12 @@
         </div>
       </div>
       <!-- Log viewer -->
-      <div id="log-viewer" class="log-viewer">
+      <div id="log-viewer" class="log-viewer scrollable-content">
         <div class="log-empty">No logs yet</div>
       </div>
     </div>
 
-    <div class="card" style="margin-top: 24px;">
+    <div class="card">
       <h2 class="card-title">About <em>Stream call</em></h2>
       <p style="margin-bottom: 12px;">
         <em>Stream call</em> detects streaming media (podcasts, radio, live streams) and
@@ -781,7 +906,9 @@
       </p>
       <p style="color: #666; font-size: 13px;">Version 1.0.0</p>
     </div>
-  </div>
+      </div> <!-- End right column -->
+    </div> <!-- End main-content -->
+  </div> <!-- End container -->
 
   <!-- Import URL modal -->
   <div id="import-url-modal" class="modal" style="display: none;">
