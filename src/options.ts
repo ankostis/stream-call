@@ -444,6 +444,46 @@ function previewEndpoint() {
   }
 }
 
+async function openInTab() {
+  // Get current form endpoint or first in list
+  const candidate = buildEndpointFromForm();
+  if (!candidate) {
+    statusBar.post(LogLevel.Error, 'endpoint', 'Invalid endpoint configuration');
+    return;
+  }
+
+  const testUrl = 'https://example.com/test-stream.m3u8';
+  const pageUrl = 'https://example.com/test-page';
+  const pageTitle = 'Test Page - stream-call';
+
+  statusBar.post(LogLevel.Info, 'apicall', `Opening in tab: ${candidate.name} → ${testUrl}`);
+  logger.info('apicall', `Opening in tab: ${candidate.name}`, { endpoint: candidate });
+
+  let response;
+  try {
+    response = await browser.runtime.sendMessage({
+      type: 'OPEN_IN_TAB',
+      streamUrl: testUrl,
+      pageUrl,
+      pageTitle,
+      endpointName: candidate.name
+    });
+  } catch (error) {
+    statusBar.post(LogLevel.Error, 'apicall', 'Failed to open in tab', error);
+    logger.error('apicall', 'Failed to open in tab', error);
+    return;
+  }
+
+  if (response?.success) {
+    statusBar.flash(LogLevel.Info, 'apicall', 3000, `✅ Opened in new tab: ${response.details || testUrl}`);
+    logger.info('apicall', `Opened in tab successfully: ${candidate.name}`, { response });
+  } else {
+    const errorMsg = response?.error ?? 'Unknown error';
+    statusBar.post(LogLevel.Error, 'apicall', `Failed to open in tab: ${errorMsg}`);
+    logger.error('apicall', `Failed to open in tab: ${candidate.name}`, { error: errorMsg });
+  }
+}
+
 async function testAPI() {
   // Get current form endpoint or first in list
   const candidate = buildEndpointFromForm();
@@ -701,6 +741,7 @@ function wireEvents() {
   document.getElementById('preview-btn')?.addEventListener('click', previewEndpoint);
   document.getElementById('add-header-row')?.addEventListener('click', () => addHeaderRow());
   document.getElementById('call-btn')?.addEventListener('click', testAPI);
+  document.getElementById('open-tab-btn')?.addEventListener('click', openInTab);
   document.getElementById('reset-btn')?.addEventListener('click', resetBuiltIns);
   document.getElementById('clear-all-btn')?.addEventListener('click', clearAllEndpoints);
   document.getElementById('export-btn')?.addEventListener('click', exportEndpoints);

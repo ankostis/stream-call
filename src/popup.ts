@@ -261,7 +261,7 @@ function populatePanel(stream: StreamInfo, index: number, allStreams: StreamInfo
 
   const callBtn = document.createElement('button');
   callBtn.className = 'btn-primary';
-  callBtn.textContent = '📤 Call API';
+  callBtn.textContent = '📤 Call';
   callBtn.addEventListener('click', () => handleCallAPI(stream, endpointName));
 
   const copyBtn = document.createElement('button');
@@ -269,8 +269,8 @@ function populatePanel(stream: StreamInfo, index: number, allStreams: StreamInfo
   copyBtn.textContent = '📋 Copy';
   copyBtn.addEventListener('click', () => handleCopyUrl(stream.url));
 
-  panelActions.appendChild(openTabBtn);
   panelActions.appendChild(callBtn);
+  panelActions.appendChild(openTabBtn);
   panelActions.appendChild(copyBtn);
 
   panel.style.display = 'block';
