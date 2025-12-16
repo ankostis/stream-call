@@ -13,7 +13,7 @@
     "test:integration:options": "node tests/integration/options-crud.js",
     "test:integration:real": "node tests/integration/real-stream.js",
     "test:integration:httpbin": "node tests/integration/httpbin-full.js --puppeteer",
-    "package": "zip -r stream-call.zip manifest.json dist icons -x 'icons/generate-icons.html'"
+    "package": "zip -r stream-call-$npm_package_version.zip manifest.json dist icons -x 'icons/generate-icons.html'"
   },
   "devDependencies": {
     "@types/chai": "^4.3.11",

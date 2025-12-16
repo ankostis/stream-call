@@ -125,6 +125,19 @@ function renderList() {
     const item = document.createElement('div');
     item.className = 'endpoint-item';
     if (endpoint.active === false) item.classList.add('inactive');
+    if (editingIndex === index) item.classList.add('selected');
+    item.style.cursor = 'pointer';
+    item.title = 'Click to edit';
+
+    // Make entire item clickable
+    item.addEventListener('click', (e) => {
+      // Don't trigger if clicking on interactive elements
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'BUTTON' || target.tagName === 'INPUT') {
+        return;
+      }
+      openEditor(index);
+    });
 
     // Header row: active checkbox + name + actions
     const header = document.createElement('div');
@@ -135,14 +148,14 @@ function renderList() {
     activeCheckbox.className = 'endpoint-active';
     activeCheckbox.checked = endpoint.active !== false;
     activeCheckbox.title = 'Active (shown in popup)';
-    activeCheckbox.addEventListener('change', () => toggleEndpointActive(index));
+    activeCheckbox.addEventListener('change', (e) => {
+      e.stopPropagation();
+      toggleEndpointActive(index);
+    });
 
     const name = document.createElement('span');
     name.className = 'endpoint-name';
     name.textContent = endpoint.name;
-    name.title = 'Click to edit';
-    name.style.cursor = 'pointer';
-    name.addEventListener('click', () => openEditor(index));
 
     const actionsSpan = document.createElement('span');
     actionsSpan.className = 'endpoint-actions';
@@ -214,6 +227,8 @@ function openEditor(index: number | null) {
     els.saveBtn().textContent = '💾 Save';
     els.saveNewBtn().style.display = 'inline-block';
   }
+  
+  renderList(); // Update selected state in UI
 }
 
 function closeEditor() {
@@ -222,6 +237,7 @@ function closeEditor() {
   els.editorTitle().textContent = 'Add API endpoint';
   els.saveBtn().textContent = '💾 Save';
   els.saveNewBtn().style.display = 'none';
+  renderList(); // Clear selected state in UI
 }
 
 function fillForm(endpoint: ApiEndpoint) {
@@ -741,6 +757,42 @@ function initialize() {
       .catch((err) => {
         logger.error('storage', 'Failed to save hover panel setting:', err);
       });
+  });
+
+  // Make help icons tappable on mobile - toggle tooltip on click/tap
+  document.querySelectorAll('.help-icon').forEach((icon) => {
+    icon.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const el = e.target as HTMLElement;
+      const wasShowing = el.classList.contains('show-tooltip');
+
+      // Hide all other tooltips
+      document.querySelectorAll('.help-icon.show-tooltip').forEach((other) => {
+        if (other !== el) other.classList.remove('show-tooltip');
+      });
+
+      // Toggle this one
+      el.classList.toggle('show-tooltip', !wasShowing);
+    });
+  });
+
+  // Hide tooltips when clicking elsewhere
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.help-icon.show-tooltip').forEach((icon) => {
+      icon.classList.remove('show-tooltip');
+    });
+  });
+
+  // Make template placeholder codes selectable on tap
+  document.querySelectorAll('.template-help code').forEach((code) => {
+    code.addEventListener('click', (e) => {
+      const el = e.target as HTMLElement;
+      const selection = window.getSelection();
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+    });
   });
 }
 

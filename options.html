@@ -216,6 +216,11 @@
       background: #5568d3;
     }
 
+    .btn-primary:active {
+      background: #4557c2;
+      transform: scale(0.98);
+    }
+
     .btn-secondary {
       background: #e0e0e0;
       color: #333;
@@ -225,6 +230,11 @@
       background: #d0d0d0;
     }
 
+    .btn-secondary:active {
+      background: #c0c0c0;
+      transform: scale(0.98);
+    }
+
     .btn-test {
       background: #4CAF50;
       color: white;
@@ -232,6 +242,11 @@
 
     .btn-test:hover {
       background: #45a049;
+    }
+
+    .btn-test:active {
+      background: #3d8b40;
+      transform: scale(0.98);
     }
 
     .alert {
@@ -431,17 +446,31 @@
     }
 
     .endpoints-list {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5em;
+      background: white;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
     }
 
     .endpoint-item {
-      border: 1px solid #e5e7eb;
-      border-radius: 6px;
       padding: 0.5em 0.75em;
-      background: #fafafa;
+      background: white;
+      border-bottom: 1px solid #f0f0f0;
       transition: all 0.2s;
+      cursor: pointer;
+    }
+
+    .endpoint-item:last-child {
+      border-bottom: none;
+    }
+
+    .endpoint-item:first-child {
+      border-top-left-radius: 6px;
+      border-top-right-radius: 6px;
+    }
+
+    .endpoint-item:last-child {
+      border-bottom-left-radius: 6px;
+      border-bottom-right-radius: 6px;
     }
 
     .endpoint-item.inactive {
@@ -450,8 +479,17 @@
     }
 
     .endpoint-item:hover {
-      border-color: #667eea;
-      box-shadow: 0 2px 6px rgba(102, 126, 234, 0.1);
+      background: #f8f9fa;
+    }
+
+    .endpoint-item:active {
+      background: #e9ecef;
+    }
+
+    .endpoint-item.selected {
+      background: #e7ecff;
+      border-left: 3px solid #667eea;
+      padding-left: calc(0.75em - 2px); /* Compensate for border */
     }
 
     .endpoint-header {
@@ -488,12 +526,12 @@
       background: transparent;
       border: 1px solid #e5e7eb;
       border-radius: 4px;
-      padding: 6px 10px;
+      padding: 10px 12px;
       font-size: 16px;
       cursor: pointer;
       transition: all 0.2s;
-      min-width: 36px;
-      min-height: 36px;
+      min-width: 44px;
+      min-height: 44px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -504,9 +542,19 @@
       border-color: #667eea;
     }
 
+    .btn-icon:active {
+      background: #e5e7eb;
+      transform: scale(0.95);
+    }
+
     .btn-icon.btn-danger:hover {
       background: #fef2f2;
       border-color: #b91c1c;
+    }
+
+    .btn-icon.btn-danger:active {
+      background: #fee2e2;
+      transform: scale(0.95);
     }
 
     .endpoint-summary {
