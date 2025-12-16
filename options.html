@@ -291,12 +291,101 @@
       margin-left: 6px;
       cursor: help;
       vertical-align: middle;
+      position: relative;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
     }
 
-    .help-icon:hover {
+    .help-icon:hover,
+    .help-icon:active {
       background: #5568d3;
       transform: scale(1.1);
       transition: all 0.15s ease;
+    }
+
+    /* Tooltip bubble - appears on tap/click for mobile */
+    .help-icon::after {
+      content: attr(title);
+      position: absolute;
+      left: 50%;
+      bottom: calc(100% + 8px);
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.9);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: normal;
+      white-space: normal;
+      width: max-content;
+      max-width: 250px;
+      line-height: 1.4;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 1000;
+      transition: opacity 0.2s ease;
+    }
+
+    .help-icon::before {
+      content: '';
+      position: absolute;
+      left: 50%;
+      bottom: calc(100% + 2px);
+      transform: translateX(-50%);
+      border: 6px solid transparent;
+      border-top-color: rgba(0, 0, 0, 0.9);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 1000;
+      transition: opacity 0.2s ease;
+    }
+
+    .help-icon.show-tooltip::after,
+    .help-icon.show-tooltip::before {
+      opacity: 1;
+    }
+
+    /* Desktop hover */
+    @media (hover: hover) and (pointer: fine) {
+      .help-icon:hover::after,
+      .help-icon:hover::before {
+        opacity: 1;
+      }
+    }
+
+    .template-help {
+      background: #f8f9fa;
+      border: 1px solid #e1e4e8;
+      border-radius: 6px;
+      padding: 6px 10px;
+      margin-bottom: 16px;
+      font-size: 11px;
+      line-height: 1.6;
+    }
+
+    .template-help strong {
+      font-size: 11px;
+      font-weight: 600;
+      color: #24292e;
+      margin-right: 6px;
+    }
+
+    .template-help code {
+      background: #fff;
+      border: 1px solid #e1e4e8;
+      border-radius: 3px;
+      padding: 1px 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 10px;
+      color: #d73a49;
+      cursor: pointer;
+      user-select: all;
+      white-space: nowrap;
+      margin: 0 2px;
+    }
+
+    .template-help code:hover {
+      background: #fff5b1;
     }
 
     .hidden {
@@ -810,6 +899,17 @@
       <h2 class="card-title" id="editor-title">API endpoint</h2>
       <div class="scrollable-content">
         <div class="form-grid">
+
+        <div class="template-help">
+          <strong>📋 Placeholders:</strong>
+          <code>{{streamUrl}}</code>
+          <code>{{streamUrl|url}}</code>
+          <code>{{pageUrl}}</code>
+          <code>{{pageTitle}}</code>
+          <code>{{pageTitle|json}}</code>
+          <code>{{timestamp}}</code>
+        </div>
+
         <div class="form-group">
           <label for="endpoint-name">Endpoint name *<span class="help-icon" title="Must be unique. Auto-suggested from endpoint host.">ℹ</span></label>
           <input type="text" id="endpoint-name" placeholder="example.com POST" />
