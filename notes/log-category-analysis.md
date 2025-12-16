@@ -6,6 +6,7 @@
 
 - **10 categories** used consistently by both Logger (audit trail) and StatusBar (UI feedback)
 - **61 total logging calls** across all components (21 Logger, 40 StatusBar)
+- **14 legacy console calls** in endpoint.ts (13) and hover-panel.ts (1) - to be migrated
 - **Categories are domain-specific** (what), **levels are severity-specific** (how important)
 - All logger calls verified for correct API usage
 - No duplicate statusBar+logger pairs (cleaned up 4 in popup.ts)
@@ -93,10 +94,21 @@ statusBar.post(LogLevel.Error, 'category', 'message', optionalError)
 statusBar.flash(LogLevel.Info, 'category', 3000, 'message')
 ```
 
+## Legacy Console Calls (To Migrate)
+
+**endpoint.ts (13 calls)**:
+- `openEndpointInTab()`: 4 calls (1 log, 3 error)
+- `callEndpointAPI()`: 9 calls (3 log, 1 warn, 5 error)
+
+**hover-panel.ts (1 call)**:
+- WIP stub: 1 log
+
+These predate Logger/StatusBar infrastructure (introduced Dec 10-15, 2025). Should be migrated to proper logging.
+
 ## Validation
 
 ✅ All logger calls verified for correct API usage
 ✅ No instances of `logger.method(LogLevel.XXX, 'category', ...)` pattern found
-✅ All 96 unit tests pass
+✅ All 95 unit tests pass
 ✅ Integration tests pass
-- `logger.debug/info/warn/error('category', 'message')` for audit trail
+⚠️ 14 legacy console calls remain (not using Logger/StatusBar)

@@ -300,6 +300,7 @@ The extension uses a message-driven architecture via `browser.runtime.sendMessag
 Both Logger (audit trail) and StatusBar (UI feedback) use unified categories:
 
 **61 total logging calls** (21 Logger, 40 StatusBar)
+**14 legacy console calls** (to be migrated to Logger)
 
 | Category | Occurrences | Purpose |
 |----------|:-----------:|---------|

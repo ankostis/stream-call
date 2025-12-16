@@ -270,10 +270,10 @@ export async function openEndpointInTab({
       };
     }
 
-    console.log('[stream-call] === Opening URL ===');
-    console.log('Endpoint name:', selectedEndpoint.name);
-    console.log('Final URL:', finalUrl);
-    console.log('======================');
+    console.log('[stream-call] Opening URL in tab:', {
+      endpoint: selectedEndpoint.name,
+      url: finalUrl
+    });
 
     // Open in new tab (switch to it)
     await browser.tabs.create({ url: finalUrl, active: true });
@@ -394,34 +394,43 @@ export async function callEndpointAPI({
       fetchOptions.body = bodyJson;
     }
 
-    console.log('[stream-call] === API Request ===');
-    console.log('Endpoint name:', selectedEndpoint.name);
-    console.log('Method:', method);
-    console.log('URL:', endpoint);
-    console.log('Headers:', headers);
-    if (fetchOptions.body) {
-      console.log('Body:', fetchOptions.body.substring(0, 200) + (fetchOptions.body.length > 200 ? '...' : ''));
-    } else {
-      console.log('Body: (none - GET/HEAD)');
-    }
-    console.log('======================');
+    console.log('[stream-call] API Request:', {
+      endpoint: selectedEndpoint.name,
+      method,
+      url: endpoint,
+      headers,
+      body: fetchOptions.body ? fetchOptions.body.substring(0, 200) + (fetchOptions.body.length > 200 ? '...' : '') : '(none - GET/HEAD)'
+    });
 
     const response = await fetch(endpoint, fetchOptions);
 
     if (!response.ok) {
       let errorDetail = response.statusText;
+      let errorBody = '';
       try {
-        const errorBody = await response.text();
+        errorBody = await response.text();
         if (errorBody && errorBody.length < 500) {
           errorDetail = errorBody;
         }
       } catch {
         // Ignore if we can't read error body
       }
+      console.log('[stream-call] API Error Response:', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
+        body: errorBody.substring(0, 500) + (errorBody.length > 500 ? '...' : '')
+      });
       throw new Error(`API returned ${response.status}: ${errorDetail}`);
     }
 
     const result = await response.text();
+    console.log('[stream-call] API Success Response:', {
+      status: response.status,
+      statusText: response.statusText,
+      headers: Object.fromEntries(response.headers.entries()),
+      body: result.substring(0, 500) + (result.length > 500 ? '...' : '')
+    });
 
     return {
       success: true,
