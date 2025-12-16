@@ -116,11 +116,11 @@ function renderList() {
   list.innerHTML = '';
 
   if (endpoints.length === 0) {
-    emptyState.style.display = 'block';
+    emptyState.classList.remove('hidden');
     return;
   }
 
-  emptyState.style.display = 'none';
+  emptyState.classList.add('hidden');
 
   endpoints.forEach((endpoint, index) => {
     const item = document.createElement('div');
@@ -216,15 +216,14 @@ function openEditor(index: number | null) {
     els.saveBtn().textContent = '💾 Save';
     els.saveNewBtn().style.display = 'inline-block';
   }
-
-  els.editorCard().style.display = 'block';
-  els.preview().style.display = 'none';
 }
 
 function closeEditor() {
   editingIndex = null;
-  els.editorCard().style.display = 'none';
-  els.preview().style.display = 'none';
+  fillForm(newEndpointDefaults());
+  els.editorTitle().textContent = 'Add API endpoint';
+  els.saveBtn().textContent = '💾 Save';
+  els.saveNewBtn().style.display = 'none';
 }
 
 function fillForm(endpoint: ApiEndpoint) {
@@ -412,7 +411,6 @@ function previewEndpoint() {
       ? applyTemplate(candidate.bodyTemplate, context)
       : JSON.stringify(context, null, 2);
 
-    els.preview().style.display = 'block';
     els.preview().textContent = `Endpoint: ${endpoint}\nMethod: ${(candidate.method || 'POST').toUpperCase()}\n\nHeaders: ${JSON.stringify(
       candidate.headers || {},
       null,
@@ -421,6 +419,7 @@ function previewEndpoint() {
     statusBar.flash(LogLevel.Info, 'stat', 2000, 'Preview generated');
   } catch (error: any) {
     statusBar.post(LogLevel.Error, 'interpolation', `Interpolation error: ${error?.message ?? 'Invalid placeholder'}`, error);
+    els.preview().textContent = `Error: ${error?.message ?? 'Invalid placeholder'}`;
   }
 }
 

@@ -254,6 +254,10 @@
       transition: all 0.15s ease;
     }
 
+    .hidden {
+      display: none !important;
+    }
+
     .example-box {
       background: #f8f9fa;
       border-left: 4px solid #667eea;
@@ -666,7 +670,7 @@
         </div>
       </div>
 
-      <div id="endpoints-empty" class="empty-state" style="display: none;">
+      <div id="endpoints-empty" class="empty-state">
         <div class="empty-state-icon">📄</div>
         <p><strong>No endpoints yet</strong></p>
         <p style="font-size: 12px; margin-top: 8px;">Click “Add API endpoint” to create one.</p>
@@ -676,7 +680,7 @@
     </div>
 
     <!-- API Endpoint Editor -->
-    <div class="card" id="editor-card" style="display: none;">
+    <div class="card" id="editor-card">
       <h2 class="card-title" id="editor-title">Add API endpoint</h2>
       <div class="form-grid">
         <div class="form-group">
@@ -731,7 +735,7 @@
           <button id="save-new-btn" class="btn-primary" type="button">➕ Save New</button>
         </div>
 
-        <div id="preview" class="preview" style="display: none;"></div>
+        <div id="preview" class="preview"></div>
       </div>
     </div>
 
