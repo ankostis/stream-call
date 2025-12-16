@@ -146,7 +146,7 @@
       background: white;
       border: 1px solid #e0e0e0;
       border-radius: 6px;
-      padding: 12px;
+      padding: 8px 12px;
       margin-bottom: 12px;
       flex-shrink: 0;
     }
@@ -186,22 +186,26 @@
     }
 
     .stream-actions {
-      display: flex;
-      gap: 8px;
-      align-items: center;
+      display: grid;
+      gap: 6px;
+      grid-template-columns: 1fr 1fr 1fr;
     }
 
-    .endpoint-select {
-      flex: 1;
-      padding: 8px 6px;
+    .stream-actions select {
+      grid-column: 1 / -1;
+      padding: 6px;
       border: 1px solid #ddd;
       border-radius: 4px;
-      font-size: 12px;
+      font-size: 11px;
       background: #fff;
     }
 
+    .stream-actions button {
+      padding: 6px 8px;
+      font-size: 11px;
+    }
+
     button {
-      flex: 1;
       padding: 8px 12px;
       border: none;
       border-radius: 4px;
@@ -209,6 +213,10 @@
       font-weight: 600;
       cursor: pointer;
       transition: all 0.2s;
+    }
+
+    .button-group button {
+      flex: 1;
     }
 
     .btn-primary {
@@ -331,19 +339,15 @@
     }
 
     .log-filter-panel {
-      display: none;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
       margin-bottom: 8px;
       font-size: 11px;
       flex-shrink: 0;
     }
 
-    .log-filter-panel.visible {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    /* Log viewer styling with flex growth */
+    /* Log viewer styling - always visible */
     .log-viewer {
       background: #0b1021;
       color: #e5e7eb;
@@ -353,17 +357,11 @@
       font-size: 11px;
       line-height: 1.4;
       border: 1px solid #1e293b;
-      display: none;
-      overflow-y: auto;
-      flex: 0;
-      min-height: 0;
-    }
-
-    .log-viewer.visible {
       display: flex;
       flex-direction: column;
       flex: 1;
       overflow-y: auto;
+      min-height: 100px;
     }
 
     .log-viewer > div {
@@ -460,17 +458,19 @@
       </div>
     </div>
 
+    <!-- Button Group -->
+    <div class="button-group">
+      <button id="refresh-btn" class="btn-secondary">🔄 Refresh</button>
+      <button id="options-btn" class="btn-secondary">⚙️ Options</button>
+    </div>
+
     <!-- Streams list (compact, scrollable) -->
     <div id="streams-list-container" class="streams-list-container" style="display: none;">
       <div id="streams-list" class="streams-list"></div>
     </div>
 
-    <!-- Stream detail panel (single, shows selected stream) -->
+    <!-- Stream detail panel (actions only, no redundant stream display) -->
     <div id="stream-panel" class="stream-panel" style="display: none;">
-      <div class="panel-header">
-        <span id="panel-type" class="stream-type">HLS</span>
-        <span id="panel-url" class="stream-url-short"></span>
-      </div>
       <div id="panel-actions" class="stream-actions"></div>
     </div>
 
@@ -480,13 +480,6 @@
       <p style="font-size: 12px; margin-top: 8px;">
         Browse to a page with streaming media to detect streams
       </p>
-    </div>
-
-    <!-- Button Group -->
-    <div class="button-group">
-      <button id="refresh-btn" class="btn-secondary">🔄 Refresh</button>
-      <button id="log-toggle" class="log-toggle btn-secondary" style="flex:0; padding:6px 8px;">📋 Logs</button>
-      <button id="options-btn" class="btn-secondary">⚙️ Options</button>
     </div>
 
     <!-- Log Filters & Viewer -->

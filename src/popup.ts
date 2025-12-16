@@ -56,8 +56,6 @@ async function initialize() {
   const statusIconEl = document.getElementById('status-icon') as HTMLSpanElement;
   const statusMsgEl = document.getElementById('status-message') as HTMLSpanElement;
   const logViewerEl = document.getElementById('log-viewer') as HTMLDivElement;
-  const logToggleEl = document.getElementById('log-toggle') as HTMLButtonElement;
-  const logFilterPanelEl = document.getElementById('log-filter-panel') as HTMLDivElement;
 
   // Wire status bar rendering
   renderStatus = createStatusRenderer({
@@ -73,14 +71,9 @@ async function initialize() {
     entries.slice(-1).forEach((e) => appendLog(e.level, e.category as any, e.message));
   });
 
-  // Wire log toggle (expand/collapse log viewer and filters)
-  logToggleEl.addEventListener('click', () => {
-    logViewerEl.classList.toggle('visible');
-    logFilterPanelEl.classList.toggle('visible');
-    logToggleEl.textContent = logViewerEl.classList.contains('visible') ? '📋 Hide' : '📋 Logs';
-  });
-
-  // Wire log filtering (filter panel always visible)\n  const levelCheckboxes = document.querySelectorAll('.log-level-filter') as NodeListOf<HTMLInputElement>;\n  applyLogFiltering(logViewerEl, levelCheckboxes);
+  // Wire log filtering (always visible)
+  const levelCheckboxes = document.querySelectorAll('.log-level-filter') as NodeListOf<HTMLInputElement>;
+  applyLogFiltering(logViewerEl, levelCheckboxes);
 
   // Load data
   await loadEndpoints();
@@ -234,15 +227,9 @@ function createStreamListItem(stream: StreamInfo, index: number, allStreams: Str
  */
 function populatePanel(stream: StreamInfo, index: number, allStreams: StreamInfo[]) {
   const panel = document.getElementById('stream-panel');
-  const panelType = document.getElementById('panel-type');
-  const panelUrl = document.getElementById('panel-url');
   const panelActions = document.getElementById('panel-actions');
 
-  if (!panel || !panelType || !panelUrl || !panelActions) return;
-
-  panelType.textContent = stream.type;
-  panelUrl.textContent = stream.url;
-  panelUrl.title = stream.url;
+  if (!panel || !panelActions) return;
 
   // Rebuild actions
   panelActions.innerHTML = '';
