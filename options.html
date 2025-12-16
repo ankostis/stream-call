@@ -445,18 +445,25 @@
       color: #667eea;
     }
 
-    .endpoints-list {
+    .card .endpoints-list,
+    #endpoints-list.endpoints-list {
       background: white;
       border: 1px solid #e0e0e0;
       border-radius: 6px;
+      height: 14rem; /* Fixed height for ~5 items */
+      overflow-y: auto;
+      flex-shrink: 0;
     }
 
     .endpoint-item {
-      padding: 0.5em 0.75em;
+      padding: 6px 10px;
       background: white;
       border-bottom: 1px solid #f0f0f0;
       transition: all 0.2s;
       cursor: pointer;
+      display: flex;
+      align-items: stretch;
+      gap: 8px;
     }
 
     .endpoint-item:last-child {
@@ -492,11 +499,18 @@
       padding-left: calc(0.75em - 2px); /* Compensate for border */
     }
 
+    .endpoint-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+
     .endpoint-header {
       display: flex;
       align-items: center;
-      gap: 0.5em;
-      margin-bottom: 0.25em;
+      gap: 6px;
     }
 
     .endpoint-active {
@@ -508,7 +522,7 @@
 
     .endpoint-name {
       flex: 1;
-      font-size: 15px;
+      font-size: 13px;
       font-weight: 600;
       color: #111827;
       overflow: hidden;
@@ -518,6 +532,7 @@
 
     .endpoint-actions {
       display: flex;
+      align-items: center;
       gap: 6px;
       flex-shrink: 0;
     }
@@ -526,12 +541,12 @@
       background: transparent;
       border: 1px solid #e5e7eb;
       border-radius: 4px;
-      padding: 10px 12px;
-      font-size: 16px;
+      padding: 4px 6px;
+      font-size: 14px;
       cursor: pointer;
       transition: all 0.2s;
-      min-width: 44px;
-      min-height: 44px;
+      min-width: 32px;
+      align-self: stretch;
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -558,13 +573,13 @@
     }
 
     .endpoint-summary {
-      font-size: 12px;
+      font-size: 11px;
       color: #6b7280;
-      line-height: 1.4;
+      line-height: 1.3;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      padding-left: 28px;
+      padding-left: 24px;
     }
 
     .btn-ghost {
@@ -587,6 +602,16 @@
       border: 1px dashed #e5e7eb;
       border-radius: 6px;
       color: #6b7280;
+    }
+
+    #endpoints-empty.empty-state {
+      height: 14rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: white;
+      border: 1px solid #e0e0e0;
     }
 
     .empty-state-icon {
@@ -783,9 +808,10 @@
       }
 
       /* Keep endpoint list scrollable on mobile */
-      #endpoints-list {
-        max-height: 40vh;
+      #endpoints-list.endpoints-list {
+        height: 14rem; /* Fixed height for consistency */
         overflow-y: auto;
+        flex-shrink: 0;
       }
 
       /* Limit log viewer height on mobile for autoscroll to work */
@@ -939,7 +965,7 @@
         <p style="font-size: 12px; margin-top: 8px;">Click “Add API endpoint” to create one.</p>
       </div>
 
-      <div id="endpoints-list" class="scrollable-content"></div>
+      <div id="endpoints-list" class="endpoints-list"></div>
     </div>
 
     <!-- API Endpoint Editor -->

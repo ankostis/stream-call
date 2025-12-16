@@ -116,10 +116,12 @@ function renderList() {
 
   if (endpoints.length === 0) {
     emptyState.classList.remove('hidden');
+    list.classList.add('hidden');
     return;
   }
 
   emptyState.classList.add('hidden');
+  list.classList.remove('hidden');
 
   endpoints.forEach((endpoint, index) => {
     const item = document.createElement('div');
@@ -139,7 +141,11 @@ function renderList() {
       openEditor(index);
     });
 
-    // Header row: active checkbox + name + actions
+    // Content wrapper for header + summary
+    const contentWrapper = document.createElement('div');
+    contentWrapper.className = 'endpoint-content';
+
+    // Header row: active checkbox + name
     const header = document.createElement('div');
     header.className = 'endpoint-header';
 
@@ -157,23 +163,8 @@ function renderList() {
     name.className = 'endpoint-name';
     name.textContent = endpoint.name;
 
-    const actionsSpan = document.createElement('span');
-    actionsSpan.className = 'endpoint-actions';
-
-    const deleteBtn = document.createElement('button');
-    deleteBtn.className = 'btn-icon btn-danger';
-    deleteBtn.textContent = '🗑️';
-    deleteBtn.title = 'Delete';
-    deleteBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      deleteEndpoint(index);
-    });
-
-    actionsSpan.appendChild(deleteBtn);
-
     header.appendChild(activeCheckbox);
     header.appendChild(name);
-    header.appendChild(actionsSpan);
 
     // Summary row: method + url + headers count + flags
     const summary = document.createElement('div');
@@ -188,8 +179,26 @@ function renderList() {
     summary.textContent = `${method} → ${endpoint.endpointTemplate}${headersCount > 0 ? ` [${headersCount} headers]` : ''}${flagsStr}`;
     summary.title = `${method} ${endpoint.endpointTemplate}`;
 
-    item.appendChild(header);
-    item.appendChild(summary);
+    contentWrapper.appendChild(header);
+    contentWrapper.appendChild(summary);
+
+    // Actions span with delete button (spans full height)
+    const actionsSpan = document.createElement('span');
+    actionsSpan.className = 'endpoint-actions';
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'btn-icon btn-danger';
+    deleteBtn.textContent = '🗑️';
+    deleteBtn.title = 'Delete';
+    deleteBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteEndpoint(index);
+    });
+
+    actionsSpan.appendChild(deleteBtn);
+
+    item.appendChild(contentWrapper);
+    item.appendChild(actionsSpan);
     list.appendChild(item);
   });
 }
@@ -227,7 +236,7 @@ function openEditor(index: number | null) {
     els.saveBtn().textContent = '💾 Save';
     els.saveNewBtn().style.display = 'inline-block';
   }
-  
+
   renderList(); // Update selected state in UI
 }
 
