@@ -41,7 +41,7 @@ import { Logger, LogLevel } from './logger';
   /**
    * Report detected stream to background script
    */
-  function reportStream(url: string) {
+  async function reportStream(url: string) {
     if (detectedStreams.has(url)) return;
 
     detectedStreams.add(url);
@@ -49,7 +49,7 @@ import { Logger, LogLevel } from './logger';
 
     // Inject hover panel on first stream detection
     if (detectedStreams.size === 1) {
-      injectHoverPanel();
+      await injectHoverPanel();
     }
 
     browser.runtime
@@ -187,9 +187,16 @@ import { Logger, LogLevel } from './logger';
   /**
    * Inject hover panel (WIP for mobile testing) - only called after streams detected
    */
-  function injectHoverPanel() {
+  async function injectHoverPanel() {
     // Only inject once
     if (document.getElementById('stream-call-toggle-btn')) return;
+
+    // Check if hover panel is enabled in settings
+    const config = await browser.storage.sync.get({ enableHoverPanel: false });
+    if (!config.enableHoverPanel) {
+      logger.info('page', 'Hover panel disabled in settings, skipping injection');
+      return;
+    }
 
     const iframe = document.createElement('iframe');
     iframe.id = 'stream-call-hover-frame';

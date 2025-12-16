@@ -34,7 +34,8 @@ const els = {
   preview: () => document.getElementById('preview') as HTMLDivElement,
   logViewer: () => document.getElementById('log-viewer') as HTMLDivElement,
   logClear: () => document.getElementById('log-clear') as HTMLButtonElement,
-  logExport: () => document.getElementById('log-export') as HTMLButtonElement
+  logExport: () => document.getElementById('log-export') as HTMLButtonElement,
+  enableHoverPanel: () => document.getElementById('enable-hover-panel') as HTMLInputElement
 };
 
 // Logging utilities
@@ -95,6 +96,7 @@ function loadSettings() {
     .then((config) => {
       const validated = validateEndpoints((config as Config).apiEndpoints || '[]');
       endpoints = validated.valid ? validated.parsed : [];
+      els.enableHoverPanel().checked = (config as Config).enableHoverPanel ?? false;
       renderList();
       if (endpoints.length === 0) {
         statusBar.post(LogLevel.Info, 'storage', 'No API endpoints configured yet. Add your first endpoint below.');
@@ -721,6 +723,18 @@ function initialize() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+  });
+
+  // Settings checkbox
+  els.enableHoverPanel().addEventListener('change', () => {
+    browser.storage.sync.set({ enableHoverPanel: els.enableHoverPanel().checked })
+      .then(() => {
+        const status = els.enableHoverPanel().checked ? 'enabled' : 'disabled';
+        statusBar.post(LogLevel.Info, 'storage', `Hover panel ${status}`);
+      })
+      .catch((err) => {
+        logger.error('storage', 'Failed to save hover panel setting:', err);
+      });
   });
 }
 

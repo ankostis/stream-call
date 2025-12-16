@@ -22,6 +22,7 @@ export type ApiEndpoint = {
  * Built-ins are identified by name prefix 'httpbingo'
  */
 export const DEFAULT_CONFIG = {
+  enableHoverPanel: false,
   apiEndpoints: JSON.stringify(
     [
       {
