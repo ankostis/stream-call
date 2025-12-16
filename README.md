@@ -10,8 +10,8 @@ HTTP API endpoint(s).
 
 - 🔍 **Automatic Stream Detection** - Detects HLS, DASH, MP3, AAC, OGG, RTMP,
   RTSP, Icecast, Shoutcast from the current page.
-- 📡 **HTTP API Endpoints** - Detected stream URLs are sent to your own API
-  endpoint, with custom HTTP method & headers.
+- 📡 **Configurable Endpoints** - Define multiple API endpoints with template placeholders
+- 🌐 **Two API call Modes** - Open-in-new-Tab (simple GET requests only), `fetch` HTTP request with full control (POST/PUT/DELETE, custom headers, cookies, body templates)
 - 📋 **Copy URLs** - Quick copy stream URLs to clipboard.
 - 🎯 **Clean UI** - Simple popup interface showing all detected streams.
 - 🔔 **Badge Notifications** - Shows number of detected streams on the

@@ -328,53 +328,31 @@ function testAPI() {
   }
 
   const firstEndpoint = endpoints[0];
-  statusBar.flash(LogLevel.Info, 'stat', 2000, 'Testing API connection...');
-
   const context = {
     streamUrl: 'https://example.com/test-stream.m3u8',
-    timestamp: new Date().toISOString(),
+    timestamp: Date.now(),
     pageUrl: 'https://example.com/test-page',
     pageTitle: 'Test Page - stream-call'
   } as Record<string, unknown>;
 
-  let endpoint: string;
-  let body: string | undefined;
-
+  let finalUrl: string;
   try {
-    endpoint = applyTemplate(firstEndpoint.endpointTemplate, context);
-    body = firstEndpoint.bodyTemplate
-      ? applyTemplate(firstEndpoint.bodyTemplate, context)
-      : JSON.stringify(context);
+    finalUrl = applyTemplate(firstEndpoint.endpointTemplate, context);
   } catch (templateError: any) {
     const availableFields = Object.keys(context).filter((k) => context[k] !== undefined).join(', ');
     statusBar.post(LogLevel.Error, 'interpolation', `❌ Interpolation error: ${templateError?.message ?? 'Invalid placeholder'}. Fields: ${availableFields}.`, templateError);
     return;
   }
 
-  const method = (firstEndpoint.method || 'POST').toUpperCase();
-
-  let headers: Record<string, string> | undefined = undefined;
-  if (body) {
-    headers = { 'Content-Type': 'application/json', ...(firstEndpoint.headers || {}) };
-  } else if (firstEndpoint.headers) {
-    headers = { ...firstEndpoint.headers };
+  // Validate URL format
+  try {
+    new URL(finalUrl);
+  } catch {
+    statusBar.post(LogLevel.Error, 'apicall', `❌ Invalid URL after interpolation: ${finalUrl}`);
+    return;
   }
 
-  fetch(endpoint, {
-    method,
-    headers,
-    body: method === 'GET' || method === 'HEAD' ? undefined : body
-  })
-    .then((response) => {
-      if (response.ok) {
-        statusBar.flash(LogLevel.Info, 'apicall', 3000, `✅ API test successful! Status: ${response.status} ${response.statusText}`);
-      } else {
-        statusBar.post(LogLevel.Warn, 'apicall', `⚠️ API returned status ${response.status}: ${response.statusText}`);
-      }
-    })
-    .catch((error) => {
-      statusBar.post(LogLevel.Error, 'apicall', `❌ API test failed: ${error?.message ?? 'Unknown error'}`, error);
-    });
+  statusBar.flash(LogLevel.Info, 'apicall', 3000, `✅ Valid test URL: ${finalUrl}`);
 }
 
 function resetSettings() {

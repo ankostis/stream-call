@@ -47,6 +47,13 @@
 - Static assets: if adding runtime HTML/assets, ensure copy step/manifest puts
   them in `dist/`. Icons via `icons/generate-icons.html`.
 
+## Logging Architecture Rules
+- **Slots/Categories** = WHAT you're logging about, domain names, concerns (eg. `endpoint`, `storage`, `apicall`)
+- **Levels** = severity enums (`LogLevel.Error/Warn/Info/Debug`) - HOW important it is
+- Categories are **separate parameters** from levels: `statusBar.post(level, category, message)`
+- Categories must **never** embed level names (❌ `endpoint-error`, ✅ `endpoint`)
+- StatusBar slots Map: one message per category, `getCurrent()` returns highest-priority level across all slots
+
 ## Testing & debugging
 - Unit & Integrations are launched by the `package.json:scripts`.
 - Manual API: use https://httpbin.org/anything to validate templating; tweak

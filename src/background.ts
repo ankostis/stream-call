@@ -6,7 +6,7 @@
  */
 export {};
 
-import { callEndpointAPI, DEFAULT_CONFIG } from './endpoint';
+import { callEndpointAPI, openEndpointInTab, DEFAULT_CONFIG } from './endpoint';
 import { Logger, LogLevel } from './logger';
 
 const logger = new Logger();
@@ -106,6 +106,16 @@ browser.runtime.onMessage.addListener((message: RuntimeMessage, sender) => {
       const streams = tabStreams.get(tabId) || [];
       logger.debug('messaging', `GET_STREAMS for tab ${tabId}: ${streams.length} streams`);
       return { streams };
+    }
+
+    if (message.type === 'OPEN_IN_TAB') {
+      logger.info('messaging', `OPEN_IN_TAB: endpoint=${message.endpointName || 'default'}, url=${message.streamUrl}`);
+      return openEndpointInTab({
+        streamUrl: message.streamUrl,
+        pageUrl: message.pageUrl,
+        pageTitle: message.pageTitle,
+        endpointName: message.endpointName
+      });
     }
 
     if (message.type === 'CALL_API') {

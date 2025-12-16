@@ -97,47 +97,34 @@ test('validateEndpoints: validates and formats', () => {
   assert(result.valid);
   assert.strictEqual(result.parsed.length, 1);
   assert.strictEqual(result.parsed[0].name, 'test-api');
-  assert.strictEqual(result.parsed[0].method, 'POST', 'Default method should be POST');
+  assert.strictEqual(result.parsed[0].endpointTemplate, 'https://api.example.com/stream');
 });
 
-test('parseEndpoints: preserves includeCookies flag', () => {
+test('parseEndpoints: preserves optional fields', () => {
   const raw = JSON.stringify([
     {
-      name: 'with-cookies',
+      name: 'with-options',
       endpointTemplate: 'https://api.example.com/stream',
-      includeCookies: true
-    },
-    {
-      name: 'without-cookies',
-      endpointTemplate: 'https://api.example.com/stream2',
-      includeCookies: false
-    }
-  ]);
-
-  const endpoints = parseEndpoints(raw);
-  assert.strictEqual(endpoints.length, 2);
-  assert.strictEqual(endpoints[0].includeCookies, true);
-  assert.strictEqual(endpoints[1].includeCookies, false);
-});
-
-test('parseEndpoints: preserves includePageHeaders flag', () => {
-  const raw = JSON.stringify([
-    {
-      name: 'with-headers',
-      endpointTemplate: 'https://api.example.com/stream',
+      method: 'POST',
+      headers: { 'X-Custom': 'value' },
+      bodyTemplate: '{"url":"{{streamUrl}}"}',
+      includeCookies: true,
       includePageHeaders: true
     },
     {
-      name: 'without-headers',
-      endpointTemplate: 'https://api.example.com/stream2',
-      includePageHeaders: false
+      name: 'simple',
+      endpointTemplate: 'https://api.example.com/stream2'
     }
   ]);
 
   const endpoints = parseEndpoints(raw);
   assert.strictEqual(endpoints.length, 2);
+  assert.strictEqual(endpoints[0].method, 'POST');
+  assert.deepStrictEqual(endpoints[0].headers, { 'X-Custom': 'value' });
+  assert.strictEqual(endpoints[0].bodyTemplate, '{"url":"{{streamUrl}}"}');
+  assert.strictEqual(endpoints[0].includeCookies, true);
   assert.strictEqual(endpoints[0].includePageHeaders, true);
-  assert.strictEqual(endpoints[1].includePageHeaders, false);
+  assert.strictEqual(endpoints[1].method, undefined);
 });
 
 test('validateEndpoints: rejects non-array JSON', () => {

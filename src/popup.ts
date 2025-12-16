@@ -266,6 +266,11 @@ function populatePanel(stream: StreamInfo, index: number, allStreams: StreamInfo
     panelActions.appendChild(select);
   }
 
+  const openTabBtn = document.createElement('button');
+  openTabBtn.className = 'btn-primary';
+  openTabBtn.textContent = '🌐 Open in Tab';
+  openTabBtn.addEventListener('click', () => handleOpenInTab(stream, endpointName));
+
   const callBtn = document.createElement('button');
   callBtn.className = 'btn-primary';
   callBtn.textContent = '📤 Call API';
@@ -276,6 +281,7 @@ function populatePanel(stream: StreamInfo, index: number, allStreams: StreamInfo
   copyBtn.textContent = '📋 Copy';
   copyBtn.addEventListener('click', () => handleCopyUrl(stream.url));
 
+  panelActions.appendChild(openTabBtn);
   panelActions.appendChild(callBtn);
   panelActions.appendChild(copyBtn);
 
@@ -283,7 +289,56 @@ function populatePanel(stream: StreamInfo, index: number, allStreams: StreamInfo
 }
 
 /**
- * Handle API call
+ * Handle open in tab
+ */
+async function handleOpenInTab(stream: StreamInfo, endpointName?: string) {
+  const config = await browser.storage.sync.get(['apiEndpoints']);
+  let endpoints: ReturnType<typeof parseEndpoints>;
+  try {
+    endpoints = parseEndpoints(config.apiEndpoints || '[]');
+  } catch (parseError: any) {
+    statusBar.post(LogLevel.Error, 'endpoint', 'Invalid endpoint configuration. Check options.', parseError);
+    showLogControls();
+    return;
+  }
+
+  if (endpoints.length === 0) {
+    statusBar.post(LogLevel.Warn, 'endpoint', 'Please configure API endpoints in options first');
+    showLogControls();
+    setTimeout(() => {
+      browser.runtime.openOptionsPage();
+    }, 2000);
+    return;
+  }
+
+  statusBar.flash(LogLevel.Info, 'apicall', 3000, `Opening in tab: ${endpointName || 'default'} → ${stream.url}`);
+
+  let response;
+  try {
+    response = await browser.runtime.sendMessage({
+      type: 'OPEN_IN_TAB',
+      streamUrl: stream.url,
+      pageUrl: stream.pageUrl,
+      pageTitle: stream.pageTitle,
+      endpointName
+    });
+  } catch (error) {
+    statusBar.post(LogLevel.Error, 'apicall', 'Failed to open in tab', error);
+    showLogControls();
+    return;
+  }
+
+  if (response?.success) {
+    statusBar.flash(LogLevel.Info, 'apicall', 3000, `✅ Opened in new tab: ${response.details || stream.url}`);
+  } else {
+    const errorMsg = response?.error ?? 'Unknown error';
+    statusBar.post(LogLevel.Error, 'apicall', `❌ Failed to open URL: ${errorMsg}`, response);
+    showLogControls();
+  }
+}
+
+/**
+ * Handle API call (fetch with POST/headers)
  */
 async function handleCallAPI(stream: StreamInfo, endpointName?: string) {
   const config = await browser.storage.sync.get(['apiEndpoints']);
@@ -327,10 +382,8 @@ async function handleCallAPI(stream: StreamInfo, endpointName?: string) {
   }
 
   if (response?.success) {
-    // statusBar.flash handles logging internally
-  statusBar.flash(LogLevel.Info, 'apicall', 3000, `✅ Success: ${response.details || 'Stream URL sent'}`);
+    statusBar.flash(LogLevel.Info, 'apicall', 3000, `✅ API call successful: ${response.message}`);
   } else {
-    // statusBar.post handles logging internally
     const errorMsg = response?.error ?? 'Unknown error';
     statusBar.post(LogLevel.Error, 'apicall', `❌ API call failed: ${errorMsg}`, response);
     showLogControls();

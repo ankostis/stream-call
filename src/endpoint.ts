@@ -14,31 +14,21 @@ export type ApiEndpoint = {
 };
 
 /**
- * Default configuration with 3 demo endpoints
+ * Default configuration with demo endpoints
  * Single source of truth for default endpoints
  */
 export const DEFAULT_CONFIG = {
   apiEndpoints: JSON.stringify(
     [
       {
-        name: 'httpbingo GET',
-        endpointTemplate: 'https://httpbingo.org/anything?url={{streamUrl}}&time={{timestamp}}',
-        method: 'GET'
+        name: 'httpbingo GET (open in tab)',
+        endpointTemplate: 'https://httpbingo.org/anything?url={{streamUrl}}&page={{pageUrl}}&title={{pageTitle|url}}&time={{timestamp}}'
       },
       {
-        name: 'httpbingo POST',
+        name: 'httpbingo POST (fetch API)',
         endpointTemplate: 'https://httpbingo.org/anything',
         method: 'POST',
-        bodyTemplate:
-          '{"streamUrl":"{{streamUrl}}","timestamp":"{{timestamp}}","pageUrl":"{{pageUrl}}","pageTitle":"{{pageTitle}}"}'
-      },
-      {
-        name: 'httpbingo GET+page-cookies',
-        endpointTemplate: 'https://httpbingo.org/anything',
-        method: 'GET',
-        headers: { 'X-Test': 'stream-call' },
-        includeCookies: true,
-        includePageHeaders: true,
+        bodyTemplate: '{"streamUrl":"{{streamUrl}}","pageUrl":"{{pageUrl}}","pageTitle":"{{pageTitle}}","timestamp":{{timestamp}}}'
       }
     ],
     null,
@@ -132,9 +122,11 @@ export function validateEndpoints(raw: string): {
         return {
           name,
           endpointTemplate: p.endpointTemplate,
-          method: p.method || 'POST',
+          method: p.method,
           headers: p.headers,
-          bodyTemplate: p.bodyTemplate
+          bodyTemplate: p.bodyTemplate,
+          includeCookies: p.includeCookies,
+          includePageHeaders: p.includePageHeaders
         };
       })
       .filter(Boolean);
@@ -212,8 +204,100 @@ function buildContext({
 }
 
 /**
- * Call API endpoint with stream information
- * Handles template interpolation, headers, cookies, and fetch execution
+ * Open endpoint URL in new tab with stream information
+ * Handles template interpolation and opens the final URL in a new browser tab
+ * Returns success/error result with detailed error messages
+ */
+export async function openEndpointInTab({
+  streamUrl,
+  pageUrl,
+  pageTitle,
+  endpointName,
+  tabHeaders
+}: {
+  streamUrl: string;
+  pageUrl?: string;
+  pageTitle?: string;
+  endpointName?: string;
+  tabHeaders?: Record<string, string>;
+}) {
+  // Declare variables at function scope for error logging
+  let selectedEndpoint: ReturnType<typeof parseEndpoints>[0] | undefined;
+  let finalUrl: string | undefined;
+
+  try {
+    const defaults = { apiEndpoints: '[]' } as const;
+    const config = (await browser.storage.sync.get(defaults)) as typeof defaults;
+
+    let endpoints: ReturnType<typeof parseEndpoints>;
+    try {
+      endpoints = parseEndpoints(config.apiEndpoints);
+    } catch (parseError: any) {
+      return {
+        success: false,
+        error: `Failed to parse API endpoints: ${parseError?.message ?? 'Unknown error'}`
+      };
+    }
+
+    selectedEndpoint = endpointName ? endpoints.find((e) => e.name === endpointName) : endpoints[0];
+
+    if (!selectedEndpoint) {
+      return {
+        success: false,
+        error: 'No API endpoints configured. Please add an endpoint in the extension options.'
+      };
+    }
+
+    const requestContext = buildContext({ streamUrl, pageUrl, pageTitle });
+
+    // Template interpolation for URL
+    try {
+      finalUrl = applyTemplate(selectedEndpoint.endpointTemplate, requestContext);
+    } catch (templateError: any) {
+      return {
+        success: false,
+        error: `Interpolation error in endpoint "${selectedEndpoint.name}": ${templateError?.message ?? 'Invalid placeholder'}. Check endpoint template and placeholders.`
+      };
+    }
+
+    // Validate URL format
+    try {
+      new URL(finalUrl);
+    } catch {
+      return {
+        success: false,
+        error: `Invalid URL after interpolation: ${finalUrl}`
+      };
+    }
+
+    console.log('[stream-call] === Opening URL ===');
+    console.log('Endpoint name:', selectedEndpoint.name);
+    console.log('Final URL:', finalUrl);
+    console.log('======================');
+
+    // Open in new tab (switch to it)
+    await browser.tabs.create({ url: finalUrl, active: true });
+
+    return {
+      success: true,
+      message: 'Opened URL in new tab',
+      details: finalUrl
+    };
+  } catch (error: any) {
+    console.error('Failed to open URL:', error);
+    if (selectedEndpoint) console.error('Endpoint:', selectedEndpoint.name);
+    if (finalUrl) console.error('URL:', finalUrl);
+
+    return {
+      success: false,
+      error: error?.message ?? 'Unknown error'
+    };
+  }
+}
+
+/**
+ * Call API endpoint with stream information using fetch
+ * Handles template interpolation, headers, cookies, and HTTP methods (GET/POST/etc)
  * Returns success/error result with detailed error messages
  */
 export async function callEndpointAPI({
@@ -229,7 +313,6 @@ export async function callEndpointAPI({
   endpointName?: string;
   tabHeaders?: Record<string, string>;
 }) {
-  // Declare variables at function scope for error logging
   let selectedEndpoint: ReturnType<typeof parseEndpoints>[0] | undefined;
   let endpoint: string | undefined;
   let method: string | undefined;
@@ -290,13 +373,11 @@ export async function callEndpointAPI({
         }
       } catch (cookieError: any) {
         console.warn('Failed to get cookies:', cookieError);
-        // Continue without cookies rather than failing entire request
       }
     }
 
     // Add page headers if flag is enabled
     if (selectedEndpoint.includePageHeaders && tabHeaders) {
-      // Merge page headers, but don't override existing headers
       for (const [key, value] of Object.entries(tabHeaders)) {
         if (!(key in headers)) {
           headers[key] = value;
@@ -304,7 +385,6 @@ export async function callEndpointAPI({
       }
     }
 
-    // Build fetch options - GET and HEAD cannot have a body
     const fetchOptions: RequestInit = {
       method,
       headers
@@ -329,7 +409,6 @@ export async function callEndpointAPI({
     const response = await fetch(endpoint, fetchOptions);
 
     if (!response.ok) {
-      // Try to get error details from response body
       let errorDetail = response.statusText;
       try {
         const errorBody = await response.text();
@@ -355,7 +434,6 @@ export async function callEndpointAPI({
     if (endpoint) console.error('URL:', endpoint);
     if (method) console.error('Method:', method);
 
-    // Provide more specific error context
     let errorMsg = error?.message ?? 'Unknown error';
     if (errorMsg.includes('NetworkError') || errorMsg.includes('fetch')) {
       errorMsg += ` (Check: 1) Server is reachable, 2) CORS/host permissions, 3) HTTP vs HTTPS)`;
