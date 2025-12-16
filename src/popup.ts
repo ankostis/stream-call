@@ -256,7 +256,7 @@ function populatePanel(stream: StreamInfo, index: number, allStreams: StreamInfo
 
   const openTabBtn = document.createElement('button');
   openTabBtn.className = 'btn-primary';
-  openTabBtn.textContent = '🌐 Open in Tab';
+  openTabBtn.textContent = '🌐 Open tab';
   openTabBtn.addEventListener('click', () => handleOpenInTab(stream, endpointName));
 
   const callBtn = document.createElement('button');
