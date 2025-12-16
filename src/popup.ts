@@ -3,7 +3,7 @@
  */
 export {};
 
-import { parseEndpoints, type ApiEndpoint } from './endpoint';
+import { parseEndpoints, type ApiEndpoint, applyTemplate } from './endpoint';
 import { Logger, StatusBar, LogLevel } from './logger';
 import { createStatusRenderer, createLogAppender, applyLogFiltering } from './logging-ui';
 
@@ -254,26 +254,62 @@ function populatePanel(stream: StreamInfo, index: number, allStreams: StreamInfo
     panelActions.appendChild(select);
   }
 
-  const openTabBtn = document.createElement('button');
-  openTabBtn.className = 'btn-primary';
-  openTabBtn.textContent = '🌐 Open tab';
-  openTabBtn.addEventListener('click', () => handleOpenInTab(stream, endpointName));
-
-  const callBtn = document.createElement('button');
-  callBtn.className = 'btn-primary';
-  callBtn.textContent = '📤 Call';
-  callBtn.addEventListener('click', () => handleCallAPI(stream, endpointName));
+  const previewBtn = document.createElement('button');
+  previewBtn.className = 'btn-test';
+  previewBtn.textContent = '👁 Preview';
+  previewBtn.addEventListener('click', () => handlePreview(stream, endpointName));
 
   const copyBtn = document.createElement('button');
   copyBtn.className = 'btn-secondary';
   copyBtn.textContent = '📋 Copy';
   copyBtn.addEventListener('click', () => handleCopyUrl(stream.url));
 
+  const callBtn = document.createElement('button');
+  callBtn.className = 'btn-primary';
+  callBtn.textContent = '📤 Call';
+  callBtn.addEventListener('click', () => handleCallAPI(stream, endpointName));
+
+  const openTabBtn = document.createElement('button');
+  openTabBtn.className = 'btn-primary';
+  openTabBtn.textContent = '🌐 Open tab';
+  openTabBtn.addEventListener('click', () => handleOpenInTab(stream, endpointName));
+
+  // Append buttons directly - CSS flexbox with wrap handles 2-row layout
+  panelActions.appendChild(previewBtn);
+  panelActions.appendChild(copyBtn);
   panelActions.appendChild(callBtn);
   panelActions.appendChild(openTabBtn);
-  panelActions.appendChild(copyBtn);
 
   panel.style.display = 'block';
+}
+
+/**
+ * Handle preview - shows formatted API request details in logger
+ */
+function handlePreview(stream: StreamInfo, endpointName?: string) {
+  if (apiEndpoints.length === 0) {
+    logger.warn('endpoint', 'No endpoints configured');
+    return;
+  }
+
+  const endpoint = apiEndpoints.find(ep => ep.name === endpointName) || apiEndpoints[0];
+  const context = {
+    streamUrl: stream.url,
+    timestamp: Date.now(),
+    pageUrl: stream.pageUrl,
+    pageTitle: stream.pageTitle
+  } as Record<string, unknown>;
+
+  try {
+    const { generatePreview } = require('./endpoint');
+    const preview = generatePreview(endpoint, context, applyTemplate);
+
+    logger.info('preview', preview);
+    statusBar.flash(LogLevel.Info, 'preview', 2000, 'Preview generated');
+  } catch (error: any) {
+    logger.error('preview', `Preview error: ${error?.message}`, error);
+    statusBar.post(LogLevel.Error, 'preview', `Preview error: ${error?.message}`);
+  }
 }
 
 /**

@@ -427,16 +427,10 @@ function previewEndpoint() {
   } as Record<string, unknown>;
 
   try {
-    const endpoint = applyTemplate(candidate.endpointTemplate, context);
-    const body = candidate.bodyTemplate
-      ? applyTemplate(candidate.bodyTemplate, context)
-      : JSON.stringify(context, null, 2);
+    const { generatePreview } = require('./endpoint');
+    const preview = generatePreview(candidate, context, applyTemplate);
 
-    els.preview().textContent = `Endpoint: ${endpoint}\nMethod: ${(candidate.method || 'POST').toUpperCase()}\n\nHeaders: ${JSON.stringify(
-      candidate.headers || {},
-      null,
-      2
-    )}\n\nBody:\n${body}`;
+    els.preview().textContent = preview;
     statusBar.flash(LogLevel.Info, 'stat', 2000, 'Preview generated');
   } catch (error: any) {
     statusBar.post(LogLevel.Error, 'interpolation', `Interpolation error: ${error?.message ?? 'Invalid placeholder'}`, error);

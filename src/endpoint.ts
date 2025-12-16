@@ -111,6 +111,31 @@ export function parseEndpoints(raw: string): ApiEndpoint[] {
 }
 
 /**
+ * Generate preview text for an API endpoint with given context
+ */
+export function generatePreview(
+  endpoint: ApiEndpoint,
+  context: Record<string, unknown>,
+  applyTemplate: (template: string, context: Record<string, unknown>) => string
+): string {
+  const url = applyTemplate(endpoint.endpointTemplate, context);
+  const body = endpoint.bodyTemplate
+    ? applyTemplate(endpoint.bodyTemplate, context)
+    : JSON.stringify(context, null, 2);
+
+  return [
+    `Endpoint: ${endpoint.name}`,
+    `URL: ${url}`,
+    `Method: ${(endpoint.method || 'POST').toUpperCase()}`,
+    '',
+    `Headers: ${JSON.stringify(endpoint.headers || {}, null, 2)}`,
+    '',
+    `Body:`,
+    body
+  ].join('\n');
+}
+
+/**
  * Validate and normalize raw JSON string into formatted array
  * Returns validation result with parsed endpoints, formatted JSON, and error message if invalid
  */
