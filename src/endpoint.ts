@@ -13,30 +13,49 @@ export type ApiEndpoint = {
   bodyTemplate?: string;
   includeCookies?: boolean;
   includePageHeaders?: boolean;
+  active?: boolean;
 };
 
 /**
- * Default configuration with demo endpoints
- * Single source of truth for default endpoints
+ * Default configuration with demo endpoints (blueprints)
+ * Single source of truth for built-in endpoints
+ * Built-ins are identified by name prefix 'httpbingo'
  */
 export const DEFAULT_CONFIG = {
   apiEndpoints: JSON.stringify(
     [
       {
         name: 'httpbingo GET (open in tab)',
-        endpointTemplate: 'https://httpbingo.org/anything?url={{streamUrl}}&page={{pageUrl}}&title={{pageTitle|url}}&time={{timestamp}}'
+        endpointTemplate: 'https://httpbingo.org/anything?url={{streamUrl}}&page={{pageUrl}}&title={{pageTitle|url}}&time={{timestamp}}',
+        active: true
       },
       {
         name: 'httpbingo POST (fetch API)',
         endpointTemplate: 'https://httpbingo.org/anything',
         method: 'POST',
-        bodyTemplate: '{"streamUrl":"{{streamUrl}}","pageUrl":"{{pageUrl}}","pageTitle":"{{pageTitle}}","timestamp":{{timestamp}}}'
+        bodyTemplate: '{"streamUrl":"{{streamUrl}}","pageUrl":"{{pageUrl}}","pageTitle":"{{pageTitle}}","timestamp":{{timestamp}}}',
+        active: true
+      },
+      {
+        name: 'httpbingo POST with headers (inactive example)',
+        endpointTemplate: 'https://httpbingo.org/anything',
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Custom-Header': 'stream-call' },
+        bodyTemplate: '{"streamUrl":"{{streamUrl}}","timestamp":{{timestamp}}}',
+        active: false
       }
     ],
     null,
     2
   )
 } as const;
+
+/**
+ * Get built-in blueprint endpoints from DEFAULT_CONFIG
+ */
+export function getBuiltInEndpoints(): ApiEndpoint[] {
+  return parseEndpoints(DEFAULT_CONFIG.apiEndpoints);
+}
 
 /**
  * Suggest an endpoint name from an endpoint URL (extract hostname)
@@ -72,7 +91,8 @@ export function parseEndpoints(raw: string): ApiEndpoint[] {
       headers: p.headers,
       bodyTemplate: p.bodyTemplate,
       includeCookies: p.includeCookies,
-      includePageHeaders: p.includePageHeaders
+      includePageHeaders: p.includePageHeaders,
+      active: p.active !== undefined ? p.active : true
     }))
     .filter((p) => {
       // Require endpoint and unique name

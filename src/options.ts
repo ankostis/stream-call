@@ -5,7 +5,7 @@ export {};
 
 import { Logger, LogLevel, StatusBar } from './logger';
 import { createLogAppender, createStatusRenderer, applyLogFiltering } from './logging-ui';
-import { applyTemplate, ApiEndpoint, suggestEndpointName, validateEndpoints, DEFAULT_CONFIG } from './endpoint';
+import { applyTemplate, ApiEndpoint, suggestEndpointName, validateEndpoints, DEFAULT_CONFIG, getBuiltInEndpoints } from './endpoint';
 
 type Config = typeof DEFAULT_CONFIG;
 
@@ -121,37 +121,83 @@ function renderList() {
   emptyState.style.display = 'none';
 
   endpoints.forEach((endpoint, index) => {
-    const card = document.createElement('div');
-    card.className = 'endpoint-card';
+    const item = document.createElement('div');
+    item.className = 'endpoint-item';
+    if (endpoint.active === false) item.classList.add('inactive');
 
-    const title = document.createElement('h3');
-    title.textContent = endpoint.name;
+    // Header row: active checkbox + name + actions
+    const header = document.createElement('div');
+    header.className = 'endpoint-header';
 
-    const meta = document.createElement('div');
-    meta.className = 'endpoint-meta';
-    meta.textContent = `${(endpoint.method || 'POST').toUpperCase()} → ${endpoint.endpointTemplate}`;
+    const activeCheckbox = document.createElement('input');
+    activeCheckbox.type = 'checkbox';
+    activeCheckbox.className = 'endpoint-active';
+    activeCheckbox.checked = endpoint.active !== false;
+    activeCheckbox.title = 'Active (shown in popup)';
+    activeCheckbox.addEventListener('change', () => toggleEndpointActive(index));
 
-    const actions = document.createElement('div');
-    actions.className = 'endpoint-actions';
+    const name = document.createElement('span');
+    name.className = 'endpoint-name';
+    name.textContent = endpoint.name;
+    name.title = endpoint.name;
+
+    const actionsSpan = document.createElement('span');
+    actionsSpan.className = 'endpoint-actions';
 
     const editBtn = document.createElement('button');
-    editBtn.className = 'btn-ghost';
-    editBtn.textContent = '✏️ Edit';
+    editBtn.className = 'btn-icon';
+    editBtn.textContent = '✏️';
+    editBtn.title = 'Edit';
     editBtn.addEventListener('click', () => openEditor(index));
 
     const deleteBtn = document.createElement('button');
-    deleteBtn.className = 'btn-secondary btn-danger';
-    deleteBtn.textContent = '🗑 Delete';
+    deleteBtn.className = 'btn-icon btn-danger';
+    deleteBtn.textContent = '🗑️';
+    deleteBtn.title = 'Delete';
     deleteBtn.addEventListener('click', () => deleteEndpoint(index));
 
-    actions.appendChild(editBtn);
-    actions.appendChild(deleteBtn);
+    actionsSpan.appendChild(editBtn);
+    actionsSpan.appendChild(deleteBtn);
 
-    card.appendChild(title);
-    card.appendChild(meta);
-    card.appendChild(actions);
-    list.appendChild(card);
+    header.appendChild(activeCheckbox);
+    header.appendChild(name);
+    header.appendChild(actionsSpan);
+
+    // Summary row: method + url + headers count + flags
+    const summary = document.createElement('div');
+    summary.className = 'endpoint-summary';
+    const method = (endpoint.method || 'POST').toUpperCase();
+    const headersCount = endpoint.headers ? Object.keys(endpoint.headers).length : 0;
+    const flags = [];
+    if (endpoint.includeCookies) flags.push('🍪');
+    if (endpoint.includePageHeaders) flags.push('📋');
+    if (endpoint.bodyTemplate) flags.push('📄');
+    const flagsStr = flags.length ? ` ${flags.join(' ')}` : '';
+    summary.textContent = `${method} → ${endpoint.endpointTemplate}${headersCount > 0 ? ` [${headersCount} headers]` : ''}${flagsStr}`;
+    summary.title = `${method} ${endpoint.endpointTemplate}`;
+
+    item.appendChild(header);
+    item.appendChild(summary);
+    list.appendChild(item);
   });
+}
+
+function toggleEndpointActive(index: number) {
+  endpoints[index].active = !endpoints[index].active;
+  const validated = validateEndpoints(JSON.stringify(endpoints));
+  if (!validated.valid) {
+    statusBar.post(LogLevel.Error, 'endpoint', 'Failed to update endpoint state');
+    return;
+  }
+  browser.storage.sync
+    .set({ apiEndpoints: validated.formatted })
+    .then(() => {
+      renderList();
+      statusBar.flash(LogLevel.Info, 'endpoint', 1000, endpoints[index].active ? '✅ Activated' : '⏸️ Deactivated');
+    })
+    .catch((error) => {
+      statusBar.post(LogLevel.Error, 'storage', 'Failed to save endpoint state', error);
+    });
 }
 
 function openEditor(index: number | null) {
@@ -226,7 +272,8 @@ function buildEndpointFromForm(): ApiEndpoint | null {
     headers: Object.keys(headers).length ? headers : undefined,
     bodyTemplate: bodyTemplate || undefined,
     includeCookies,
-    includePageHeaders
+    includePageHeaders,
+    active: editingIndex !== null ? endpoints[editingIndex].active : true
   };
 
   return apiEndpoint;
@@ -355,23 +402,44 @@ function testAPI() {
   statusBar.flash(LogLevel.Info, 'apicall', 3000, `✅ Valid test URL: ${finalUrl}`);
 }
 
-function resetSettings() {
-  if (!confirm('Reset API endpoints to defaults?')) return;
-  const validated = validateEndpoints(DEFAULT_CONFIG.apiEndpoints);
+function resetBuiltIns() {
+  if (!confirm('Reset built-in blueprints to defaults? (User-defined endpoints will be preserved)')) return;
+
+  const builtIns = getBuiltInEndpoints();
+  const builtInNames = new Set(builtIns.map(e => e.name));
+  const userEndpoints = endpoints.filter(e => !builtInNames.has(e.name));
+  const merged = [...builtIns, ...userEndpoints];
+
+  const validated = validateEndpoints(JSON.stringify(merged));
   if (!validated.valid) {
-    statusBar.post(LogLevel.Error, 'endpoint', 'Default config is invalid');
+    statusBar.post(LogLevel.Error, 'endpoint', 'Failed to validate merged endpoints');
     return;
   }
+
   browser.storage.sync
     .set({ apiEndpoints: validated.formatted })
     .then(() => {
-      // Reload from storage to ensure consistency between memory and storage
       loadSettings();
       closeEditor();
-      statusBar.flash(LogLevel.Info, 'stat', 2000, '✅ Defaults restored and saved.');
+      statusBar.flash(LogLevel.Info, 'stat', 2000, `✅ Built-in blueprints restored (${builtIns.length} built-ins, ${userEndpoints.length} user endpoints preserved)`);
     })
     .catch((error) => {
-      statusBar.post(LogLevel.Error, 'storage', 'Failed to reset settings', error);
+      statusBar.post(LogLevel.Error, 'storage', 'Failed to reset built-ins', error);
+    });
+}
+
+function clearAllEndpoints() {
+  if (!confirm('Remove ALL endpoints? This cannot be undone.')) return;
+
+  browser.storage.sync
+    .set({ apiEndpoints: '[]' })
+    .then(() => {
+      loadSettings();
+      closeEditor();
+      statusBar.flash(LogLevel.Info, 'stat', 2000, '✅ All endpoints cleared');
+    })
+    .catch((error) => {
+      statusBar.post(LogLevel.Error, 'storage', 'Failed to clear endpoints', error);
     });
 }
 
@@ -483,7 +551,8 @@ function wireEvents() {
   document.getElementById('preview-btn')?.addEventListener('click', previewEndpoint);
   document.getElementById('add-header-row')?.addEventListener('click', () => addHeaderRow());
   document.getElementById('test-btn')?.addEventListener('click', testAPI);
-  document.getElementById('reset-btn')?.addEventListener('click', resetSettings);
+  document.getElementById('reset-btn')?.addEventListener('click', resetBuiltIns);
+  document.getElementById('clear-all-btn')?.addEventListener('click', clearAllEndpoints);
   document.getElementById('export-btn')?.addEventListener('click', exportEndpoints);
   document.getElementById('import-btn')?.addEventListener('click', () => {
     (document.getElementById('import-file-input') as HTMLInputElement).click();

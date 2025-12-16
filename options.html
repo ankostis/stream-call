@@ -245,37 +245,92 @@
     }
 
     .endpoints-list {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
     }
 
-    .endpoint-card {
+    .endpoint-item {
       border: 1px solid #e5e7eb;
       border-radius: 6px;
       padding: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
       background: #fafafa;
+      transition: all 0.2s;
     }
 
-    .endpoint-card h3 {
+    .endpoint-item.inactive {
+      opacity: 0.6;
+      background: #f9fafb;
+    }
+
+    .endpoint-item:hover {
+      border-color: #667eea;
+      box-shadow: 0 2px 6px rgba(102, 126, 234, 0.1);
+    }
+
+    .endpoint-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+
+    .endpoint-active {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .endpoint-name {
+      flex: 1;
       font-size: 15px;
       font-weight: 600;
       color: #111827;
-    }
-
-    .endpoint-meta {
-      font-size: 12px;
-      color: #4b5563;
-      line-height: 1.4;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .endpoint-actions {
       display: flex;
-      gap: 8px;
-      margin-top: 8px;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .btn-icon {
+      background: transparent;
+      border: 1px solid #e5e7eb;
+      border-radius: 4px;
+      padding: 6px 10px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+      min-width: 36px;
+      min-height: 36px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-icon:hover {
+      background: #f3f4f6;
+      border-color: #667eea;
+    }
+
+    .btn-icon.btn-danger:hover {
+      background: #fef2f2;
+      border-color: #b91c1c;
+    }
+
+    .endpoint-summary {
+      font-size: 12px;
+      color: #6b7280;
+      line-height: 1.4;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      padding-left: 28px;
     }
 
     .btn-ghost {
@@ -582,7 +637,8 @@
         <div class="card-actions">
           <button id="add-endpoint-btn" class="btn-primary">＋ Add API endpoint</button>
           <button id="test-btn" class="btn-test">🧪 Test first endpoint</button>
-          <button id="reset-btn" class="btn-secondary">↺ Reset defaults</button>
+          <button id="reset-btn" class="btn-secondary">↺ Reset built-ins</button>
+          <button id="clear-all-btn" class="btn-danger">✖ Clear all</button>
           <button id="export-btn" class="btn-secondary">⬇ Export</button>
           <button id="import-btn" class="btn-secondary">⬆ Import</button>
         </div>

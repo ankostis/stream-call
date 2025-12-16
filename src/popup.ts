@@ -247,12 +247,14 @@ function populatePanel(stream: StreamInfo, index: number, allStreams: StreamInfo
   // Rebuild actions
   panelActions.innerHTML = '';
 
-  let endpointName: string | undefined = apiEndpoints[0]?.name;
+  // Filter to show only active endpoints
+  const activeEndpoints = apiEndpoints.filter(ep => ep.active !== false);
+  let endpointName: string | undefined = activeEndpoints[0]?.name;
 
-  if (apiEndpoints.length > 0) {
+  if (activeEndpoints.length > 0) {
     const select = document.createElement('select');
     select.className = 'endpoint-select';
-    apiEndpoints.forEach((endpoint) => {
+    activeEndpoints.forEach((endpoint) => {
       const option = document.createElement('option');
       option.value = endpoint.name;
       option.textContent = endpoint.name;
