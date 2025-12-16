@@ -324,7 +324,11 @@ Both Logger (audit trail) and StatusBar (UI feedback) use unified categories:
 
 ## Inspiration
 
-This extension was inspired by:
+This extension is my scratch reply for the itch of by Chromecast not working
+in my home's WiiM Ultra music system, coupled with my curiosity for Claude's vibe coding,
+TypoScript, and my [liberation talk](https://ankostis.io/data-liberation-talk/slides/).
+
+Claude's inspiration list:
 - **stream-recorder** - For stream detection techniques
 - **stream-bypass** - For handling various streaming protocols
 

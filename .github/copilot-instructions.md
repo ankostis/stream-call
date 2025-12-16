@@ -1,5 +1,10 @@
 # Copilot Instructions for *Stream call*
 
+## Project coordinates
+- **Project name**: *Stream call*
+- **Blip**: Send page streams to API calls
+- **Short description**: A (mobile) Firefox extension to extract streaming media URLs (podcasts, radio stations, live streams) and send to HTTP API endpoint(s)
+
 ## Project essentials
 - Firefox WebExtension; manifest points to built assets in `dist/` (tsc + copy,
   no bundler). Keep manifest paths in sync with `dist` outputs.
@@ -77,6 +82,10 @@
   error separation, better UI feedback).
 - `refact-options-ui.md`: fiddle architecture to optimize UX and execution-context boundaries.
 
+## UI, CSS
+
+- Prefer `rem` units.
+
 ## Ask when unclear
 - Confirm target browser (Firefox vs Chrome) before changing APIs or types.
 - Verify new permissions/host permissions before adding to manifest.
@@ -93,3 +102,11 @@
 - Don't `git add` files, i may plan to derive multiple commits from existing workspace changes.
 - I frequently rewrite my history to hide the [Sausage Making](https://gist.github.com/SethRobertson/1540906/de2387189cc924c2b24ad867e6f81b29a9ced1a7#sausage-making).  Read history and help.
 - Ask me if a commit has finished, when you can't tell.
+
+## Release & Changes
+
+List epigrammatically the most significant changes since last release.
+
+- Collect all commits since the last release commit.
+- An indication of significance of a commit is the capitalization of its header: FIX is more eimportant than Fix & fix.  Fixes useally are more important than features & enhancements docs.
+- Merge & consolidate all commits about an domain (eg logging) per type  (fix, feat, etc)

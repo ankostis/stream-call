@@ -1,5 +1,19 @@
 ## Changes
 
+## v0.3.0 - (2025-12-16) GUI also works ok now
+
+- Feat(ui) Consistent API call action buttons (Call, Open, Preview) in popup & options UIs
+- FIX(ui) Touch-friendly UI & hints, improved look & feel of options page.
+- feat(ui) Don't jerk when adding endpoint in options page.
+- refact(ui) css units from px -> rem for scalable UI
+- doc: consistent project description across README, UI & manifest paraphernalia
+- feat(build) "About" section get its version from extension's Manifest.
+- feat(build) include version in zip fname when packaging the extension.
+- drop(broker) minor messaging dead code
+- chore: my project coordinates in `manifest.json`
+- [ ] TODO/Enh(API): support POST for "Open in Tab" button with dynamic `<form>` submission.
+- [ ] TODO/FEAT: hover panel full implementation (WIP since v0.1.0)
+
 ## v0.2.0 - (2025-12-15) FIXED and ENHANCED
 
 - FEAT: Dual call modes — "Open in Tab" (simple GET) vs "Call API" (full HTTP with
@@ -24,26 +38,26 @@
   setup
 - cod: Copilot instructions — enhanced with logging rules, git workflow, testing
   conventions
-- docc: README overhaul — updated architecture, logging stats (61 calls), project
+- doc: README overhaul — updated architecture, logging stats (61 calls), project
   structure
 - doc: Test improvements — endpoint.test.ts expanded, template.test.ts merged into
   endpoint
 - enh: 2400+ line delta — 24 files changed, 2422 insertions, 900 deletions since
   v0.1.0
-- [x] FIX: `GET` requests fail because they include an (empty) body.
-- [x] FIX: had duplicate endpoint DEFAULTS.
-- [x] Feat: Refactored options UI for mobile-friendly experience:
-- [x] Enhanced API validation with real calls and detailed logging
-- [x] Logger architecture hardening (required logger, no console.* calls)
-- [x] Fix(mobile): options button in popup not quite working:
+- FIX: `GET` requests fail because they include an (empty) body.
+- FIX: had duplicate endpoint DEFAULTS.
+- Feat: Refactored options UI for mobile-friendly experience:
+- Enhanced API validation with real calls and detailed logging
+- Logger architecture hardening (required logger, no console.* calls)
+- Fix(mobile): options button in popup not quite working:
   opens new tab without switching to it, filling up the tab list.  Reuse tab??
-- [x] improve docs
-- [ ] prepare for Mozilla extension site submission.
-- TODO: transfer popup logs from extension-context -> page's console.
-- BUG: popup cannot see responses from fetch-calls.
-- BUG: persist popup logs & logbox-expanded choice in popup panel.
-- TODO: logging message texts, levels & timeout in status bar
-- TODO: improve icons
+- doc: improve README.
+- [ ] TODO/CHORE: prepare for Mozilla extension site submission.
+- [ ] TODO: transfer popup logs from extension-context -> page's console.
+- [ ] TODO/BUG: popup cannot see responses from fetch-calls.
+- [ ] TODO/BUG: persist popup logs & logbox-expanded choice in popup panel.
+- [x] TODO: logging message texts, levels & timeout in status bar
+- [ ] TODO: improve icons
 
 ## v0.1.0 - (2025-12-14) it almost Works
 
