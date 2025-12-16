@@ -93,12 +93,6 @@ async function initialize() {
   logger.debug('popup', 'Popup initialized successfully');
 }
 
-// Helper to show log controls
-function showLogControls() {
-  const logToggleEl = document.getElementById('log-toggle') as HTMLButtonElement;
-  if (logToggleEl) logToggleEl.style.display = 'block';
-}
-
 async function loadEndpoints() {
   // Return cached endpoints if available (avoids repeated storage reads during popup lifetime)
   if (endpointsCached) return;
@@ -134,7 +128,6 @@ async function loadStreams() {
     statusBar.post(LogLevel.Error, 'messaging', '⚠️ Extension background service not responding. Try reloading the extension.', pingError);
     const loadingEl = document.getElementById('loading');
     if (loadingEl) loadingEl.style.display = 'none';
-    showLogControls();
     return;
   }
 
@@ -149,7 +142,6 @@ async function loadStreams() {
     statusBar.post(LogLevel.Error, 'messaging', 'Failed to fetch streams from background', error);
     const loadingEl = document.getElementById('loading');
     if (loadingEl) loadingEl.style.display = 'none';
-    showLogControls();
     return;
   }
 
@@ -176,11 +168,6 @@ async function loadStreams() {
     if (badge) badge.textContent = streams.length.toString();
 
     displayStreams(streams);
-  }
-
-  // Show log controls if we have streams or errors
-  if (logger.getAll().length > 0) {
-    showLogControls();
   }
   // Note: Other errors bubble to caller (initialize) with full context
 }
@@ -310,13 +297,11 @@ async function handleOpenInTab(stream: StreamInfo, endpointName?: string) {
     endpoints = parseEndpoints(config.apiEndpoints || '[]');
   } catch (parseError: any) {
     statusBar.post(LogLevel.Error, 'endpoint', 'Invalid endpoint configuration. Check options.', parseError);
-    showLogControls();
     return;
   }
 
   if (endpoints.length === 0) {
     statusBar.post(LogLevel.Warn, 'endpoint', 'Please configure API endpoints in options first');
-    showLogControls();
     setTimeout(async () => {
       const optionsUrl = browser.runtime.getURL('dist/options.html');
       await openOrSwitchToTab(optionsUrl);
@@ -337,7 +322,6 @@ async function handleOpenInTab(stream: StreamInfo, endpointName?: string) {
     });
   } catch (error) {
     statusBar.post(LogLevel.Error, 'apicall', 'Failed to open in tab', error);
-    showLogControls();
     return;
   }
 
@@ -346,7 +330,6 @@ async function handleOpenInTab(stream: StreamInfo, endpointName?: string) {
   } else {
     const errorMsg = response?.error ?? 'Unknown error';
     statusBar.post(LogLevel.Error, 'apicall', `❌ Failed to open URL: ${errorMsg}`, response);
-    showLogControls();
   }
 }
 
@@ -361,13 +344,11 @@ async function handleCallAPI(stream: StreamInfo, endpointName?: string) {
   } catch (parseError: any) {
     // Parse error is a known configuration issue
     statusBar.post(LogLevel.Error, 'endpoint', 'Invalid endpoint configuration. Check options.', parseError);
-    showLogControls();
     return;
   }
 
   if (endpoints.length === 0) {
     statusBar.post(LogLevel.Warn, 'endpoint', 'Please configure API endpoints in options first');
-    showLogControls();
     setTimeout(async () => {
       const optionsUrl = browser.runtime.getURL('dist/options.html');
       await openOrSwitchToTab(optionsUrl);
@@ -390,7 +371,6 @@ async function handleCallAPI(stream: StreamInfo, endpointName?: string) {
   } catch (error) {
     // Message passing error - log and display
     statusBar.post(LogLevel.Error, 'apicall', 'Failed to send API request', error);
-    showLogControls();
     return;
   }
 
@@ -399,7 +379,6 @@ async function handleCallAPI(stream: StreamInfo, endpointName?: string) {
   } else {
     const errorMsg = response?.error ?? 'Unknown error';
     statusBar.post(LogLevel.Error, 'apicall', `❌ API call failed: ${errorMsg}`, response);
-    showLogControls();
   }
 }
 
@@ -414,7 +393,6 @@ async function handleCopyUrl(url: string) {
   } catch (error) {
     // Clipboard write may fail due to permissions.
     statusBar.post(LogLevel.Warn, 'clipboard', '⚠️ Failed to copy URL', error);
-    showLogControls();
   }
 }
 
@@ -436,7 +414,6 @@ async function handleRefresh() {
     statusBar.post(LogLevel.Error, 'popup', 'Failed to refresh streams', error);
     const loading = document.getElementById('loading');
     if (loading) loading.style.display = 'none';
-    showLogControls();
   }
 }
 
@@ -463,6 +440,5 @@ document.addEventListener('DOMContentLoaded', async () => {
     statusBar.post(LogLevel.Error, 'popup', 'Failed to initialize popup', error);
     const loadingEl = document.getElementById('loading');
     if (loadingEl) loadingEl.style.display = 'none';
-    showLogControls();
   }
 });
