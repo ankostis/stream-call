@@ -305,8 +305,14 @@ async function handleOpenInTab(stream: StreamInfo, endpointName?: string) {
   if (endpoints.length === 0) {
     statusBar.post(LogLevel.Warn, 'endpoint', 'Please configure API endpoints in options first');
     showLogControls();
-    setTimeout(() => {
-      browser.runtime.openOptionsPage();
+    setTimeout(async () => {
+      const optionsUrl = browser.runtime.getURL('dist/options.html');
+      const tabs = await browser.tabs.query({ url: optionsUrl });
+      if (tabs.length > 0 && tabs[0].id) {
+        await browser.tabs.update(tabs[0].id, { active: true });
+      } else {
+        await browser.runtime.openOptionsPage();
+      }
     }, 2000);
     return;
   }
@@ -356,8 +362,14 @@ async function handleCallAPI(stream: StreamInfo, endpointName?: string) {
     // statusBar.post handles logging internally
     statusBar.post(LogLevel.Warn, 'endpoint', 'Please configure API endpoints in options first');
     showLogControls();
-    setTimeout(() => {
-      browser.runtime.openOptionsPage();
+    setTimeout(async () => {
+      const optionsUrl = browser.runtime.getURL('dist/options.html');
+      const tabs = await browser.tabs.query({ url: optionsUrl });
+      if (tabs.length > 0 && tabs[0].id) {
+        await browser.tabs.update(tabs[0].id, { active: true });
+      } else {
+        await browser.runtime.openOptionsPage();
+      }
     }, 2000);
     return;
   }
@@ -430,9 +442,15 @@ async function handleRefresh() {
 /**
  * Handle options button
  */
-function handleOptions() {
+async function handleOptions() {
   logger.debug('popup', 'Options button clicked');
-  browser.runtime.openOptionsPage();
+  const optionsUrl = browser.runtime.getURL('dist/options.html');
+  const tabs = await browser.tabs.query({ url: optionsUrl });
+  if (tabs.length > 0 && tabs[0].id) {
+    await browser.tabs.update(tabs[0].id, { active: true });
+  } else {
+    await browser.runtime.openOptionsPage();
+  }
 }
 
 /**

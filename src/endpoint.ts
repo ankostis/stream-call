@@ -275,12 +275,17 @@ export async function openEndpointInTab({
       url: finalUrl
     });
 
-    // Open in new tab (switch to it)
-    await browser.tabs.create({ url: finalUrl, active: true });
+    // Reuse existing tab with same URL or create new one
+    const existingTabs = await browser.tabs.query({ url: finalUrl });
+    if (existingTabs.length > 0 && existingTabs[0].id) {
+      await browser.tabs.update(existingTabs[0].id, { active: true });
+    } else {
+      await browser.tabs.create({ url: finalUrl, active: true });
+    }
 
     return {
       success: true,
-      message: 'Opened URL in new tab',
+      message: 'Opened URL in tab',
       details: finalUrl
     };
   } catch (error: any) {
