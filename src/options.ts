@@ -22,6 +22,8 @@ const els = {
   endpointsEmpty: () => document.getElementById('endpoints-empty') as HTMLDivElement,
   editorCard: () => document.getElementById('editor-card') as HTMLDivElement,
   editorTitle: () => document.getElementById('editor-title') as HTMLHeadingElement,
+  saveBtn: () => document.getElementById('save-endpoint-btn') as HTMLButtonElement,
+  saveNewBtn: () => document.getElementById('save-new-btn') as HTMLButtonElement,
   name: () => document.getElementById('endpoint-name') as HTMLInputElement,
   method: () => document.getElementById('endpoint-method') as HTMLSelectElement,
   endpoint: () => document.getElementById('endpoint-endpoint') as HTMLInputElement,
@@ -204,7 +206,17 @@ function openEditor(index: number | null) {
   editingIndex = index;
   const endpoint = index === null ? newEndpointDefaults() : endpoints[index];
   fillForm(endpoint);
-  els.editorTitle().textContent = index === null ? 'Add API endpoint' : 'Edit API endpoint';
+
+  if (index === null) {
+    els.editorTitle().textContent = 'Add API endpoint';
+    els.saveBtn().textContent = '💾 Save';
+    els.saveNewBtn().style.display = 'none';
+  } else {
+    els.editorTitle().textContent = 'Edit API endpoint';
+    els.saveBtn().textContent = '💾 Save';
+    els.saveNewBtn().style.display = 'inline-block';
+  }
+
   els.editorCard().style.display = 'block';
   els.preview().style.display = 'none';
 }
@@ -303,7 +315,51 @@ function saveEndpoint() {
     .then(() => {
       renderList();
       closeEditor();
-      statusBar.flash(LogLevel.Info, 'endpoint', 3000, '✅ API endpoint saved');
+      statusBar.flash(LogLevel.Info, 'endpoint', 3000, '✅ Saved');
+    })
+    .catch((error) => {
+      statusBar.post(LogLevel.Error, 'storage', 'Failed to save API endpoint', error);
+    });
+}
+
+function saveAsNew() {
+  if (editingIndex === null) {
+    // If not editing, just use regular save
+    saveEndpoint();
+    return;
+  }
+
+  const candidate = buildEndpointFromForm();
+  if (!candidate) return;
+
+  // Generate unique name by appending counter
+  let baseName = candidate.name || 'endpoint';
+  let newName = baseName;
+  let counter = 2;
+  const existingNames = new Set(endpoints.map(e => e.name));
+
+  while (existingNames.has(newName)) {
+    newName = `${baseName}-${counter}`;
+    counter++;
+  }
+
+  candidate.name = newName;
+  const updated = [...endpoints, candidate];
+
+  const validated = validateEndpoints(JSON.stringify(updated));
+  if (!validated.valid) {
+    statusBar.post(LogLevel.Error, 'endpoint', validated.errorMessage || 'Invalid API endpoint');
+    return;
+  }
+
+  endpoints = validated.parsed;
+
+  browser.storage.sync
+    .set({ apiEndpoints: validated.formatted })
+    .then(() => {
+      renderList();
+      closeEditor();
+      statusBar.flash(LogLevel.Info, 'endpoint', 3000, `✅ Saved as "${newName}"`);
     })
     .catch((error) => {
       statusBar.post(LogLevel.Error, 'storage', 'Failed to save API endpoint', error);
@@ -547,6 +603,7 @@ function performImport(merge: boolean) {
 function wireEvents() {
   document.getElementById('add-endpoint-btn')?.addEventListener('click', () => openEditor(null));
   document.getElementById('save-endpoint-btn')?.addEventListener('click', saveEndpoint);
+  document.getElementById('save-new-btn')?.addEventListener('click', saveAsNew);
   document.getElementById('cancel-edit-btn')?.addEventListener('click', closeEditor);
   document.getElementById('preview-btn')?.addEventListener('click', previewEndpoint);
   document.getElementById('add-header-row')?.addEventListener('click', () => addHeaderRow());
