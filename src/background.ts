@@ -39,7 +39,6 @@ type RuntimeMessage =
   | { type: 'GET_STREAMS'; tabId: number }
   | { type: 'CALL_API'; streamUrl: string; pageUrl?: string; pageTitle?: string; endpointName?: string }
   | { type: 'OPEN_IN_TAB'; streamUrl: string; pageUrl?: string; pageTitle?: string; endpointName?: string }
-  | { type: 'CLEAR_STREAMS'; tabId: number }
   | { type: 'PING' };
 
 const tabStreams = new Map<number, StreamInfo[]>();
@@ -135,15 +134,6 @@ browser.runtime.onMessage.addListener((message: RuntimeMessage, sender) => {
         logger
       });
     }
-
-  if (message.type === 'CLEAR_STREAMS') {
-    const tabId = message.tabId;
-    const count = tabStreams.get(tabId)?.length || 0;
-    tabStreams.delete(tabId);
-    updateBadge(tabId, 0);
-    logger.debug('background', `Cleared ${count} streams for tab ${tabId}`);
-    return Promise.resolve({ success: true });
-  }
 
   if (message.type === 'PING') {
     // Test integration: respond with current detection state

@@ -47,7 +47,6 @@ type StreamInfo = {
 type RuntimeMessage =
   | { type: 'STREAM_DETECTED'; url: string; streamType: string }
   | { type: 'GET_STREAMS'; tabId: number }
-  | { type: 'CLEAR_STREAMS'; tabId: number }
   | { type: 'PING' };
 
 // Simulate the background script's message handler
@@ -87,12 +86,6 @@ async function handleMessage(message: RuntimeMessage, sender: any) {
     const tabId = message.tabId;
     const streams = tabStreams.get(tabId) || [];
     return { streams };
-  }
-
-  if (message.type === 'CLEAR_STREAMS') {
-    const tabId = message.tabId;
-    tabStreams.delete(tabId);
-    return { success: true };
   }
 
   if (message.type === 'PING') {
@@ -212,22 +205,6 @@ test('GET_STREAMS: returns empty array for unknown tab', async () => {
   const result = await handleMessage(message, {});
 
   assert.deepEqual(result.streams, []);
-});
-
-test('CLEAR_STREAMS: removes streams for tab', async () => {
-  tabStreams.clear();
-  tabStreams.set(1, [
-    {
-      url: 'https://example.com/stream.m3u8',
-      type: 'HLS',
-      timestamp: Date.now(),
-    },
-  ]);
-
-  const message = { type: 'CLEAR_STREAMS' as const, tabId: 1 };
-  await handleMessage(message, {});
-
-  assert.equal(tabStreams.has(1), false, 'Should remove tab streams');
 });
 
 test('PING: responds with pong', async () => {
