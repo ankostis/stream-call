@@ -181,7 +181,8 @@ function renderList() {
 }
 
 function toggleEndpointActive(index: number) {
-  endpoints[index].active = !endpoints[index].active;
+  const currentState = endpoints[index].active !== false; // undefined or true = active
+  endpoints[index].active = !currentState;
   const validated = validateEndpoints(JSON.stringify(endpoints));
   if (!validated.valid) {
     statusBar.post(LogLevel.Error, 'endpoint', 'Failed to update endpoint state');

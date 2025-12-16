@@ -149,7 +149,8 @@ export function validateEndpoints(raw: string): {
           headers: p.headers,
           bodyTemplate: p.bodyTemplate,
           includeCookies: p.includeCookies,
-          includePageHeaders: p.includePageHeaders
+          includePageHeaders: p.includePageHeaders,
+          active: p.active
         };
       })
       .filter(Boolean);
