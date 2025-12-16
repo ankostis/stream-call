@@ -31,6 +31,18 @@ let renderStatus: ReturnType<typeof createStatusRenderer>;
 let appendLog: ReturnType<typeof createLogAppender>;
 
 /**
+ * Open URL in tab, reusing existing tab if found
+ */
+async function openOrSwitchToTab(url: string): Promise<void> {
+  const tabs = await browser.tabs.query({ url });
+  if (tabs.length > 0 && tabs[0].id) {
+    await browser.tabs.update(tabs[0].id, { active: true });
+  } else {
+    await browser.tabs.create({ url, active: true });
+  }
+}
+
+/**
  * Initialize popup
  */
 async function initialize() {
@@ -118,7 +130,7 @@ async function loadStreams() {
   try {
     await browser.runtime.sendMessage({ type: 'PING' });
   } catch (pingError) {
-    // Known issue: background worker crashed or not loaded - statusBar.post handles logging
+    // Known issue: background worker crashed or not loaded.
     statusBar.post(LogLevel.Error, 'messaging', '⚠️ Extension background service not responding. Try reloading the extension.', pingError);
     const loadingEl = document.getElementById('loading');
     if (loadingEl) loadingEl.style.display = 'none';
@@ -307,12 +319,7 @@ async function handleOpenInTab(stream: StreamInfo, endpointName?: string) {
     showLogControls();
     setTimeout(async () => {
       const optionsUrl = browser.runtime.getURL('dist/options.html');
-      const tabs = await browser.tabs.query({ url: optionsUrl });
-      if (tabs.length > 0 && tabs[0].id) {
-        await browser.tabs.update(tabs[0].id, { active: true });
-      } else {
-        await browser.runtime.openOptionsPage();
-      }
+      await openOrSwitchToTab(optionsUrl);
     }, 2000);
     return;
   }
@@ -352,24 +359,18 @@ async function handleCallAPI(stream: StreamInfo, endpointName?: string) {
   try {
     endpoints = parseEndpoints(config.apiEndpoints || '[]');
   } catch (parseError: any) {
-    // Parse error is a known configuration issue - statusBar.post handles logging
+    // Parse error is a known configuration issue
     statusBar.post(LogLevel.Error, 'endpoint', 'Invalid endpoint configuration. Check options.', parseError);
     showLogControls();
     return;
   }
 
   if (endpoints.length === 0) {
-    // statusBar.post handles logging internally
     statusBar.post(LogLevel.Warn, 'endpoint', 'Please configure API endpoints in options first');
     showLogControls();
     setTimeout(async () => {
       const optionsUrl = browser.runtime.getURL('dist/options.html');
-      const tabs = await browser.tabs.query({ url: optionsUrl });
-      if (tabs.length > 0 && tabs[0].id) {
-        await browser.tabs.update(tabs[0].id, { active: true });
-      } else {
-        await browser.runtime.openOptionsPage();
-      }
+      await openOrSwitchToTab(optionsUrl);
     }, 2000);
     return;
   }
@@ -411,7 +412,7 @@ async function handleCopyUrl(url: string) {
     // statusBar.flash handles logging internally
     statusBar.flash(LogLevel.Info, 'clipboard', 3000, `📋 URL copied: ${url}`);
   } catch (error) {
-    // Clipboard write may fail due to permissions; statusBar.post handles logging
+    // Clipboard write may fail due to permissions.
     statusBar.post(LogLevel.Warn, 'clipboard', '⚠️ Failed to copy URL', error);
     showLogControls();
   }
@@ -445,12 +446,7 @@ async function handleRefresh() {
 async function handleOptions() {
   logger.debug('popup', 'Options button clicked');
   const optionsUrl = browser.runtime.getURL('dist/options.html');
-  const tabs = await browser.tabs.query({ url: optionsUrl });
-  if (tabs.length > 0 && tabs[0].id) {
-    await browser.tabs.update(tabs[0].id, { active: true });
-  } else {
-    await browser.runtime.openOptionsPage();
-  }
+  await openOrSwitchToTab(optionsUrl);
 }
 
 /**
