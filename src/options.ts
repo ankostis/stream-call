@@ -5,7 +5,7 @@ export {};
 
 import { Logger, LogLevel, StatusBar } from './logger';
 import { createLogAppender, createStatusRenderer, applyLogFiltering } from './logging-ui';
-import { applyTemplate, ApiEndpoint, suggestEndpointName, validateEndpoints, DEFAULT_CONFIG, getBuiltInEndpoints } from './endpoint';
+import { applyTemplate, ApiEndpoint, suggestEndpointName, validateEndpoints, DEFAULT_CONFIG, getBuiltInEndpoints, callEndpointAPI } from './endpoint';
 
 type Config = typeof DEFAULT_CONFIG;
 
@@ -424,13 +424,14 @@ function previewEndpoint() {
   }
 }
 
-function testAPI() {
-  if (endpoints.length === 0) {
-    statusBar.post(LogLevel.Error, 'endpoint', 'Please add at least one API endpoint first');
+async function testAPI() {
+  // Get current form endpoint or first in list
+  const candidate = buildEndpointFromForm();
+  if (!candidate) {
+    statusBar.post(LogLevel.Error, 'endpoint', 'Invalid endpoint configuration');
     return;
   }
 
-  const firstEndpoint = endpoints[0];
   const context = {
     streamUrl: 'https://example.com/test-stream.m3u8',
     timestamp: Date.now(),
@@ -438,24 +439,25 @@ function testAPI() {
     pageTitle: 'Test Page - stream-call'
   } as Record<string, unknown>;
 
-  let finalUrl: string;
-  try {
-    finalUrl = applyTemplate(firstEndpoint.endpointTemplate, context);
-  } catch (templateError: any) {
-    const availableFields = Object.keys(context).filter((k) => context[k] !== undefined).join(', ');
-    statusBar.post(LogLevel.Error, 'interpolation', `❌ Interpolation error: ${templateError?.message ?? 'Invalid placeholder'}. Fields: ${availableFields}.`, templateError);
-    return;
-  }
+  statusBar.post(LogLevel.Info, 'apicall', `Validating endpoint "${candidate.name}"...`);
+  logger.info('apicall', `Validating endpoint: ${candidate.name}`, { endpoint: candidate });
 
-  // Validate URL format
-  try {
-    new URL(finalUrl);
-  } catch {
-    statusBar.post(LogLevel.Error, 'apicall', `❌ Invalid URL after interpolation: ${finalUrl}`);
-    return;
-  }
+  const result = await callEndpointAPI({
+    streamUrl: context.streamUrl as string,
+    pageUrl: context.pageUrl as string,
+    pageTitle: context.pageTitle as string,
+    endpointName: candidate.name,
+    apiEndpoints: [candidate],
+    logger
+  });
 
-  statusBar.flash(LogLevel.Info, 'apicall', 3000, `✅ Valid test URL: ${finalUrl}`);
+  if (result.success) {
+    statusBar.flash(LogLevel.Info, 'apicall', 5000, `✅ Success: ${result.message}`);
+    logger.info('apicall', `Validation successful: ${candidate.name}`, { response: result.response });
+  } else {
+    statusBar.post(LogLevel.Error, 'apicall', `❌ Failed: ${result.error}`);
+    logger.error('apicall', `Validation failed: ${candidate.name}`, { error: result.error });
+  }
 }
 
 function resetBuiltIns() {
@@ -679,7 +681,7 @@ function wireEvents() {
   document.getElementById('cancel-edit-btn')?.addEventListener('click', closeEditor);
   document.getElementById('preview-btn')?.addEventListener('click', previewEndpoint);
   document.getElementById('add-header-row')?.addEventListener('click', () => addHeaderRow());
-  document.getElementById('test-btn')?.addEventListener('click', testAPI);
+  document.getElementById('validate-btn')?.addEventListener('click', testAPI);
   document.getElementById('reset-btn')?.addEventListener('click', resetBuiltIns);
   document.getElementById('clear-all-btn')?.addEventListener('click', clearAllEndpoints);
   document.getElementById('export-btn')?.addEventListener('click', exportEndpoints);

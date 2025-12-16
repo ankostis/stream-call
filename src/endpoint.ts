@@ -243,7 +243,7 @@ export async function openEndpointInTab({
   pageTitle?: string;
   endpointName?: string;
   tabHeaders?: Record<string, string>;
-  logger?: Logger;
+  logger: Logger;
 }) {
   // Declare variables at function scope for error logging
   let selectedEndpoint: ReturnType<typeof parseEndpoints>[0] | undefined;
@@ -294,7 +294,7 @@ export async function openEndpointInTab({
       };
     }
 
-    logger?.info('endpoint', `Opening URL in tab: ${selectedEndpoint.name}`, {
+    logger.info('apicall', `Opening URL in tab: ${selectedEndpoint.name}`, {
       endpoint: selectedEndpoint.name,
       url: finalUrl
     });
@@ -313,9 +313,11 @@ export async function openEndpointInTab({
       details: finalUrl
     };
   } catch (error: any) {
-    console.error('Failed to open URL:', error);
-    if (selectedEndpoint) console.error('Endpoint:', selectedEndpoint.name);
-    if (finalUrl) console.error('URL:', finalUrl);
+    logger.error('apicall', `Failed to open URL: ${error?.message ?? 'Unknown error'}`, {
+      endpoint: selectedEndpoint?.name,
+      url: finalUrl,
+      error
+    });
 
     return {
       success: false,
@@ -342,7 +344,7 @@ export async function callEndpointAPI({
   pageTitle?: string;
   endpointName?: string;
   tabHeaders?: Record<string, string>;
-  logger?: Logger;
+  logger: Logger;
 }) {
   let selectedEndpoint: ReturnType<typeof parseEndpoints>[0] | undefined;
   let endpoint: string | undefined;
@@ -403,7 +405,7 @@ export async function callEndpointAPI({
           headers['Cookie'] = cookieHeader;
         }
       } catch (cookieError: any) {
-        console.warn('Failed to get cookies:', cookieError);
+        logger.warn('apicall', `Failed to get cookies: ${cookieError}`, { pageUrl, cookieError });
       }
     }
 
@@ -425,7 +427,7 @@ export async function callEndpointAPI({
       fetchOptions.body = bodyJson;
     }
 
-    logger?.info('endpoint', `API Request: ${method} ${selectedEndpoint.name}`, {
+    logger.info('apicall', `API Request: ${method} ${selectedEndpoint.name}`, {
       endpoint: selectedEndpoint.name,
       method,
       url: endpoint,
@@ -446,7 +448,7 @@ export async function callEndpointAPI({
       } catch {
         // Ignore if we can't read error body
       }
-      logger?.error('endpoint', `API Error Response: ${response.status} ${response.statusText}`, {
+      logger.error('apicall', `API Error Response: ${response.status} ${response.statusText}`, {
         status: response.status,
         statusText: response.statusText,
         headers: Object.fromEntries(response.headers.entries()),
@@ -456,7 +458,7 @@ export async function callEndpointAPI({
     }
 
     const result = await response.text();
-    logger?.info('endpoint', `API Success Response: ${response.status} ${response.statusText}`, {
+    logger.info('apicall', `API Success Response: ${response.status} ${response.statusText}`, {
       status: response.status,
       statusText: response.statusText,
       headers: Object.fromEntries(response.headers.entries()),
@@ -469,10 +471,12 @@ export async function callEndpointAPI({
       response: result
     };
   } catch (error: any) {
-    console.error('API call failed:', error);
-    if (selectedEndpoint) console.error('Endpoint:', selectedEndpoint.name);
-    if (endpoint) console.error('URL:', endpoint);
-    if (method) console.error('Method:', method);
+    logger.error('apicall', `API call failed: ${error?.message ?? 'Unknown error'}`, {
+      endpoint: selectedEndpoint?.name,
+      url: endpoint,
+      method,
+      error
+    });
 
     let errorMsg = error?.message ?? 'Unknown error';
     if (errorMsg.includes('NetworkError') || errorMsg.includes('fetch')) {
