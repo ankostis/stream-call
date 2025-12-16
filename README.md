@@ -1,8 +1,7 @@
 # 🎵 *Stream call*
 
-A Firefox browser extension in typescript that detects streaming media (podcasts, radio
-stations, live streams) on web pages and sends the stream URLs to a configurable
-HTTP API endpoint(s).
+A (mobile) Firefox extension to extract streaming media URLs (podcasts, radio
+stations, live streams) and send to HTTP API endpoint(s).
 
 **Platform**: Works on desktop Firefox and mobile Firefox Nightly
 

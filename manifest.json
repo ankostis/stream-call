@@ -2,7 +2,8 @@
   "manifest_version": 3,
   "name": "Stream call",
   "version": "0.2.0",
-  "description": "Detects streaming media (podcasts, radio stations) and sends stream URLs to a configurable HTTP API",
+  "description": "A (mobile) Firefox extension to extract streaming media URLs (podcasts, radio stations, live streams) and send to HTTP API endpoint(s)",
+  },
   "permissions": [
     "storage",
     "activeTab",
