@@ -640,7 +640,8 @@
           <button id="reset-btn" class="btn-secondary">↺ Reset built-ins</button>
           <button id="clear-all-btn" class="btn-danger">✖ Clear all</button>
           <button id="export-btn" class="btn-secondary">⬇ Export</button>
-          <button id="import-btn" class="btn-secondary">⬆ Import</button>
+          <button id="import-file-btn" class="btn-secondary">⬆ Import file</button>
+          <button id="import-url-btn" class="btn-secondary">🌐 Import URL</button>
         </div>
       </div>
 
@@ -761,7 +762,23 @@
     </div>
   </div>
 
-  <!-- Import modal -->
+  <!-- Import URL modal -->
+  <div id="import-url-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <h2>Import from URL</h2>
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; margin-bottom: 8px; font-weight: 500;">JSON URL or GitHub Gist:</label>
+        <input type="text" id="import-url-input" placeholder="https://example.com/endpoints.json or https://gist.github.com/..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; font-size: 13px;" />
+        <div class="help-text">Paste a URL to a JSON file or GitHub gist. For gists, use either the gist URL or the raw JSON URL.</div>
+      </div>
+      <div class="button-group">
+        <button id="import-url-fetch-btn" class="btn-primary">⬇ Fetch</button>
+        <button id="import-url-cancel-btn" class="btn-secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Import preview modal -->
   <div id="import-modal" class="modal" style="display: none;">
     <div class="modal-content">
       <h2>Import endpoints</h2>

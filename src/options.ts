@@ -547,6 +547,78 @@ function handleFileSelect(e: Event) {
   input.value = '';
 }
 
+function showImportUrlModal() {
+  const modal = document.getElementById('import-url-modal') as HTMLDivElement;
+  const input = document.getElementById('import-url-input') as HTMLInputElement;
+  input.value = '';
+  modal.style.display = 'flex';
+  input.focus();
+}
+
+function hideImportUrlModal() {
+  const modal = document.getElementById('import-url-modal') as HTMLDivElement;
+  modal.style.display = 'none';
+}
+
+function convertGistUrl(url: string): string {
+  // Convert GitHub gist URLs to raw format
+  // https://gist.github.com/user/abc123 -> https://gist.githubusercontent.com/user/abc123/raw/
+  // https://gist.github.com/user/abc123/def456 -> https://gist.githubusercontent.com/user/abc123/raw/def456/
+  const gistMatch = url.match(/^https?:\/\/gist\.github\.com\/([^\/]+)\/([a-f0-9]+)(?:\/([a-f0-9]+))?/);
+  if (gistMatch) {
+    const [, user, gistId, revision] = gistMatch;
+    return revision
+      ? `https://gist.githubusercontent.com/${user}/${gistId}/raw/${revision}/`
+      : `https://gist.githubusercontent.com/${user}/${gistId}/raw/`;
+  }
+  return url;
+}
+
+async function fetchFromUrl() {
+  const input = document.getElementById('import-url-input') as HTMLInputElement;
+  const url = input.value.trim();
+
+  if (!url) {
+    statusBar.post(LogLevel.Error, 'import', 'URL is required');
+    return;
+  }
+
+  // Validate URL format
+  try {
+    new URL(url);
+  } catch {
+    statusBar.post(LogLevel.Error, 'import', 'Invalid URL format');
+    return;
+  }
+
+  const fetchUrl = convertGistUrl(url);
+  statusBar.post(LogLevel.Info, 'import', `Fetching from ${fetchUrl}...`);
+
+  try {
+    const response = await fetch(fetchUrl);
+    if (!response.ok) {
+      statusBar.post(LogLevel.Error, 'import', `Failed to fetch: ${response.status} ${response.statusText}`);
+      return;
+    }
+
+    const content = await response.text();
+    const parsed = JSON.parse(content);
+    const validated = validateEndpoints(JSON.stringify(parsed));
+
+    if (!validated.valid) {
+      statusBar.post(LogLevel.Error, 'import', `Invalid JSON: ${validated.errorMessage}`);
+      return;
+    }
+
+    pendingImportEndpoints = validated.parsed;
+    hideImportUrlModal();
+    showImportModal();
+    statusBar.flash(LogLevel.Info, 'import', 2000, `✅ Fetched ${validated.parsed.length} endpoint(s)`);
+  } catch (error: any) {
+    statusBar.post(LogLevel.Error, 'import', `Failed to fetch or parse JSON: ${error?.message ?? 'Unknown error'}`, error);
+  }
+}
+
 function showImportModal() {
   const modal = document.getElementById('import-modal') as HTMLDivElement;
   const preview = document.getElementById('import-preview') as HTMLDivElement;
@@ -611,9 +683,12 @@ function wireEvents() {
   document.getElementById('reset-btn')?.addEventListener('click', resetBuiltIns);
   document.getElementById('clear-all-btn')?.addEventListener('click', clearAllEndpoints);
   document.getElementById('export-btn')?.addEventListener('click', exportEndpoints);
-  document.getElementById('import-btn')?.addEventListener('click', () => {
+  document.getElementById('import-file-btn')?.addEventListener('click', () => {
     (document.getElementById('import-file-input') as HTMLInputElement).click();
   });
+  document.getElementById('import-url-btn')?.addEventListener('click', showImportUrlModal);
+  document.getElementById('import-url-cancel-btn')?.addEventListener('click', hideImportUrlModal);
+  document.getElementById('import-url-fetch-btn')?.addEventListener('click', fetchFromUrl);
   document.getElementById('import-file-input')?.addEventListener('change', handleFileSelect);
   document.getElementById('import-merge-btn')?.addEventListener('click', () => performImport(true));
   document.getElementById('import-replace-btn')?.addEventListener('click', () => performImport(false));
