@@ -38,6 +38,7 @@ type RuntimeMessage =
   | { type: 'STREAM_DETECTED'; url: string; streamType: string }
   | { type: 'GET_STREAMS'; tabId: number }
   | { type: 'CALL_API'; streamUrl: string; pageUrl?: string; pageTitle?: string; endpointName?: string }
+  | { type: 'OPEN_IN_TAB'; streamUrl: string; pageUrl?: string; pageTitle?: string; endpointName?: string }
   | { type: 'CLEAR_STREAMS'; tabId: number }
   | { type: 'PING' };
 

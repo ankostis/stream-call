@@ -261,3 +261,82 @@ test('STREAM_DETECTED: captures page context', async () => {
   assert.equal(streams[0].pageTitle, 'Test Page Title');
   assert.ok(streams[0].timestamp > 0);
 });
+
+/**
+ * Test that all handled message types are declared in RuntimeMessage union
+ * This prevents the issue where message handlers exist but types are missing
+ */
+test('RuntimeMessage type includes all handled message types', async () => {
+  // Read the background.ts source to extract handled types and declared types
+  const fs = await import('fs/promises');
+  const path = await import('path');
+
+  const backgroundPath = path.join(process.cwd(), 'src', 'background.ts');
+  const content = await fs.readFile(backgroundPath, 'utf-8');
+
+  // Extract handled message types from if statements
+  const handledTypesRegex = /if \(message\.type === '([^']+)'\)/g;
+  const handledTypes = new Set<string>();
+  let match;
+  while ((match = handledTypesRegex.exec(content)) !== null) {
+    handledTypes.add(match[1]);
+  }
+
+  // Extract declared types from RuntimeMessage union
+  // Match the entire type definition including all union members
+  const runtimeMessageMatch = content.match(/type RuntimeMessage\s*=\s*((?:[\s\S](?!\ntype\s|\nconst\s|\nfunction\s))+)/);
+  assert(runtimeMessageMatch, 'RuntimeMessage type definition not found');
+
+  const declaredTypes = new Set<string>();
+  const unionContent = runtimeMessageMatch[1];
+  const declaredTypesRegex = /\{\s*type:\s*'([^']+)'/g;
+  while ((match = declaredTypesRegex.exec(unionContent)) !== null) {
+    declaredTypes.add(match[1]);
+  }
+
+  // Verify all handled types are declared
+  const missingTypes: string[] = [];
+  for (const handledType of handledTypes) {
+    if (!declaredTypes.has(handledType)) {
+      missingTypes.push(handledType);
+    }
+  }
+
+  assert.strictEqual(
+    missingTypes.length,
+    0,
+    `Message types handled but not declared in RuntimeMessage: ${missingTypes.join(', ')}`
+  );
+
+  console.log(`✓ Handled types: ${Array.from(handledTypes).sort().join(', ')}`);
+  console.log(`✓ Declared types: ${Array.from(declaredTypes).sort().join(', ')}`);
+});
+
+test('No duplicate message type declarations in RuntimeMessage', async () => {
+  const fs = await import('fs/promises');
+  const path = await import('path');
+
+  const backgroundPath = path.join(process.cwd(), 'src', 'background.ts');
+  const content = await fs.readFile(backgroundPath, 'utf-8');
+
+  // Extract all declared types
+  const declaredTypesRegex = /\{\s*type:\s*'([^']+)'/g;
+  const runtimeMessageMatch = content.match(/type RuntimeMessage\s*=\s*([\s\S]*?);/);
+  assert(runtimeMessageMatch, 'RuntimeMessage type definition not found');
+
+  const types: string[] = [];
+  const unionContent = runtimeMessageMatch[1];
+  let match;
+  while ((match = declaredTypesRegex.exec(unionContent)) !== null) {
+    types.push(match[1]);
+  }
+
+  const uniqueTypes = new Set(types);
+  const duplicates = types.filter((t, i) => types.indexOf(t) !== i);
+
+  assert.strictEqual(
+    types.length,
+    uniqueTypes.size,
+    `Duplicate message types found: ${duplicates.join(', ')}`
+  );
+});
