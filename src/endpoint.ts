@@ -3,6 +3,8 @@
  * Centralized endpoint parsing, validation, normalization, and template interpolation
  */
 
+import type { Logger } from './logger';
+
 export type ApiEndpoint = {
   name: string;
   endpointTemplate: string;
@@ -213,13 +215,15 @@ export async function openEndpointInTab({
   pageUrl,
   pageTitle,
   endpointName,
-  tabHeaders
+  tabHeaders,
+  logger
 }: {
   streamUrl: string;
   pageUrl?: string;
   pageTitle?: string;
   endpointName?: string;
   tabHeaders?: Record<string, string>;
+  logger?: Logger;
 }) {
   // Declare variables at function scope for error logging
   let selectedEndpoint: ReturnType<typeof parseEndpoints>[0] | undefined;
@@ -270,7 +274,7 @@ export async function openEndpointInTab({
       };
     }
 
-    console.log('[stream-call] Opening URL in tab:', {
+    logger?.info('endpoint', `Opening URL in tab: ${selectedEndpoint.name}`, {
       endpoint: selectedEndpoint.name,
       url: finalUrl
     });
@@ -310,13 +314,15 @@ export async function callEndpointAPI({
   pageUrl,
   pageTitle,
   endpointName,
-  tabHeaders
+  tabHeaders,
+  logger
 }: {
   streamUrl: string;
   pageUrl?: string;
   pageTitle?: string;
   endpointName?: string;
   tabHeaders?: Record<string, string>;
+  logger?: Logger;
 }) {
   let selectedEndpoint: ReturnType<typeof parseEndpoints>[0] | undefined;
   let endpoint: string | undefined;
@@ -399,7 +405,7 @@ export async function callEndpointAPI({
       fetchOptions.body = bodyJson;
     }
 
-    console.log('[stream-call] API Request:', {
+    logger?.info('endpoint', `API Request: ${method} ${selectedEndpoint.name}`, {
       endpoint: selectedEndpoint.name,
       method,
       url: endpoint,
@@ -420,7 +426,7 @@ export async function callEndpointAPI({
       } catch {
         // Ignore if we can't read error body
       }
-      console.log('[stream-call] API Error Response:', {
+      logger?.error('endpoint', `API Error Response: ${response.status} ${response.statusText}`, {
         status: response.status,
         statusText: response.statusText,
         headers: Object.fromEntries(response.headers.entries()),
@@ -430,7 +436,7 @@ export async function callEndpointAPI({
     }
 
     const result = await response.text();
-    console.log('[stream-call] API Success Response:', {
+    logger?.info('endpoint', `API Success Response: ${response.status} ${response.statusText}`, {
       status: response.status,
       statusText: response.statusText,
       headers: Object.fromEntries(response.headers.entries()),

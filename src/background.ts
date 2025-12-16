@@ -114,7 +114,8 @@ browser.runtime.onMessage.addListener((message: RuntimeMessage, sender) => {
         streamUrl: message.streamUrl,
         pageUrl: message.pageUrl,
         pageTitle: message.pageTitle,
-        endpointName: message.endpointName
+        endpointName: message.endpointName,
+        logger
       });
     }
 
@@ -129,7 +130,8 @@ browser.runtime.onMessage.addListener((message: RuntimeMessage, sender) => {
         pageUrl: message.pageUrl,
         pageTitle: message.pageTitle,
         endpointName: message.endpointName,
-        tabHeaders: pageHeaders
+        tabHeaders: pageHeaders,
+        logger
       });
     }
 

@@ -5,8 +5,8 @@
 ## Summary
 
 - **10 categories** used consistently by both Logger (audit trail) and StatusBar (UI feedback)
-- **61 total logging calls** across all components (21 Logger, 40 StatusBar)
-- **14 legacy console calls** in endpoint.ts (13) and hover-panel.ts (1) - to be migrated
+- **65 total logging calls** across all components (25 Logger, 40 StatusBar)
+- **1 legacy console call** in hover-panel.ts (WIP stub) - to be migrated
 - **Categories are domain-specific** (what), **levels are severity-specific** (how important)
 - All logger calls verified for correct API usage
 - No duplicate statusBar+logger pairs (cleaned up 4 in popup.ts)
@@ -15,7 +15,7 @@
 
 | Category  | Count | Status | Description |
 |-----------|-------|--------|-------------|
-| endpoint  |   15 | ✅ | Endpoint operations (config/validation/save/delete) |
+| endpoint  |   19 | ✅ | Endpoint operations (config/validation/save/delete/tab-open/api-call) |
 | apicall   |   10 | ✅ | API call operations (HTTP requests/responses/testing) |
 | storage   |    9 | ✅ | Storage operations (load/save/reset/export/import/initialization) |
 | popup     |    7 | ✅ | Popup component operations (initialization/refresh/UI actions) |
@@ -33,8 +33,9 @@
 | options.ts |      0      |       27        |   27  |
 | popup.ts   |      5      |       13        |   18  |
 | background.ts |   10     |        0        |   10  |
+| endpoint.ts |     4      |        0        |    4  |
 | page.ts    |      6      |        0        |    6  |
-| **Total**  |   **21**    |     **40**      | **61**|
+| **Total**  |   **25**    |     **40**      | **65**|
 
 **Note**: Each execution context (background, page, popup, options) has its own isolated Logger instance with separate circular buffers.
 
@@ -96,14 +97,13 @@ statusBar.flash(LogLevel.Info, 'category', 3000, 'message')
 
 ## Legacy Console Calls (To Migrate)
 
-**endpoint.ts (13 calls)**:
-- `openEndpointInTab()`: 4 calls (1 log, 3 error)
-- `callEndpointAPI()`: 9 calls (3 log, 1 warn, 5 error)
-
 **hover-panel.ts (1 call)**:
 - WIP stub: 1 log
 
-These predate Logger/StatusBar infrastructure (introduced Dec 10-15, 2025). Should be migrated to proper logging.
+This predates Logger/StatusBar infrastructure (introduced Dec 10-15, 2025). Should be migrated to proper logging.
+
+**Migration History**:
+- ✅ endpoint.ts (13 calls → Logger): `openEndpointInTab()` (1), `callEndpointAPI()` (3) - migrated Dec 16, 2025
 
 ## Validation
 
@@ -111,4 +111,4 @@ These predate Logger/StatusBar infrastructure (introduced Dec 10-15, 2025). Shou
 ✅ No instances of `logger.method(LogLevel.XXX, 'category', ...)` pattern found
 ✅ All 95 unit tests pass
 ✅ Integration tests pass
-⚠️ 14 legacy console calls remain (not using Logger/StatusBar)
+⚠️ 1 legacy console call remains (not using Logger/StatusBar)

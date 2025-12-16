@@ -299,12 +299,12 @@ The extension uses a message-driven architecture via `browser.runtime.sendMessag
 
 Both Logger (audit trail) and StatusBar (UI feedback) use unified categories:
 
-**61 total logging calls** (21 Logger, 40 StatusBar)
-**14 legacy console calls** (to be migrated to Logger)
+**65 total logging calls** (25 Logger, 40 StatusBar)
+**1 legacy console call** (WIP hover-panel.ts stub)
 
 | Category | Occurrences | Purpose |
 |----------|:-----------:|---------|
-| endpoint | 15 | Endpoint operations (config/validation/save/delete) |
+| endpoint | 19 | Endpoint operations (config/validation/save/delete/tab-open/api-call) |
 | apicall  | 10 | API call operations (HTTP requests/responses/testing) |
 | storage  |  9 | Storage operations (load/save/reset/export/import/initialization) |
 | popup    |  7 | Popup component operations (initialization/refresh/UI actions) |
