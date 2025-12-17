@@ -240,15 +240,29 @@
     }
 
     .btn-test {
+      background: #ffc107;
+      color: #000;
+    }
+
+    .btn-test:hover {
+      background: #e0a800;
+    }
+
+    .btn-test:active {
+      background: #c69500;
+      transform: scale(0.98);
+    }
+
+    .btn-action {
       background: #4CAF50;
       color: white;
     }
 
-    .btn-test:hover {
+    .btn-action:hover {
       background: #45a049;
     }
 
-    .btn-test:active {
+    .btn-action:active {
       background: #3d8b40;
       transform: scale(0.98);
     }
@@ -1038,8 +1052,8 @@
         <div class="button-group">
           <button id="clear-edit-btn" class="btn-secondary" type="button">🆕 Clear</button>
           <button id="preview-btn" class="btn-test" type="button">👁 Preview</button>
-          <button id="call-btn" class="btn-test" type="button">📤 Call</button>
-          <button id="open-tab-btn" class="btn-test" type="button">🌐 Open tab</button>
+          <button id="call-btn" class="btn-action" type="button">📤 Call</button>
+          <button id="open-tab-btn" class="btn-action" type="button">🌐 Open tab</button>
           <button id="save-endpoint-btn" class="btn-primary" type="submit">💾 Save</button>
           <button id="save-new-btn" class="btn-primary" type="button">➕ Save New</button>
         </div>

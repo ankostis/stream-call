@@ -265,12 +265,12 @@ function populatePanel(stream: StreamInfo, index: number, allStreams: StreamInfo
   copyBtn.addEventListener('click', () => handleCopyUrl(stream.url));
 
   const callBtn = document.createElement('button');
-  callBtn.className = 'btn-primary';
+  callBtn.className = 'btn-action';
   callBtn.textContent = '📤 Call';
   callBtn.addEventListener('click', () => handleCallEndpoint('fetch', stream, endpointName));
 
   const openTabBtn = document.createElement('button');
-  openTabBtn.className = 'btn-secondary';
+  openTabBtn.className = 'btn-action';
   openTabBtn.textContent = '🌐 Open tab';
   openTabBtn.addEventListener('click', () => handleCallEndpoint('tab', stream, endpointName));
 
