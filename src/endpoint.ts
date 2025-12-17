@@ -257,138 +257,54 @@ function buildContext({
  * Handles template interpolation and opens the final URL in a new browser tab
  * Returns success/error result with detailed error messages
  */
-export async function openEndpointInTab({
+/**
+ * Call API endpoint or open in tab with stream information
+ * Handles template interpolation, headers, cookies, and HTTP methods
+ *
+ * @param mode - 'fetch' for HTTP request, 'tab' to open URL in browser tab
+ * @param apiEndpoints - Optional override for endpoints (used by options page for testing)
+ * Returns success/error result with detailed error messages
+ */
+export async function callEndpoint({
+  mode,
   streamUrl,
   pageUrl,
   pageTitle,
   endpointName,
   tabHeaders,
+  apiEndpoints,
   logger
 }: {
+  mode: 'fetch' | 'tab';
   streamUrl: string;
   pageUrl?: string;
   pageTitle?: string;
   endpointName?: string;
   tabHeaders?: Record<string, string>;
+  apiEndpoints?: ApiEndpoint[];
   logger: Logger;
 }) {
   // Declare variables at function scope for error logging
-  let selectedEndpoint: ReturnType<typeof parseEndpoints>[0] | undefined;
+  let selectedEndpoint: ApiEndpoint | undefined;
   let finalUrl: string | undefined;
-
-  try {
-    const defaults = { apiEndpoints: '[]' } as const;
-    const config = (await browser.storage.sync.get(defaults)) as typeof defaults;
-
-    let endpoints: ReturnType<typeof parseEndpoints>;
-    try {
-      endpoints = parseEndpoints(config.apiEndpoints);
-    } catch (parseError: any) {
-      return {
-        success: false,
-        error: `Failed to parse API endpoints: ${parseError?.message ?? 'Unknown error'}`
-      };
-    }
-
-    selectedEndpoint = endpointName ? endpoints.find((e) => e.name === endpointName) : endpoints[0];
-
-    if (!selectedEndpoint) {
-      return {
-        success: false,
-        error: 'No API endpoints configured. Please add an endpoint in the extension options.'
-      };
-    }
-
-    const requestContext = buildContext({ streamUrl, pageUrl, pageTitle });
-
-    // Template interpolation for URL
-    try {
-      finalUrl = applyTemplate(selectedEndpoint.endpointTemplate, requestContext);
-    } catch (templateError: any) {
-      return {
-        success: false,
-        error: `Interpolation error in endpoint "${selectedEndpoint.name}": ${templateError?.message ?? 'Invalid placeholder'}. Check endpoint template and placeholders.`
-      };
-    }
-
-    // Validate URL format
-    try {
-      new URL(finalUrl);
-    } catch {
-      return {
-        success: false,
-        error: `Invalid URL after interpolation: ${finalUrl}`
-      };
-    }
-
-    logger.info('apicall', `Opening URL in tab: ${selectedEndpoint.name}`, {
-      endpoint: selectedEndpoint.name,
-      url: finalUrl
-    });
-
-    // Reuse existing tab with same URL or create new one
-    const existingTabs = await browser.tabs.query({ url: finalUrl });
-    if (existingTabs.length > 0 && existingTabs[0].id) {
-      await browser.tabs.update(existingTabs[0].id, { active: true });
-    } else {
-      await browser.tabs.create({ url: finalUrl, active: true });
-    }
-
-    return {
-      success: true,
-      message: 'Opened URL in tab',
-      details: finalUrl
-    };
-  } catch (error: any) {
-    logger.error('apicall', `Failed to open URL: ${error?.message ?? 'Unknown error'}`, {
-      endpoint: selectedEndpoint?.name,
-      url: finalUrl,
-      error
-    });
-
-    return {
-      success: false,
-      error: error?.message ?? 'Unknown error'
-    };
-  }
-}
-
-/**
- * Call API endpoint with stream information using fetch
- * Handles template interpolation, headers, cookies, and HTTP methods (GET/POST/etc)
- * Returns success/error result with detailed error messages
- */
-export async function callEndpointAPI({
-  streamUrl,
-  pageUrl,
-  pageTitle,
-  endpointName,
-  tabHeaders,
-  logger
-}: {
-  streamUrl: string;
-  pageUrl?: string;
-  pageTitle?: string;
-  endpointName?: string;
-  tabHeaders?: Record<string, string>;
-  logger: Logger;
-}) {
-  let selectedEndpoint: ReturnType<typeof parseEndpoints>[0] | undefined;
-  let endpoint: string | undefined;
   let method: string | undefined;
 
   try {
-    const defaults = { apiEndpoints: '[]' } as const;
-    const config = (await browser.storage.sync.get(defaults)) as typeof defaults;
-
-    let endpoints: ReturnType<typeof parseEndpoints>;
-    try {
-      endpoints = parseEndpoints(config.apiEndpoints);
-    } catch (parseError: any) {
-      return {
-        success: false,
-        error: `Failed to parse API endpoints: ${parseError?.message ?? 'Unknown error'}`
-      };
+    // Use provided endpoints or load from storage
+    let endpoints: ApiEndpoint[];
+    if (apiEndpoints) {
+      endpoints = apiEndpoints;
+    } else {
+      const defaults = { apiEndpoints: '[]' } as const;
+      const config = (await browser.storage.sync.get(defaults)) as typeof defaults;
+      try {
+        endpoints = parseEndpoints(config.apiEndpoints);
+      } catch (parseError: any) {
+        return {
+          success: false,
+          error: `Failed to parse API endpoints: ${parseError?.message ?? 'Unknown error'}`
+        };
+      }
     }
 
     selectedEndpoint = endpointName ? endpoints.find((e) => e.name === endpointName) : endpoints[0];
@@ -402,13 +318,15 @@ export async function callEndpointAPI({
 
     const requestContext = buildContext({ streamUrl, pageUrl, pageTitle });
 
-    // Separate template error handling for actionable error messages
-    let bodyJson: string;
+    // Template interpolation
+    let bodyJson: string | undefined;
     try {
-      endpoint = applyTemplate(selectedEndpoint.endpointTemplate, requestContext);
-      bodyJson = selectedEndpoint.bodyTemplate
-        ? applyTemplate(selectedEndpoint.bodyTemplate, requestContext)
-        : JSON.stringify(requestContext);
+      finalUrl = applyTemplate(selectedEndpoint.endpointTemplate, requestContext);
+      if (mode === 'fetch') {
+        bodyJson = selectedEndpoint.bodyTemplate
+          ? applyTemplate(selectedEndpoint.bodyTemplate, requestContext)
+          : JSON.stringify(requestContext);
+      }
     } catch (templateError: any) {
       return {
         success: false,
@@ -416,6 +334,39 @@ export async function callEndpointAPI({
       };
     }
 
+    // Mode: open in tab
+    if (mode === 'tab') {
+      // Validate URL format
+      try {
+        new URL(finalUrl);
+      } catch {
+        return {
+          success: false,
+          error: `Invalid URL after interpolation: ${finalUrl}`
+        };
+      }
+
+      logger.info('apicall', `Opening URL in tab: ${selectedEndpoint.name}`, {
+        endpoint: selectedEndpoint.name,
+        url: finalUrl
+      });
+
+      // Reuse existing tab with same URL or create new one
+      const existingTabs = await browser.tabs.query({ url: finalUrl });
+      if (existingTabs.length > 0 && existingTabs[0].id) {
+        await browser.tabs.update(existingTabs[0].id, { active: true });
+      } else {
+        await browser.tabs.create({ url: finalUrl, active: true });
+      }
+
+      return {
+        success: true,
+        message: 'Opened URL in tab',
+        details: finalUrl
+      };
+    }
+
+    // Mode: fetch (HTTP request)
     method = (selectedEndpoint.method || 'POST').toUpperCase();
 
     let headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -457,12 +408,12 @@ export async function callEndpointAPI({
     logger.info('apicall', `API Request: ${method} ${selectedEndpoint.name}`, {
       endpoint: selectedEndpoint.name,
       method,
-      url: endpoint,
+      url: finalUrl,
       headers,
       body: fetchOptions.body ? fetchOptions.body.substring(0, 200) + (fetchOptions.body.length > 200 ? '...' : '') : '(none - GET/HEAD)'
     });
 
-    const response = await fetch(endpoint, fetchOptions);
+    const response = await fetch(finalUrl, fetchOptions);
 
     if (!response.ok) {
       let errorDetail = response.statusText;
@@ -498,15 +449,17 @@ export async function callEndpointAPI({
       response: result
     };
   } catch (error: any) {
-    logger.error('apicall', `API call failed: ${error?.message ?? 'Unknown error'}`, {
+    const action = mode === 'tab' ? 'open URL' : 'API call';
+    logger.error('apicall', `${action} failed: ${error?.message ?? 'Unknown error'}`, {
       endpoint: selectedEndpoint?.name,
-      url: endpoint,
+      url: finalUrl,
       method,
+      mode,
       error
     });
 
     let errorMsg = error?.message ?? 'Unknown error';
-    if (errorMsg.includes('NetworkError') || errorMsg.includes('fetch')) {
+    if (mode === 'fetch' && (errorMsg.includes('NetworkError') || errorMsg.includes('fetch'))) {
       errorMsg += ` (Check: 1) Server is reachable, 2) CORS/host permissions, 3) HTTP vs HTTPS)`;
     }
 

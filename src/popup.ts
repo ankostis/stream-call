@@ -3,7 +3,7 @@
  */
 export {};
 
-import { parseEndpoints, type ApiEndpoint, applyTemplate, callEndpointAPI, openEndpointInTab } from './endpoint';
+import { parseEndpoints, type ApiEndpoint, applyTemplate, callEndpoint } from './endpoint';
 import { Logger, StatusBar, LogLevel } from './logger';
 import { createStatusRenderer, createLogAppender, applyLogFiltering } from './logging-ui';
 
@@ -267,12 +267,12 @@ function populatePanel(stream: StreamInfo, index: number, allStreams: StreamInfo
   const callBtn = document.createElement('button');
   callBtn.className = 'btn-primary';
   callBtn.textContent = '📤 Call';
-  callBtn.addEventListener('click', () => handleCallAPI(stream, endpointName));
+  callBtn.addEventListener('click', () => handleCallEndpoint('fetch', stream, endpointName));
 
   const openTabBtn = document.createElement('button');
-  openTabBtn.className = 'btn-primary';
+  openTabBtn.className = 'btn-secondary';
   openTabBtn.textContent = '🌐 Open tab';
-  openTabBtn.addEventListener('click', () => handleOpenInTab(stream, endpointName));
+  openTabBtn.addEventListener('click', () => handleCallEndpoint('tab', stream, endpointName));
 
   // Append buttons directly - CSS flexbox with wrap handles 2-row layout
   panelActions.appendChild(previewBtn);
@@ -313,9 +313,9 @@ function handlePreview(stream: StreamInfo, endpointName?: string) {
 }
 
 /**
- * Handle open in tab
+ * Handle endpoint action (call API or open in tab)
  */
-async function handleOpenInTab(stream: StreamInfo, endpointName?: string) {
+async function handleCallEndpoint(mode: 'fetch' | 'tab', stream: StreamInfo, endpointName?: string) {
   const config = await browser.storage.sync.get(['apiEndpoints']);
   let endpoints: ReturnType<typeof parseEndpoints>;
   try {
@@ -334,10 +334,12 @@ async function handleOpenInTab(stream: StreamInfo, endpointName?: string) {
     return;
   }
 
-  statusBar.flash(LogLevel.Info, 'apicall', 3000, `Opening in tab: ${endpointName || 'default'} → ${stream.url}`);
+  const action = mode === 'fetch' ? 'Calling API' : 'Opening in tab';
+  statusBar.flash(LogLevel.Info, 'apicall', 3000, `${action}: ${endpointName || 'default'} → ${stream.url}`);
 
   // Direct call (popup runs in extension context)
-  const response = await openEndpointInTab({
+  const response = await callEndpoint({
+    mode,
     streamUrl: stream.url,
     pageUrl: stream.pageUrl,
     pageTitle: stream.pageTitle,
@@ -346,53 +348,12 @@ async function handleOpenInTab(stream: StreamInfo, endpointName?: string) {
   });
 
   if (response?.success) {
-    statusBar.flash(LogLevel.Info, 'apicall', 3000, `✅ Opened in new tab: ${response.details || stream.url}`);
+    const successMsg = mode === 'fetch' ? `✅ API call successful: ${response.message}` : `✅ Opened in new tab: ${response.details || stream.url}`;
+    statusBar.flash(LogLevel.Info, 'apicall', 3000, successMsg);
   } else {
     const errorMsg = response?.error ?? 'Unknown error';
-    statusBar.post(LogLevel.Error, 'apicall', `❌ Failed to open URL: ${errorMsg}`, response);
-  }
-}
-
-/**
- * Handle API call (fetch with POST/headers)
- */
-async function handleCallAPI(stream: StreamInfo, endpointName?: string) {
-  const config = await browser.storage.sync.get(['apiEndpoints']);
-  let endpoints: ReturnType<typeof parseEndpoints>;
-  try {
-    endpoints = parseEndpoints(config.apiEndpoints || '[]');
-  } catch (parseError: any) {
-    // Parse error is a known configuration issue
-    statusBar.post(LogLevel.Error, 'endpoint', 'Invalid endpoint configuration. Check options.', parseError);
-    return;
-  }
-
-  if (endpoints.length === 0) {
-    statusBar.post(LogLevel.Warn, 'endpoint', 'Please configure API endpoints in options first');
-    setTimeout(async () => {
-      const optionsUrl = browser.runtime.getURL('dist/options.html');
-      await openOrSwitchToTab(optionsUrl);
-    }, 2000);
-    return;
-  }
-
-  // statusBar.flash handles logging internally
-  statusBar.flash(LogLevel.Info, 'apicall', 3000, `Calling API: ${endpointName || 'default'} → ${stream.url}`);
-
-  // Direct call (popup runs in extension context)
-  const response = await callEndpointAPI({
-    streamUrl: stream.url,
-    pageUrl: stream.pageUrl,
-    pageTitle: stream.pageTitle,
-    endpointName,
-    logger
-  });
-
-  if (response?.success) {
-    statusBar.flash(LogLevel.Info, 'apicall', 3000, `✅ API call successful: ${response.message}`);
-  } else {
-    const errorMsg = response?.error ?? 'Unknown error';
-    statusBar.post(LogLevel.Error, 'apicall', `❌ API call failed: ${errorMsg}`, response);
+    const failMsg = mode === 'fetch' ? `❌ API call failed: ${errorMsg}` : `❌ Failed to open URL: ${errorMsg}`;
+    statusBar.post(LogLevel.Error, 'apicall', failMsg, response);
   }
 }
 

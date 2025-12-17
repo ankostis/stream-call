@@ -5,7 +5,7 @@ export {};
 
 import { Logger, LogLevel, StatusBar } from './logger';
 import { createLogAppender, createStatusRenderer, applyLogFiltering } from './logging-ui';
-import { applyTemplate, ApiEndpoint, suggestEndpointName, validateEndpoints, DEFAULT_CONFIG, getBuiltInEndpoints, callEndpointAPI, openEndpointInTab } from './endpoint';
+import { applyTemplate, ApiEndpoint, suggestEndpointName, validateEndpoints, DEFAULT_CONFIG, getBuiltInEndpoints, callEndpoint } from './endpoint';
 
 type Config = typeof DEFAULT_CONFIG;
 
@@ -438,8 +438,11 @@ function previewEndpoint() {
   }
 }
 
-async function openInTab() {
-  // Get current form endpoint or first in list
+/**
+ * Handle endpoint action with test data (call API or open in tab)
+ */
+async function handleCallEndpoint(mode: 'fetch' | 'tab') {
+  // Get current form endpoint
   const candidate = buildEndpointFromForm();
   if (!candidate) {
     statusBar.post(LogLevel.Error, 'endpoint', 'Invalid endpoint configuration');
@@ -450,61 +453,28 @@ async function openInTab() {
   const pageUrl = 'https://example.com/test-page';
   const pageTitle = 'Test Page - stream-call';
 
-  statusBar.post(LogLevel.Info, 'apicall', `Opening in tab: ${candidate.name} → ${testUrl}`);
-  logger.info('apicall', `Opening in tab: ${candidate.name}`, { endpoint: candidate });
+  const action = mode === 'fetch' ? 'Validating endpoint' : 'Opening in tab';
+  statusBar.post(LogLevel.Info, 'apicall', `${action}: ${candidate.name} → ${testUrl}`);
+  logger.info('apicall', `${action}: ${candidate.name}`, { endpoint: candidate });
 
   // Direct call (options runs in extension context)
-  const response = await openEndpointInTab({
+  const response = await callEndpoint({
+    mode,
     streamUrl: testUrl,
     pageUrl,
     pageTitle,
-    endpointName: candidate.name,
-    logger
-  });
-
-  if (response?.success) {
-    statusBar.flash(LogLevel.Info, 'apicall', 3000, `✅ Opened in new tab: ${response.details || testUrl}`);
-    logger.info('apicall', `Opened in tab successfully: ${candidate.name}`, { response });
-  } else {
-    const errorMsg = response?.error ?? 'Unknown error';
-    statusBar.post(LogLevel.Error, 'apicall', `Failed to open in tab: ${errorMsg}`);
-    logger.error('apicall', `Failed to open in tab: ${candidate.name}`, { error: errorMsg });
-  }
-}
-
-async function testAPI() {
-  // Get current form endpoint or first in list
-  const candidate = buildEndpointFromForm();
-  if (!candidate) {
-    statusBar.post(LogLevel.Error, 'endpoint', 'Invalid endpoint configuration');
-    return;
-  }
-
-  const context = {
-    streamUrl: 'https://example.com/test-stream.m3u8',
-    timestamp: Date.now(),
-    pageUrl: 'https://example.com/test-page',
-    pageTitle: 'Test Page - stream-call'
-  } as Record<string, unknown>;
-
-  statusBar.post(LogLevel.Info, 'apicall', `Validating endpoint "${candidate.name}"...`);
-  logger.info('apicall', `Validating endpoint: ${candidate.name}`, { endpoint: candidate });
-
-  const result = await callEndpointAPI({
-    streamUrl: context.streamUrl as string,
-    pageUrl: context.pageUrl as string,
-    pageTitle: context.pageTitle as string,
     endpointName: candidate.name,
     apiEndpoints: [candidate],
     logger
   });
 
-  if (result.success) {
-    statusBar.flash(LogLevel.Info, 'apicall', 5000, `✅ Success: ${result.message}`);
-    logger.info('apicall', `Validation successful: ${candidate.name}`, { response: result.response });
+  if (response.success) {
+    const successMsg = mode === 'fetch' ? `✅ Success: ${response.message}` : `✅ Opened in new tab: ${response.details || testUrl}`;
+    statusBar.flash(LogLevel.Info, 'apicall', 3000, successMsg);
+    logger.info('apicall', `${action} successful: ${candidate.name}`, { response: mode === 'fetch' ? response.response : response.details });
   } else {
-    statusBar.post(LogLevel.Error, 'apicall', `❌ Failed: ${result.error}`);
-    logger.error('apicall', `Validation failed: ${candidate.name}`, { error: result.error });
+    statusBar.post(LogLevel.Error, 'apicall', `❌ Failed: ${response.error}`);
+    logger.error('apicall', `${action} failed: ${candidate.name}`, { error: response.error });
   }
 }
 
@@ -728,8 +698,8 @@ function wireEvents() {
   document.getElementById('clear-edit-btn')?.addEventListener('click', closeEditor);
   document.getElementById('preview-btn')?.addEventListener('click', previewEndpoint);
   document.getElementById('add-header-row')?.addEventListener('click', () => addHeaderRow());
-  document.getElementById('call-btn')?.addEventListener('click', testAPI);
-  document.getElementById('open-tab-btn')?.addEventListener('click', openInTab);
+  document.getElementById('call-btn')?.addEventListener('click', () => handleCallEndpoint('fetch'));
+  document.getElementById('open-tab-btn')?.addEventListener('click', () => handleCallEndpoint('tab'));
   document.getElementById('reset-btn')?.addEventListener('click', resetBuiltIns);
   document.getElementById('clear-all-btn')?.addEventListener('click', clearAllEndpoints);
   document.getElementById('export-btn')?.addEventListener('click', exportEndpoints);

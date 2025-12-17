@@ -6,7 +6,7 @@
  */
 export {};
 
-import { callEndpointAPI, openEndpointInTab, DEFAULT_CONFIG } from './endpoint';
+import { callEndpoint, DEFAULT_CONFIG } from './endpoint';
 import { Logger, LogLevel } from './logger';
 
 const logger = new Logger();
@@ -111,7 +111,8 @@ browser.runtime.onMessage.addListener((message: RuntimeMessage, sender) => {
     if (message.type === 'OPEN_IN_TAB') {
       // Message handler for page/hover-panel contexts (popup/options call directly)
       logger.info('messaging', `OPEN_IN_TAB: endpoint=${message.endpointName || 'default'}, url=${message.streamUrl}`);
-      return openEndpointInTab({
+      return callEndpoint({
+        mode: 'tab',
         streamUrl: message.streamUrl,
         pageUrl: message.pageUrl,
         pageTitle: message.pageTitle,
@@ -127,7 +128,8 @@ browser.runtime.onMessage.addListener((message: RuntimeMessage, sender) => {
       const pageHeaders = activeTab?.id !== undefined ? tabHeaders.get(activeTab.id) : undefined;
 
       logger.info('messaging', `CALL_API: endpoint=${message.endpointName || 'default'}, url=${message.streamUrl}`);
-      return callEndpointAPI({
+      return callEndpoint({
+        mode: 'fetch',
         streamUrl: message.streamUrl,
         pageUrl: message.pageUrl,
         pageTitle: message.pageTitle,
