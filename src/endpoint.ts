@@ -136,6 +136,23 @@ export function generatePreview(
 }
 
 /**
+ * Preview an API endpoint call and log the formatted request details.
+ * Unified function used by popup and options panels.
+ */
+export function previewCall(
+  endpoint: ApiEndpoint,
+  context: Record<string, unknown>,
+  logger: { info: (slot: string, message: string, ...args: unknown[]) => void }
+): void {
+  try {
+    const preview = generatePreview(endpoint, context, applyTemplate);
+    logger.info('endpoint', preview, { endpoint, context });
+  } catch (error: any) {
+    logger.info('endpoint', `Interpolation error: ${error?.message ?? 'Invalid placeholder'}`, error);
+  }
+}
+
+/**
  * Validate and normalize raw JSON string into formatted array
  * Returns validation result with parsed endpoints, formatted JSON, and error message if invalid
  */

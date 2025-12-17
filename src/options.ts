@@ -5,7 +5,7 @@ export {};
 
 import { Logger, LogLevel, StatusBar } from './logger';
 import { createLogAppender, createStatusRenderer, applyLogFiltering } from './logging-ui';
-import { applyTemplate, ApiEndpoint, suggestEndpointName, validateEndpoints, DEFAULT_CONFIG, getBuiltInEndpoints, callEndpoint } from './endpoint';
+import { ApiEndpoint, suggestEndpointName, validateEndpoints, DEFAULT_CONFIG, getBuiltInEndpoints, callEndpoint, previewCall } from './endpoint';
 
 type Config = typeof DEFAULT_CONFIG;
 
@@ -31,7 +31,6 @@ const els = {
   includeCookies: () => document.getElementById('endpoint-include-cookies') as HTMLInputElement,
   includeHeaders: () => document.getElementById('endpoint-include-headers') as HTMLInputElement,
   headersRows: () => document.getElementById('headers-rows') as HTMLDivElement,
-  preview: () => document.getElementById('preview') as HTMLDivElement,
   logViewer: () => document.getElementById('log-viewer') as HTMLDivElement,
   logClear: () => document.getElementById('log-clear') as HTMLButtonElement,
   logExport: () => document.getElementById('log-export') as HTMLButtonElement,
@@ -415,7 +414,7 @@ function deleteEndpoint(index: number) {
     });
 }
 
-function previewEndpoint() {
+function handlePreview() {
   const candidate = buildEndpointFromForm();
   if (!candidate) return;
 
@@ -426,16 +425,8 @@ function previewEndpoint() {
     pageTitle: 'Example page'
   } as Record<string, unknown>;
 
-  try {
-    const { generatePreview } = require('./endpoint');
-    const preview = generatePreview(candidate, context, applyTemplate);
-
-    els.preview().textContent = preview;
-    statusBar.flash(LogLevel.Info, 'stat', 2000, 'Preview generated');
-  } catch (error: any) {
-    statusBar.post(LogLevel.Error, 'interpolation', `Interpolation error: ${error?.message ?? 'Invalid placeholder'}`, error);
-    els.preview().textContent = `Error: ${error?.message ?? 'Invalid placeholder'}`;
-  }
+  statusBar.flash(LogLevel.Info, 'options', 2000, 'Generating preview:');
+  previewCall(candidate, context, logger);
 }
 
 /**
@@ -696,7 +687,7 @@ function wireEvents() {
   document.getElementById('save-endpoint-btn')?.addEventListener('click', saveEndpoint);
   document.getElementById('save-new-btn')?.addEventListener('click', saveAsNew);
   document.getElementById('clear-edit-btn')?.addEventListener('click', closeEditor);
-  document.getElementById('preview-btn')?.addEventListener('click', previewEndpoint);
+  document.getElementById('preview-btn')?.addEventListener('click', handlePreview);
   document.getElementById('add-header-row')?.addEventListener('click', () => addHeaderRow());
   document.getElementById('call-btn')?.addEventListener('click', () => handleCallEndpoint('fetch'));
   document.getElementById('open-tab-btn')?.addEventListener('click', () => handleCallEndpoint('tab'));

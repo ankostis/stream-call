@@ -3,7 +3,7 @@
  */
 export {};
 
-import { parseEndpoints, type ApiEndpoint, applyTemplate, callEndpoint } from './endpoint';
+import { parseEndpoints, type ApiEndpoint, previewCall, callEndpoint } from './endpoint';
 import { Logger, StatusBar, LogLevel } from './logger';
 import { createStatusRenderer, createLogAppender, applyLogFiltering } from './logging-ui';
 
@@ -300,16 +300,8 @@ function handlePreview(stream: StreamInfo, endpointName?: string) {
     pageTitle: stream.pageTitle
   } as Record<string, unknown>;
 
-  try {
-    const { generatePreview } = require('./endpoint');
-    const preview = generatePreview(endpoint, context, applyTemplate);
-
-    logger.info('preview', preview);
-    statusBar.flash(LogLevel.Info, 'preview', 2000, 'Preview generated');
-  } catch (error: any) {
-    logger.error('preview', `Preview error: ${error?.message}`, error);
-    statusBar.post(LogLevel.Error, 'preview', `Preview error: ${error?.message}`);
-  }
+  statusBar.flash(LogLevel.Info, 'popup', 2000, 'Generating preview:');
+  previewCall(endpoint, context, logger);
 }
 
 /**
