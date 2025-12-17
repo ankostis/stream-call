@@ -4,8 +4,9 @@
 export {};
 
 import { parseEndpoints, type ApiEndpoint, previewCall, callEndpoint } from './endpoint';
-import { Logger, StatusBar, LogLevel } from './logger';
-import { createStatusRenderer, createLogAppender, applyLogFiltering } from './logging-ui';
+import { LogLevel } from './logger';
+import { applyLogFiltering } from './logging-ui';
+import { initLogging, createButton, type ButtonConfig } from './components-ui';
 
 type StreamInfo = {
   url: string;
@@ -21,14 +22,10 @@ let apiEndpoints: ApiEndpoint[] = [];
 // Cache endpoints in memory for the popup's lifetime to avoid repeated storage reads
 let endpointsCached = false;
 
-// Logging utilities
-const logger = new Logger();
-const statusBar = new StatusBar();
-statusBar.setLogger(logger);
-
-// UI rendering will be set up in initialize() after DOM is ready
-let renderStatus: ReturnType<typeof createStatusRenderer>;
-let appendLog: ReturnType<typeof createLogAppender>;
+// Logging utilities (initialized in initialize() after DOM ready)
+let logger: ReturnType<typeof initLogging>['logger'];
+let statusBar: ReturnType<typeof initLogging>['statusBar'];
+let appendLog: ReturnType<typeof initLogging>['appendLog'];
 
 /**
  * Open URL in tab, reusing existing tab if found
@@ -51,29 +48,20 @@ async function initialize() {
 
   currentTabId = tabs[0].id ?? null;
 
-  // Setup UI rendering with actual DOM elements (now available)
-  const statusBarEl = document.getElementById('status-bar') as HTMLDivElement;
-  const statusIconEl = document.getElementById('status-icon') as HTMLSpanElement;
-  const statusMsgEl = document.getElementById('status-message') as HTMLSpanElement;
-  const logViewerEl = document.getElementById('log-viewer') as HTMLDivElement;
-
-  // Wire status bar rendering
-  renderStatus = createStatusRenderer({
-    bar: statusBarEl,
-    icon: statusIconEl,
-    message: statusMsgEl
+  // Initialize logging infrastructure
+  const logging = initLogging({
+    statusBar: document.getElementById('status-bar') as HTMLDivElement,
+    statusIcon: document.getElementById('status-icon') as HTMLSpanElement,
+    statusMsg: document.getElementById('status-message') as HTMLSpanElement,
+    logViewer: document.getElementById('log-viewer') as HTMLDivElement
   });
-  statusBar.subscribe((current) => renderStatus(current ? { level: current.level, message: current.message } : null));
-
-  // Wire log appending
-  appendLog = createLogAppender(logViewerEl);
-  logger.subscribe((entries) => {
-    entries.slice(-1).forEach((e) => appendLog(e.level, e.category as any, e.message));
-  });
+  logger = logging.logger;
+  statusBar = logging.statusBar;
+  appendLog = logging.appendLog;
 
   // Wire log filtering (always visible)
   const levelCheckboxes = document.querySelectorAll('.log-level-filter') as NodeListOf<HTMLInputElement>;
-  applyLogFiltering(logViewerEl, levelCheckboxes);
+  applyLogFiltering(document.getElementById('log-viewer') as HTMLDivElement, levelCheckboxes);
 
   // Load data
   await loadEndpoints();
@@ -254,25 +242,29 @@ function populatePanel(stream: StreamInfo, index: number, allStreams: StreamInfo
     panelActions.appendChild(select);
   }
 
-  const previewBtn = document.createElement('button');
-  previewBtn.className = 'btn-test';
-  previewBtn.textContent = '👁 Preview';
-  previewBtn.addEventListener('click', () => handlePreview(stream, endpointName));
+  const previewBtn = createButton({
+    className: 'btn-test',
+    text: '👁 Preview',
+    onClick: () => handlePreview(stream, endpointName)
+  });
 
-  const copyBtn = document.createElement('button');
-  copyBtn.className = 'btn-secondary';
-  copyBtn.textContent = '📋 Copy';
-  copyBtn.addEventListener('click', () => handleCopyUrl(stream.url));
+  const copyBtn = createButton({
+    className: 'btn-secondary',
+    text: '📋 Copy',
+    onClick: () => handleCopyUrl(stream.url)
+  });
 
-  const callBtn = document.createElement('button');
-  callBtn.className = 'btn-action';
-  callBtn.textContent = '📤 Call';
-  callBtn.addEventListener('click', () => handleCallEndpoint('fetch', stream, endpointName));
+  const callBtn = createButton({
+    className: 'btn-action',
+    text: '📤 Call',
+    onClick: () => handleCallEndpoint('fetch', stream, endpointName)
+  });
 
-  const openTabBtn = document.createElement('button');
-  openTabBtn.className = 'btn-action';
-  openTabBtn.textContent = '🌐 Open tab';
-  openTabBtn.addEventListener('click', () => handleCallEndpoint('tab', stream, endpointName));
+  const openTabBtn = createButton({
+    className: 'btn-action',
+    text: '🌐 Open tab',
+    onClick: () => handleCallEndpoint('tab', stream, endpointName)
+  });
 
   // Append buttons directly - CSS flexbox with wrap handles 2-row layout
   panelActions.appendChild(previewBtn);

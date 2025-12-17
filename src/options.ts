@@ -3,8 +3,9 @@
  */
 export {};
 
-import { Logger, LogLevel, StatusBar } from './logger';
-import { createLogAppender, createStatusRenderer, applyLogFiltering } from './logging-ui';
+import { LogLevel } from './logger';
+import { applyLogFiltering } from './logging-ui';
+import { initLogging } from './components-ui';
 import { ApiEndpoint, suggestEndpointName, validateEndpoints, DEFAULT_CONFIG, getBuiltInEndpoints, callEndpoint, previewCall } from './endpoint';
 
 type Config = typeof DEFAULT_CONFIG;
@@ -38,23 +39,16 @@ const els = {
   aboutVersion: () => document.getElementById('about-version') as HTMLElement
 };
 
-// Logging utilities
-const logger = new Logger();
-const statusBar = new StatusBar();
-statusBar.setLogger(logger);
-
-// UI helpers
-const renderStatus = createStatusRenderer({
-  bar: els.statusBar(),
-  icon: els.statusIcon(),
-  message: els.statusMsg()
+// Initialize logging infrastructure
+const logging = initLogging({
+  statusBar: els.statusBar(),
+  statusIcon: els.statusIcon(),
+  statusMsg: els.statusMsg(),
+  logViewer: els.logViewer()
 });
-statusBar.subscribe((current) => renderStatus(current ? { level: current.level, message: current.message } : null));
-
-const appendLog = createLogAppender(els.logViewer());
-logger.subscribe((entries) => {
-  entries.slice(-1).forEach((e) => appendLog(e.level, e.category as any, e.message));
-});
+const logger = logging.logger;
+const statusBar = logging.statusBar;
+const appendLog = logging.appendLog;
 
 // Remove showAlert indirection: callers should use statusBar/logger directly.
 
