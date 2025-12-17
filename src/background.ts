@@ -109,6 +109,7 @@ browser.runtime.onMessage.addListener((message: RuntimeMessage, sender) => {
     }
 
     if (message.type === 'OPEN_IN_TAB') {
+      // Message handler for page/hover-panel contexts (popup/options call directly)
       logger.info('messaging', `OPEN_IN_TAB: endpoint=${message.endpointName || 'default'}, url=${message.streamUrl}`);
       return openEndpointInTab({
         streamUrl: message.streamUrl,
@@ -120,6 +121,7 @@ browser.runtime.onMessage.addListener((message: RuntimeMessage, sender) => {
     }
 
     if (message.type === 'CALL_API') {
+      // Message handler for page/hover-panel contexts (popup/options call directly)
       // Get page headers for current tab if available
       const [activeTab] = await browser.tabs.query({ active: true, currentWindow: true });
       const pageHeaders = activeTab?.id !== undefined ? tabHeaders.get(activeTab.id) : undefined;

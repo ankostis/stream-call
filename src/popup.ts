@@ -3,7 +3,7 @@
  */
 export {};
 
-import { parseEndpoints, type ApiEndpoint, applyTemplate } from './endpoint';
+import { parseEndpoints, type ApiEndpoint, applyTemplate, callEndpointAPI, openEndpointInTab } from './endpoint';
 import { Logger, StatusBar, LogLevel } from './logger';
 import { createStatusRenderer, createLogAppender, applyLogFiltering } from './logging-ui';
 
@@ -336,19 +336,14 @@ async function handleOpenInTab(stream: StreamInfo, endpointName?: string) {
 
   statusBar.flash(LogLevel.Info, 'apicall', 3000, `Opening in tab: ${endpointName || 'default'} → ${stream.url}`);
 
-  let response;
-  try {
-    response = await browser.runtime.sendMessage({
-      type: 'OPEN_IN_TAB',
-      streamUrl: stream.url,
-      pageUrl: stream.pageUrl,
-      pageTitle: stream.pageTitle,
-      endpointName
-    });
-  } catch (error) {
-    statusBar.post(LogLevel.Error, 'apicall', 'Failed to open in tab', error);
-    return;
-  }
+  // Direct call (popup runs in extension context)
+  const response = await openEndpointInTab({
+    streamUrl: stream.url,
+    pageUrl: stream.pageUrl,
+    pageTitle: stream.pageTitle,
+    endpointName,
+    logger
+  });
 
   if (response?.success) {
     statusBar.flash(LogLevel.Info, 'apicall', 3000, `✅ Opened in new tab: ${response.details || stream.url}`);
@@ -384,20 +379,14 @@ async function handleCallAPI(stream: StreamInfo, endpointName?: string) {
   // statusBar.flash handles logging internally
   statusBar.flash(LogLevel.Info, 'apicall', 3000, `Calling API: ${endpointName || 'default'} → ${stream.url}`);
 
-  let response;
-  try {
-    response = await browser.runtime.sendMessage({
-      type: 'CALL_API',
-      streamUrl: stream.url,
-      pageUrl: stream.pageUrl,
-      pageTitle: stream.pageTitle,
-      endpointName
-    });
-  } catch (error) {
-    // Message passing error - log and display
-    statusBar.post(LogLevel.Error, 'apicall', 'Failed to send API request', error);
-    return;
-  }
+  // Direct call (popup runs in extension context)
+  const response = await callEndpointAPI({
+    streamUrl: stream.url,
+    pageUrl: stream.pageUrl,
+    pageTitle: stream.pageTitle,
+    endpointName,
+    logger
+  });
 
   if (response?.success) {
     statusBar.flash(LogLevel.Info, 'apicall', 3000, `✅ API call successful: ${response.message}`);

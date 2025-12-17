@@ -192,7 +192,7 @@ The extension architecture revolves around six core concepts that work together 
 | **API Endpoints** | User-configured HTTP targets | `storage.sync.apiEndpoints`, `config.ts` | • Webhooks/APIs for detected streams<br>• Support templating<br>• Fully customizable |
 | **Interpolation Templates** | Placeholder strings | Endpoint/body templates | • Dynamic value insertion<br>• `{{streamUrl}}`, `{{pageUrl}}`, `{{pageTitle}}`, `{{timestamp}}` |
 | **Execution Contexts** | Isolated JavaScript environments | Page context vs Extension context | • Content script runs in page context<br>• Background/popup run in extension context<br>• Cannot share variables/functions<br>• Communication only via messages |
-| **Runtime Messages** | Cross-component IPC | `RuntimeMessage` type | • `STREAM_DETECTED`, `GET_STREAMS`<br>• `CALL_API`, `PING`, `CLEAR_STREAMS` |
+| **Runtime Messages** | Cross-component IPC | `RuntimeMessage` type | • `STREAM_DETECTED` (page→bg), `GET_STREAMS` (popup→bg)<br>• `CALL_API` (hover→bg), `OPEN_IN_TAB` (hover→bg), `PING` |
 
 ### 1. Detection Patterns
 - **What**: Regular expression patterns (`STREAM_PATTERNS`) that match known streaming media URLs
@@ -251,9 +251,8 @@ The extension architecture revolves around six core concepts that work together 
 - **Message Types**:
   - `STREAM_DETECTED` (content → background): Reports newly detected stream URL with type
   - `GET_STREAMS` (popup → background): Requests all streams for current tab
-  - `CALL_API` (popup → background): Triggers API call with stream data to configured endpoint
+  - `CALL_API` (hover-panel → background): Triggers API call with stream data (popup/options call directly)
   - `PING` (popup → background): Health check to verify background worker is alive
-  - `CLEAR_STREAMS` (popup → background): Clears stored streams for a tab
 
 ### Message Flow
 
@@ -289,9 +288,9 @@ The extension uses a message-driven architecture via `browser.runtime.sendMessag
 
 - `STREAM_DETECTED` (content → background): Reports a newly detected stream URL with its type
 - `GET_STREAMS` (popup → background): Requests all streams for the current tab
-- `CALL_API` (popup → background): Triggers an API call with stream data to a configured endpoint
+- `CALL_API` (hover-panel → background): Triggers API call from page context (popup/options call `callEndpointAPI()` directly)
+- `OPEN_IN_TAB` (hover-panel → background): Opens endpoint in new tab from page context (popup/options call `openEndpointInTab()` directly)
 - `PING` (popup → background): Health check to verify background worker is alive
-- `CLEAR_STREAMS` (popup → background): Clears stored streams for a tab
 
 
 ### Logging Categories
@@ -309,7 +308,7 @@ Both Logger (audit trail) and StatusBar (UI feedback) use unified categories:
 | popup    |  7 | Popup component operations (initialization/refresh/UI actions) |
 | page     |  6 | Page script operations (stream detection/player detection/UI injection) |
 | background | 6 | Background worker operations (stream management/tab lifecycle/initialization) |
-| messaging | 5 | Cross-component message passing (GET_STREAMS/CALL_API/PING) |
+| messaging | 5 | Cross-component message passing (page↔background via browser.runtime.sendMessage) |
 | stat     |  3 | General status/progress messages |
 | interpolation | 2 | Template placeholder interpolation |
 | clipboard | 2 | Clipboard copy operations |

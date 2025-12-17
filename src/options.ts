@@ -5,7 +5,7 @@ export {};
 
 import { Logger, LogLevel, StatusBar } from './logger';
 import { createLogAppender, createStatusRenderer, applyLogFiltering } from './logging-ui';
-import { applyTemplate, ApiEndpoint, suggestEndpointName, validateEndpoints, DEFAULT_CONFIG, getBuiltInEndpoints, callEndpointAPI } from './endpoint';
+import { applyTemplate, ApiEndpoint, suggestEndpointName, validateEndpoints, DEFAULT_CONFIG, getBuiltInEndpoints, callEndpointAPI, openEndpointInTab } from './endpoint';
 
 type Config = typeof DEFAULT_CONFIG;
 
@@ -453,20 +453,14 @@ async function openInTab() {
   statusBar.post(LogLevel.Info, 'apicall', `Opening in tab: ${candidate.name} → ${testUrl}`);
   logger.info('apicall', `Opening in tab: ${candidate.name}`, { endpoint: candidate });
 
-  let response;
-  try {
-    response = await browser.runtime.sendMessage({
-      type: 'OPEN_IN_TAB',
-      streamUrl: testUrl,
-      pageUrl,
-      pageTitle,
-      endpointName: candidate.name
-    });
-  } catch (error) {
-    statusBar.post(LogLevel.Error, 'apicall', 'Failed to open in tab', error);
-    logger.error('apicall', 'Failed to open in tab', error);
-    return;
-  }
+  // Direct call (options runs in extension context)
+  const response = await openEndpointInTab({
+    streamUrl: testUrl,
+    pageUrl,
+    pageTitle,
+    endpointName: candidate.name,
+    logger
+  });
 
   if (response?.success) {
     statusBar.flash(LogLevel.Info, 'apicall', 3000, `✅ Opened in new tab: ${response.details || testUrl}`);
