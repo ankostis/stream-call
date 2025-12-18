@@ -1,5 +1,5 @@
 /**
- * Unit tests for background.ts message handlers
+ * Unit tests for broker.ts message handlers
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -49,7 +49,7 @@ type RuntimeMessage =
   | { type: 'GET_STREAMS'; tabId: number }
   | { type: 'PING' };
 
-// Simulate the background script's message handler
+// Simulate the broker script's message handler
 // This is a simplified version for testing
 const tabStreams = new Map<number, StreamInfo[]>();
 
@@ -244,12 +244,12 @@ test('STREAM_DETECTED: captures page context', async () => {
  * This prevents the issue where message handlers exist but types are missing
  */
 test('RuntimeMessage type includes all handled message types', async () => {
-  // Read the background.ts source to extract handled types and declared types
+  // Read the broker.ts source to extract handled types and declared types
   const fs = await import('fs/promises');
   const path = await import('path');
 
-  const backgroundPath = path.join(process.cwd(), 'src', 'background.ts');
-  const content = await fs.readFile(backgroundPath, 'utf-8');
+  const brokerPath = path.join(process.cwd(), 'src', 'broker.ts');
+  const content = await fs.readFile(brokerPath, 'utf-8');
 
   // Extract handled message types from if statements
   const handledTypesRegex = /if \(message\.type === '([^']+)'\)/g;
@@ -293,8 +293,8 @@ test('No duplicate message type declarations in RuntimeMessage', async () => {
   const fs = await import('fs/promises');
   const path = await import('path');
 
-  const backgroundPath = path.join(process.cwd(), 'src', 'background.ts');
-  const content = await fs.readFile(backgroundPath, 'utf-8');
+  const brokerPath = path.join(process.cwd(), 'src', 'broker.ts');
+  const content = await fs.readFile(brokerPath, 'utf-8');
 
   // Extract all declared types
   const declaredTypesRegex = /\{\s*type:\s*'([^']+)'/g;

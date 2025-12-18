@@ -169,7 +169,7 @@ Expected response structure:
 
 ### View Extension Logs
 - **Content script:** F12 on webpage → Console
-- **Background script:** `about:debugging` → This Firefox → Inspect
+- **Broker script:** `about:debugging` → This Firefox → Inspect
 - **Popup:** F12 on popup window
 
 ### Common Issues
@@ -182,7 +182,7 @@ Expected response structure:
 **API call fails:**
 - Check network tab for request
 - Verify endpoint URL is correct
-- Check background script console for errors
+- Check broker script console for errors
 
 **Cookies/headers not sent:**
 - Verify checkboxes are enabled in endpoint config

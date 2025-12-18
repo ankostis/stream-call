@@ -1,6 +1,6 @@
 // Integration test runner: launches Firefox via web-ext, opens tests/test-page.html,
 // and asserts that the extension logs stream detections.
-// We rely on console output from content/background scripts containing keywords.
+// We rely on console output from content/broker scripts containing keywords.
 
 const { spawn } = require('node:child_process');
 const { resolve, join } = require('node:path');

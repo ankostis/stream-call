@@ -130,7 +130,7 @@ stream-call/
 ├── options.html              # Options page UI (copied to dist/)
 ├── hover-panel.html          # WIP in-page overlay UI (copied to dist/)
 ├── src/                      # TypeScript sources
-│   ├── background.ts         # Background service worker
+│   ├── broker.ts             # Broker service worker
 │   ├── page.ts               # Page script for stream detection
 │   ├── popup.ts              # Popup logic
 │   ├── options.ts            # Options page logic
@@ -187,10 +187,10 @@ The extension architecture revolves around six core concepts that work together 
 | Concept | 🎯 What | 📍 Where | 🔧 Purpose |
 |---------|---------|----------|------------|
 | **Detection Patterns** | Regex for stream URLs | `STREAM_PATTERNS` in `detect.ts` | • Match streaming media URLs<br>• Built-in, not user-configurable<br>• Tested via `content.test.ts` |
-| **Streams** | Detected URLs + metadata + classification | `StreamInfo` in `background.ts` | • Store detected media per tab<br>• Typed as HLS, DASH, MP3, RTMP, etc.<br>• Include page context + timestamp |
+| **Streams** | Detected URLs + metadata + classification | `StreamInfo` in `broker.ts` | • Store detected media per tab<br>• Typed as HLS, DASH, MP3, RTMP, etc.<br>• Include page context + timestamp |
 | **API Endpoints** | User-configured HTTP targets | `storage.sync.apiEndpoints`, `config.ts` | • Webhooks/APIs for detected streams<br>• Support templating<br>• Fully customizable |
 | **Interpolation Templates** | Placeholder strings | Endpoint/body templates | • Dynamic value insertion<br>• `{{streamUrl}}`, `{{pageUrl}}`, `{{pageTitle}}`, `{{timestamp}}` |
-| **Execution Contexts** | Isolated JavaScript environments | Page context vs Extension context | • Content script runs in page context<br>• Background/popup run in extension context<br>• Cannot share variables/functions<br>• Communication only via messages |
+| **Execution Contexts** | Isolated JavaScript environments | Page context vs Extension context | • Content script runs in page context<br>• Broker/popup run in extension context<br>• Cannot share variables/functions<br>• Communication only via messages |
 | **Runtime Messages** | Cross-component IPC | `RuntimeMessage` type | • `STREAM_DETECTED` (page→bg), `GET_STREAMS` (popup→bg)<br>• `CALL_API` (hover→bg), `OPEN_IN_TAB` (hover→bg), `PING` |
 
 ### 1. Detection Patterns
@@ -203,7 +203,7 @@ The extension architecture revolves around six core concepts that work together 
 
 ### 2. Streams
 - **What**: Detected media URLs with metadata (`StreamInfo`) and classification labels
-- **Where**: `StreamInfo` type in `src/background.ts`; `getStreamType()` in `src/detect.ts`
+- **Where**: `StreamInfo` type in `src/broker.ts`; `getStreamType()` in `src/detect.ts`
 - **Purpose**: Store detected streaming resources with type (HLS, DASH, HTTP Audio, RTMP, Icecast/Shoutcast), page context, and timestamp
 - **Examples**: `{ url: "https://example.com/live.m3u8", type: "HLS", pageUrl: "...", timestamp: 1234567890 }`
 
@@ -237,21 +237,21 @@ The extension architecture revolves around six core concepts that work together 
 - **What**: Isolated JavaScript environments where extension code runs
 - **Two contexts**:
   - **Page Context** (`page.ts`): Runs inside the webpage DOM, has access to page resources (images, media, scripts) but **isolated memory** from extension
-  - **Extension Context** (`background.ts`, `popup.ts`, `options.ts`): Runs in browser's extension sandbox, has access to `browser.*` APIs, storage, and network requests
-- **Why it matters**: Content scripts cannot directly call functions in background/popup or access their variables — they are in **separate JavaScript worlds**
+  - **Extension Context** (`broker.ts`, `popup.ts`, `options.ts`): Runs in browser's extension sandbox, has access to `browser.*` APIs, storage, and network requests
+- **Why it matters**: Content scripts cannot directly call functions in broker/popup or access their variables — they are in **separate JavaScript worlds**
 - **Root cause of messages**: This isolation is why `browser.runtime.sendMessage()` exists — it's the **only way** to pass data between contexts
 - **Security benefit**: Page scripts cannot access extension internals (API keys, stored endpoints, etc.)
 - **Common pitfall**: Trying to `import` shared utilities in both contexts requires careful module design (e.g., `detect.ts` exports pure functions usable in both)
 
 ### 6. Runtime Messages
 - **What**: Cross-component communication protocol via `browser.runtime.sendMessage()`
-- **Where**: `RuntimeMessage` type in `src/background.ts`
-- **Purpose**: Message-passing between page script (page context), background worker, and popup (extension context)
+- **Where**: `RuntimeMessage` type in `src/broker.ts`
+- **Purpose**: Message-passing between page script (page context), broker worker, and popup (extension context)
 - **Message Types**:
-  - `STREAM_DETECTED` (content → background): Reports newly detected stream URL with type
-  - `GET_STREAMS` (popup → background): Requests all streams for current tab
-  - `CALL_API` (hover-panel → background): Triggers API call with stream data (popup/options call directly)
-  - `PING` (popup → background): Health check to verify background worker is alive
+  - `STREAM_DETECTED` (content → broker): Reports newly detected stream URL with type
+  - `GET_STREAMS` (popup → broker): Requests all streams for current tab
+  - `CALL_API` (hover-panel → broker): Triggers API call with stream data (popup/options call directly)
+  - `PING` (popup → broker): Health check to verify broker worker is alive
 
 ### Message Flow
 
@@ -262,8 +262,8 @@ The extension uses a message-driven architecture via `browser.runtime.sendMessag
 ┌────────────────────────────────────┐  ┌────────────────────────────────────┐
 │                                    │  │                                    │
 │  ┌─────────────┐  STREAM_DETECTED  │  │  ┌────────────────┐  GET_STREAMS   │
-│  │   Content   ├───────────────────┼──┼─>│  Background    │<──────────┐    │
-│  │   Script    │                   │  │  │  (background.ts│           │    │
+│  │   Content   ├───────────────────┼──┼─>│    Broker      │<──────────┐    │
+│  │   Script    │                   │  │  │   (broker.ts)  │           │    │
 │  │   (page.ts) │                   │  │  │   endpoint.ts) │           │    │
 │  └─────────────┘                   │  │  └────────┬───────┘           │    │
 │       ▲                            │  │           │                   │    │
@@ -285,11 +285,11 @@ The extension uses a message-driven architecture via `browser.runtime.sendMessag
 
 #### Message Types
 
-- `STREAM_DETECTED` (content → background): Reports a newly detected stream URL with its type
-- `GET_STREAMS` (popup → background): Requests all streams for the current tab
-- `CALL_API` (hover-panel → background): Triggers API call from page context (popup/options call `callEndpointAPI()` directly)
-- `OPEN_IN_TAB` (hover-panel → background): Opens endpoint in new tab from page context (popup/options call `openEndpointInTab()` directly)
-- `PING` (popup → background): Health check to verify background worker is alive
+- `STREAM_DETECTED` (content → broker): Reports a newly detected stream URL with its type
+- `GET_STREAMS` (popup → broker): Requests all streams for the current tab
+- `CALL_API` (hover-panel → broker): Triggers API call from page context (popup/options call `callEndpointAPI()` directly)
+- `OPEN_IN_TAB` (hover-panel → broker): Opens endpoint in new tab from page context (popup/options call `openEndpointInTab()` directly)
+- `PING` (popup → broker): Health check to verify broker worker is alive
 
 
 ### Logging Categories
@@ -307,8 +307,8 @@ Logger provides audit trail (ring buffer) + UI status (slot-based):
 | storage  |  9 | Storage operations (load/save/reset/export/import/initialization) |
 | popup    |  7 | Popup component operations (initialization/refresh/UI actions) |
 | page     |  6 | Page script operations (stream detection/player detection/UI injection) |
-| background | 6 | Background worker operations (stream management/tab lifecycle/initialization) |
-| messaging | 5 | Cross-component message passing (page↔background via browser.runtime.sendMessage) |
+| broker | 6 | Broker worker operations (stream management/tab lifecycle/initialization) |
+| messaging | 5 | Cross-component message passing (page↔broker via browser.runtime.sendMessage) |
 | stat     |  3 | General status/progress messages |
 | interpolation | 2 | Template placeholder interpolation |
 | clipboard | 2 | Clipboard copy operations |

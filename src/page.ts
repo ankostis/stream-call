@@ -39,7 +39,7 @@ import { Logger, LogLevel } from './logger';
   }
 
   /**
-   * Report detected stream to background script
+   * Report detected stream to broker script
    */
   async function reportStream(url: string) {
     if (detectedStreams.has(url)) return;
@@ -66,7 +66,7 @@ import { Logger, LogLevel } from './logger';
       })
       .catch((err) => {
         // Message send can fail during page navigation/unload - this is expected
-        logger.warn('page', `Failed to report stream '${url}' to background worker`, err);
+        logger.warn('page', `Failed to report stream '${url}' to broker worker`, err);
         // In a future enhancement, could track failure count and surface via a UI overlay.
       });
   }

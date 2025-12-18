@@ -1,5 +1,5 @@
 /**
- * stream-call Background Service Worker (extension-context)
+ * stream-call Broker Service Worker (extension-context)
  * Handles communication between content scripts and popup,
  * manages detected streams, and triggers API calls
  *
@@ -92,9 +92,9 @@ browser.runtime.onMessage.addListener((message: RuntimeMessage, sender) => {
       // Enforce cap: remove oldest entry if limit exceeded
       if (streams.length > MAX_STREAMS_PER_TAB) {
         streams.shift();
-        logger.debug('background', `Tab ${tabId}: stream cap reached, removed oldest`);
+        logger.debug('broker', `Tab ${tabId}: stream cap reached, removed oldest`);
       }
-      logger.info('background', `Stream detected: ${streamInfo.url} (${streamInfo.type})`);
+      logger.info('broker', `Stream detected: ${streamInfo.url} (${streamInfo.type})`);
       updateBadge(tabId, streams.length);
     }
 
@@ -160,7 +160,7 @@ browser.tabs.onRemoved.addListener((tabId) => {
   tabStreams.delete(tabId);
   tabHeaders.delete(tabId);
   if (count > 0) {
-    logger.debug('background', `Tab ${tabId} closed: cleaned ${count} streams`);
+    logger.debug('broker', `Tab ${tabId} closed: cleaned ${count} streams`);
   }
 });
 
@@ -172,7 +172,7 @@ browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
     tabHeaders.delete(tabId);
     updateBadge(tabId, 0);
     if (count > 0) {
-      logger.debug('background', `Tab ${tabId} navigated: cleared ${count} streams`);
+      logger.debug('broker', `Tab ${tabId} navigated: cleared ${count} streams`);
     }
   }
 });
@@ -198,4 +198,4 @@ function updateBadge(tabId: number, count: number) {
   }
 }
 
-logger.info('background', 'Background service worker loaded');
+logger.info('broker', 'Broker service worker loaded');

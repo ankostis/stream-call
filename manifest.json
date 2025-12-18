@@ -19,7 +19,7 @@
     "<all_urls>"
   ],
   "background": {
-    "scripts": ["dist/background.js"]
+    "scripts": ["dist/broker.js"]
   },
   "content_scripts": [
     {

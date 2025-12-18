@@ -20,7 +20,7 @@
 | storage   |    9 | ✅ | Storage operations (load/save/reset/export/import/initialization) |
 | popup     |    7 | ✅ | Popup component operations (initialization/refresh/UI actions) |
 | page      |    6 | ✅ | Page script operations (stream detection/player detection/UI injection) |
-| background|    6 | ✅ | Background worker operations (stream management/tab lifecycle/initialization) |
+| broker|    6 | ✅ | Broker worker operations (stream management/tab lifecycle/initialization) |
 | messaging |    5 | ✅ | Cross-component message passing (GET_STREAMS/CALL_API/PING) |
 | stat      |    3 | ✅ | General status/progress messages |
 | interpolation| 2 | ✅ | Template placeholder interpolation |
@@ -32,12 +32,12 @@
 |-----------|:------------:|:---------------:|:-----:|
 | options.ts |      0      |       27        |   27  |
 | popup.ts   |      5      |       13        |   18  |
-| background.ts |   10     |        0        |   10  |
+| broker.ts |   10     |        0        |   10  |
 | endpoint.ts |     4      |        0        |    4  |
 | page.ts    |      6      |        0        |    6  |
 | **Total**  |   **25**    |     **40**      | **65**|
 
-**Note**: Each execution context (background, page, popup, options) has its own isolated Logger instance with separate circular buffers.
+**Note**: Each execution context (broker, page, popup, options) has its own isolated Logger instance with separate circular buffers.
 
 ## Consolidation History
 
@@ -53,8 +53,8 @@
 - `storage-info` → `storage`
 - `last-action` → distributed to domain categories
 
-**Phase 3**: Added Logger to background.ts
-- New `background` category for worker operations
+**Phase 3**: Added Logger to broker.ts
+- New `broker` category for worker operations
 - Expanded `messaging` for cross-context communication
 
 **Phase 4**: Fixed Logger API bugs in page.ts

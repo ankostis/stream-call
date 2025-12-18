@@ -8,7 +8,7 @@
 ## Project essentials
 - Firefox WebExtension; manifest points to built assets in `dist/` (tsc + copy,
   no bundler). Keep manifest paths in sync with `dist` outputs.
-- TypeScript sources in `src/` (`background.ts`, `page.ts`, `popup.ts`,
+- TypeScript sources in `src/` (`broker.ts`, `page.ts`, `popup.ts`,
   `options.ts`); `popup.html` and `options.html` are copied to `dist/`.
 - Build: `npm install` then `npm run build` (clean + tsc + copy HTML). Package:
   `npm run build && zip -r stream-call.zip manifest.json dist icons -x
@@ -25,7 +25,7 @@
 ## Architecture principles
 - Message-based flow: content -> `STREAM_DETECTED`; popup -> PING + `GET_STREAMS`.
   All cross-component comms via `browser.runtime.sendMessage()`.
-- Bounded state: background caps 200 streams/tab (LRU) and cleans on close/nav;
+- Bounded state: broker caps 200 streams/tab (LRU) and cleans on close/nav;
   popup caches endpoints in-memory per session.
 - Shared utilities: `config.ts` (parse/validate endpoints), `template.ts` (interpolate placeholders),
   `detect.ts` (detection patterns), `debounce.ts` (throttle). Content imports patterns
@@ -66,7 +66,7 @@
 - Unit & Integrations are launched by the `package.json:scripts`.
 - Manual API: use https://httpbin.org/anything to validate templating; tweak
   `DEFAULT_CONFIG` in `src/options.ts` for quick tests.
-- Debugging: background via about:debugging > Inspect; content in page console;
+- Debugging: broker via about:debugging > Inspect; content in page console;
   PING handler for popup health checks; use logs.
 
 ## Quick references

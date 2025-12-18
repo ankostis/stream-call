@@ -119,7 +119,7 @@ async function loadStreams() {
     });
   } catch (error) {
     // Message passing error - log and display
-    logger.error( 'messaging', 'Failed to fetch streams from background', error);
+    logger.error( 'messaging', 'Failed to fetch streams from broker', error);
     const loadingEl = document.getElementById('loading');
     if (loadingEl) loadingEl.style.display = 'none';
     return;

@@ -156,7 +156,7 @@ web-ext run --start-url https://www.ertecho.gr/radio/trito/
 ### API call fails
 - Verify endpoint URL in options
 - Check network tab for request
-- Inspect background script console
+- Inspect broker script console
 
 ### Cookies/headers missing
 - Verify checkboxes enabled in endpoint config

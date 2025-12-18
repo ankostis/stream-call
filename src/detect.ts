@@ -3,7 +3,7 @@
  *
  * Separated from page.ts for:
  * - Modularity: Detection logic isolated from DOM/messaging concerns
- * - Reuse: Background/popup/diagnostics can import patterns without page context
+ * - Reuse: Broker/popup/diagnostics can import patterns without page context
  * - Testability: Pure functions easy to unit test (see content.test.ts)
  * - Stability: Pattern evolution independent of content-script implementation
  * - Single source of truth: Avoids regex duplication across components
