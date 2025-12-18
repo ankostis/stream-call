@@ -21,7 +21,8 @@ export function isStreamUrl(url: string | null | undefined, base?: string): bool
     const urlObj = new URL(url, base ?? 'http://localhost');
     const fullUrl = urlObj.href;
     return STREAM_PATTERNS.some((pattern) => pattern.test(fullUrl));
-  } catch (e) {
+  } catch (e: any) {
+    console.debug('[stream-call] URL parse error in isStreamUrl:', url, e.message);
     return false;
   }
 }

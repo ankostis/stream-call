@@ -26,12 +26,12 @@ export const DEFAULT_CONFIG = {
   apiEndpoints: JSON.stringify(
     [
       {
-        name: 'httpbingo GET (open in tab)',
+        name: 'httpbingo GET',
         endpointTemplate: 'https://httpbingo.org/anything?url={{streamUrl}}&page={{pageUrl}}&title={{pageTitle|url}}&time={{timestamp}}',
         active: true
       },
       {
-        name: 'httpbingo POST (fetch API)',
+        name: 'httpbingo POST',
         endpointTemplate: 'https://httpbingo.org/anything',
         method: 'POST',
         bodyTemplate: '{"streamUrl":"{{streamUrl}}","pageUrl":"{{pageUrl}}","pageTitle":"{{pageTitle}}","timestamp":{{timestamp}}}',
@@ -339,11 +339,10 @@ export async function callEndpoint({
     let bodyJson: string | undefined;
     try {
       finalUrl = applyTemplate(selectedEndpoint.endpointTemplate, requestContext);
-      if (mode === 'fetch') {
-        bodyJson = selectedEndpoint.bodyTemplate
-          ? applyTemplate(selectedEndpoint.bodyTemplate, requestContext)
-          : JSON.stringify(requestContext);
-      }
+      // Interpolate body template for both modes (fetch needs it, tab uses it for form fields)
+      bodyJson = selectedEndpoint.bodyTemplate
+        ? applyTemplate(selectedEndpoint.bodyTemplate, requestContext)
+        : (mode === 'fetch' ? JSON.stringify(requestContext) : undefined);
     } catch (templateError: any) {
       return {
         success: false,
@@ -356,30 +355,120 @@ export async function callEndpoint({
       // Validate URL format
       try {
         new URL(finalUrl);
-      } catch {
+      } catch (urlError: any) {
+        logger.warn('apicall', `Invalid URL after interpolation: ${finalUrl}`, {
+          endpoint: selectedEndpoint.name,
+          url: finalUrl,
+          error: urlError
+        });
         return {
           success: false,
           error: `Invalid URL after interpolation: ${finalUrl}`
         };
       }
 
-      logger.info('apicall', `Opening URL in tab: ${selectedEndpoint.name}`, {
+      const method = (selectedEndpoint.method || 'GET').toUpperCase();
+
+      logger.info('apicall', `Opening URL in tab (${method}): ${selectedEndpoint.name}`, {
         endpoint: selectedEndpoint.name,
-        url: finalUrl
+        url: finalUrl,
+        method
       });
 
-      // Reuse existing tab with same URL or create new one
-      const existingTabs = await browser.tabs.query({ url: finalUrl });
-      if (existingTabs.length > 0 && existingTabs[0].id) {
-        await browser.tabs.update(existingTabs[0].id, { active: true });
-      } else {
-        await browser.tabs.create({ url: finalUrl, active: true });
+      // For GET/HEAD or no method specified: use simple tab navigation
+      if (!method || method === 'GET' || method === 'HEAD') {
+        // Store tab ID in session storage for reuse by endpoint name
+        const storageKey = `tabId-${selectedEndpoint.name}`;
+        const stored = await browser.storage.session.get(storageKey);
+        const storedTabId = stored[storageKey] as number | undefined;
+
+        // Try to reuse the stored tab
+        if (storedTabId) {
+          try {
+            const tab = await browser.tabs.get(storedTabId);
+            if (tab) {
+              await browser.tabs.update(storedTabId, { url: finalUrl, active: true });
+              return {
+                success: true,
+                message: 'Reused existing tab',
+                details: finalUrl
+              };
+            }
+          } catch (tabError: any) {
+            logger.warn('apicall', `Stored tab ${storedTabId} no longer exists, creating new tab: ${tabError.message}`);
+          }
+        }
+
+        // Create new tab and store its ID
+        const newTab = await browser.tabs.create({ url: finalUrl, active: true });
+        if (newTab.id) {
+          await browser.storage.session.set({ [storageKey]: newTab.id });
+        }
+
+        return {
+          success: true,
+          message: `Opened URL in new tab: (${finalUrl}`,
+          details: finalUrl
+        };
       }
+
+      // For POST/PUT/DELETE: use form submission to bypass CORS
+      // Create hidden form in current document, submit to named window
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = finalUrl;
+      // Use consistent window name per endpoint for tab reuse
+      const windowName = `stream-call-${selectedEndpoint.name.replace(/[^a-zA-Z0-9]/g, '-')}`;
+      form.target = windowName;
+      form.style.display = 'none';
+
+      // Parse body template and create hidden inputs
+      if (bodyJson) {
+        try {
+          const bodyData = typeof bodyJson === 'string' ? JSON.parse(bodyJson) : bodyJson;
+          if (typeof bodyData === 'object' && bodyData !== null) {
+            Object.entries(bodyData).forEach(([key, value]) => {
+              const input = document.createElement('input');
+              input.type = 'hidden';
+              input.name = key;
+              input.value = String(value);
+              form.appendChild(input);
+            });
+          }
+        } catch (parseError: any) {
+          logger.warn('apicall', `Could not parse body as JSON for form submission: ${parseError.message}. Sending as raw field.`);
+          const input = document.createElement('input');
+          input.type = 'hidden';
+          input.name = 'data';
+          input.value = String(bodyJson);
+          form.appendChild(input);
+        }
+      }
+
+      // Add method override field for PUT/DELETE
+      if (method !== 'POST') {
+        const methodInput = document.createElement('input');
+        methodInput.type = 'hidden';
+        methodInput.name = '_method';
+        methodInput.value = method;
+        form.appendChild(methodInput);
+      }
+
+      // Submit form to named window - browser will create/reuse window by name
+      document.body.appendChild(form);
+      form.submit();
+
+      // Clean up after brief delay to ensure submission completes
+      setTimeout(() => {
+        if (form.parentNode) {
+          document.body.removeChild(form);
+        }
+      }, 100);
 
       return {
         success: true,
-        message: 'Opened URL in tab',
-        details: finalUrl
+        message: `Opened URL in tab via ${method} form submission`,
+        details: `${finalUrl} (window: ${windowName})`
       };
     }
 

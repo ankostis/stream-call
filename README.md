@@ -7,12 +7,11 @@ stations, live streams) and send to HTTP API endpoint(s).
 
 ## Features
 
-- 🔍 **Automatic Stream Detection** - Detects HLS, DASH, MP3, AAC, OGG, RTMP,
+- 🔍 **Page Stream Detection** - Detects HLS, DASH, MP3, AAC, OGG, RTMP,
   RTSP, Icecast, Shoutcast from the current page.
-- 📡 **Configurable Endpoints** - Define multiple API endpoints with template placeholders
-- 🌐 **Two API call Modes** - Open-in-new-Tab (simple GET requests only), `fetch` HTTP request with full control (POST/PUT/DELETE, custom headers, cookies, body templates)
+- 📡 **Configurable Endpoints** - Define multiple API endpoints with template placeholders, export & import bluprints from files or sites
+- 🌐 **Two API call Modes** - "Open in Tab" (GET via navigation or POST/PUT/DELETE via form submission - bypasses CORS), "Call API" (`fetch` HTTP request with full control: custom headers, body templates, programmatic response handling)
 - 📋 **Copy URLs** - Quick copy stream URLs to clipboard.
-- 🎯 **Clean UI** - Simple popup interface showing all detected streams.
 - 🔔 **Badge Notifications** - Shows number of detected streams on the
   extension icon.
 - **Mobile Firefox Nightly Support** - Extension works also on mobile Firefox Nightly.
@@ -99,9 +98,9 @@ Placeholders are *case-insensitive* and support 2 jinja-like filters eg. `{{stre
    showing the number of detected streams.
 3. Click the extension icon to view all detected streams.
 4. Select the desired API Endpoint (pre-configured above).
-5. Click the "📤 Call API" button..
-6. The stream URL will be sent to your configured endpoint and you'll rexeve
-   a success or error notification in the log-box.
+5. Choose action:
+   - **📤 Call API** - Send HTTP request (fetch) with full control over headers/body. Receives programmatic response, shows success/error in log.
+   - **🌐 Open in Tab** - Open URL in new browser tab. GET/HEAD uses simple navigation, POST/PUT/DELETE uses form submission to bypass CORS and sen. Useful for HTML-returning services where you want to see the rendered page.
 
 #### Supported Stream Types
 
