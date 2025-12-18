@@ -1,6 +1,6 @@
 export {};
 
-import type { StatusBar, StatusMessage, LogLevel } from './logger';
+import type { LogLevel } from './logger';
 
 // Lightweight UI helpers for rendering StatusBar and Logger output
 
@@ -15,7 +15,7 @@ export function createStatusRenderer(elements: {
       bar.style.display = 'none';
       return;
     }
-    elements.message.textContent = msg.message;
+    elements.message.innerHTML = msg.message;
     elements.icon.textContent = msg.level === 'error' ? '❌' : msg.level === 'warn' ? '⚠️' : 'ℹ️';
     // Vary background color by level
     if (msg.level === 'error') {

@@ -3,7 +3,7 @@
  */
 export {};
 
-import { Logger, StatusBar, LogLevel } from './logger';
+import { Logger, LogLevel, SlotMessage } from './logger';
 import { createStatusRenderer, createLogAppender, applyLogFiltering } from './logging-ui';
 
 /**
@@ -39,12 +39,9 @@ export function initLogging(elements: {
   logViewer: HTMLElement;
 }): {
   logger: Logger;
-  statusBar: StatusBar;
   appendLog: ReturnType<typeof createLogAppender>;
 } {
   const logger = new Logger();
-  const statusBar = new StatusBar();
-  statusBar.setLogger(logger);
 
   const renderStatus = createStatusRenderer({
     bar: elements.statusBar,
@@ -52,14 +49,22 @@ export function initLogging(elements: {
     message: elements.statusMsg
   });
 
-  statusBar.subscribe((current) =>
-    renderStatus(current ? { level: current.level, message: current.message } : null)
-  );
+  // Subscribe to status changes (includes slot prefix in monospace)
+  logger.subscribeStatus((current) => {
+    if (current) {
+      renderStatus({
+        level: current.level,
+        message: `<code>[${current.slot}]</code> ${current.message}`
+      });
+    } else {
+      renderStatus(null);
+    }
+  });
 
   const appendLog = createLogAppender(elements.logViewer);
-  logger.subscribe((entries) => {
+  logger.subscribeLogs((entries) => {
     entries.slice(-1).forEach((e) => appendLog(e.level, e.category as any, e.message));
   });
 
-  return { logger, statusBar, appendLog };
+  return { logger, appendLog };
 }

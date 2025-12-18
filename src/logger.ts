@@ -1,8 +1,42 @@
 /**
- * Logger utility for in-memory audit trail with filtering and export.
+ * Logger: Unified logging and status management
  *
- * Designed as reusable abstraction for options page and future mobile panels.
- * Maintains circular buffer (max 100 entries) with level/category filtering.
+ * API Overview:
+ * =============
+ *
+ * PERSISTENT STATUS (add to ring + set slot, stays until cleared):
+ *   logger.error(slot, ...msg)
+ *   logger.warn(slot, ...msg)
+ *   logger.info(slot, ...msg)
+ *   logger.debug(slot, ...msg)
+ *
+ * TRANSIENT STATUS (add to ring + set slot, auto-expires after timeout):
+ *   logger.errorFlash(timeout, slot, ...msg)
+ *   logger.warnFlash(timeout, slot, ...msg)
+ *   logger.infoFlash(timeout, slot, ...msg)
+ *
+ * QUERY:
+ *   logger.transientMsg()            → Current visible message (highest priority)
+ *   logger.filterLogs(levels, cats)  → Filter ring buffer entries
+ *   logger.exportJSON()              → Export ring as JSON
+ *
+ * MANAGEMENT:
+ *   logger.clearSlot(slot?, level?)  → Clear slot(s)
+ *   logger.clearLogs()               → Clear ring buffer
+ *
+ * SUBSCRIPTIONS:
+ *   logger.subscribeLogs(callback)   → Notified on ring changes
+ *   logger.subscribeStatus(callback) → Notified on status changes (including expirations)
+ *
+ * DATA:
+ *   logger.logsRing  → Public access to ring buffer (LogEntry[])
+ *
+ * ARCHITECTURE:
+ * - Single timer for all expirations (not per-message)
+ * - Slots are private (one message per slot, latest wins)
+ * - Status messages embedded in SlotMessage (expireTimestamp field)
+ * - Display priority: level first (error > warn > info > debug), then most recent
+ * - Transient = has expireTimestamp, persistent = no expireTimestamp
  */
 export {};
 
@@ -12,15 +46,24 @@ export enum LogLevel {
   Info = 'info',
   Debug = 'debug'
 }
-// Free-form category string; callers should reuse consistent names.
+
 export type LogCategory = string;
 
 export interface LogEntry {
   timestamp: Date;
   level: LogLevel;
   category: LogCategory;
-  message: string; // UI-friendly, formatted string
-  args: unknown[]; // Raw arguments as passed by callers
+  message: string;
+  args: unknown[];
+}
+
+export interface SlotMessage {
+  slot: string;
+  level: LogLevel;
+  message: string;
+  messageArgs?: unknown[];
+  timestamp: Date;
+  expireTimestamp?: Date;  // undefined = persistent, Date = transient (auto-clear)
 }
 
 function formatArg(arg: unknown): string {
@@ -43,28 +86,86 @@ function formatArgs(args: unknown[]): string {
 }
 
 export class Logger {
-  private entries: LogEntry[] = [];
+  public logsRing: LogEntry[] = [];
   private maxEntries = 100;
-  private subscribers: Set<(entries: LogEntry[]) => void> = new Set();
+  private slots = new Map<string, SlotMessage>();
+  private expirationTimer: ReturnType<typeof setTimeout> | null = null;
+  private logSubscribers = new Set<(entries: LogEntry[]) => void>();
+  private statusSubscribers = new Set<(msg: SlotMessage | null) => void>();
 
-  /**
-   * Log a message at the specified level and category
-   */
-  log(level: LogLevel, category: LogCategory, ...msg: unknown[]): void {
+  // ========================================================================
+  // PERSISTENT STATUS (no expiration)
+  // ========================================================================
+
+  error(slot: string, ...msg: unknown[]): void {
+    this.setSlot(LogLevel.Error, slot, undefined, ...msg);
+  }
+
+  warn(slot: string, ...msg: unknown[]): void {
+    this.setSlot(LogLevel.Warn, slot, undefined, ...msg);
+  }
+
+  info(slot: string, ...msg: unknown[]): void {
+    this.setSlot(LogLevel.Info, slot, undefined, ...msg);
+  }
+
+  debug(slot: string, ...msg: unknown[]): void {
+    this.setSlot(LogLevel.Debug, slot, undefined, ...msg);
+  }
+
+  // ========================================================================
+  // TRANSIENT STATUS (auto-expires)
+  // ========================================================================
+
+  errorFlash(timeout: number, slot: string, ...msg: unknown[]): void {
+    const expireTimestamp = new Date(Date.now() + timeout);
+    this.setSlot(LogLevel.Error, slot, expireTimestamp, ...msg);
+  }
+
+  warnFlash(timeout: number, slot: string, ...msg: unknown[]): void {
+    const expireTimestamp = new Date(Date.now() + timeout);
+    this.setSlot(LogLevel.Warn, slot, expireTimestamp, ...msg);
+  }
+
+  infoFlash(timeout: number, slot: string, ...msg: unknown[]): void {
+    const expireTimestamp = new Date(Date.now() + timeout);
+    this.setSlot(LogLevel.Info, slot, expireTimestamp, ...msg);
+  }
+
+  // ========================================================================
+  // INTERNAL: SET SLOT + LOG TO RING
+  // ========================================================================
+
+  private setSlot(
+    level: LogLevel,
+    slot: string,
+    expireTimestamp: Date | undefined,
+    ...msg: unknown[]
+  ): void {
     const message = formatArgs(msg);
+
+    // Add to ring buffer
     const entry: LogEntry = {
       timestamp: new Date(),
       level,
-      category,
+      category: slot,
       message,
       args: msg
     };
-
-    // Add to circular buffer
-    this.entries.push(entry);
-    if (this.entries.length > this.maxEntries) {
-      this.entries.shift(); // Drop oldest
+    this.logsRing.push(entry);
+    if (this.logsRing.length > this.maxEntries) {
+      this.logsRing.shift();
     }
+
+    // Update slot
+    this.slots.set(slot, {
+      slot,
+      level,
+      message,
+      messageArgs: msg,
+      timestamp: new Date(),
+      expireTimestamp
+    });
 
     // Console passthrough
     const consoleMethods: Record<LogLevel, (...args: any[]) => void> = {
@@ -73,82 +174,92 @@ export class Logger {
       [LogLevel.Info]: console.info,
       [LogLevel.Debug]: console.debug
     };
-    consoleMethods[level](`[${category}]`, ...(msg.length > 0 ? msg : [message]));
+    consoleMethods[level](`[${slot}]`, ...(msg.length > 0 ? msg : [message]));
 
-    // Notify subscribers
-    this.notify();
+    // Notify
+    this.notifyLogs();
+    this.notifyStatus();
+
+    // Reschedule expiration if needed
+    if (expireTimestamp) {
+      this.scheduleNextExpiration();
+    }
   }
 
-  /**
-   * Log an error message
-   */
-  error(category: LogCategory, ...msg: unknown[]): void {
-    this.log(LogLevel.Error, category, ...msg);
+  // ========================================================================
+  // EXPIRATION MANAGEMENT (single timer)
+  // ========================================================================
+
+  private scheduleNextExpiration(): void {
+    if (this.expirationTimer) {
+      clearTimeout(this.expirationTimer);
+      this.expirationTimer = null;
+    }
+
+    // Find earliest expiration
+    let earliest: Date | null = null;
+    for (const msg of this.slots.values()) {
+      if (msg.expireTimestamp) {
+        if (!earliest || msg.expireTimestamp < earliest) {
+          earliest = msg.expireTimestamp;
+        }
+      }
+    }
+
+    if (earliest) {
+      const delay = earliest.getTime() - Date.now();
+      this.expirationTimer = setTimeout(() => {
+        // Don't clear expired slots - they stay in Map and get filtered by transientMsg()
+        // Just notify UI so it can re-render without the expired message
+        this.notifyStatus();
+        this.scheduleNextExpiration();
+      }, Math.max(0, delay));
+    }
   }
 
-  /**
-   * Log a warning message
-   */
-  warn(category: LogCategory, ...msg: unknown[]): void {
-    this.log(LogLevel.Warn, category, ...msg);
-  }
+  // ========================================================================
+  // QUERY
+  // ========================================================================
 
   /**
-   * Log an info message
+   * Get current visible message (transient or persistent).
+   * Priority: level first (error > warn > info > debug), then most recent.
+   * Filters out expired transient messages.
    */
-  info(category: LogCategory, ...msg: unknown[]): void {
-    this.log(LogLevel.Info, category, ...msg);
+  transientMsg(): SlotMessage | null {
+    if (this.slots.size === 0) return null;
+
+    // persisent & non-expired messages
+    //
+    const now = Date.now();
+    const allMessages = Array.from(this.slots.values()).filter(
+      (m) => !m.expireTimestamp || m.expireTimestamp.getTime() > now
+    );
+
+    // Scan by level, the sort to by post-timestamp (BUG: sort by expirations!!).
+    //
+    const levels = [LogLevel.Error, LogLevel.Warn, LogLevel.Info, LogLevel.Debug];
+    for (const level of levels) {
+      const messagesAtLevel = allMessages.filter((m) => m.level === level);
+      if (messagesAtLevel.length > 0) {
+        return messagesAtLevel.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())[0];
+      }
+    }
+
+    return null;
   }
 
-  /**
-   * Log a debug message
-   */
-  debug(category: LogCategory, ...msg: unknown[]): void {
-    this.log(LogLevel.Debug, category, ...msg);
-  }
-
-  /**
-   * Get all log entries
-   */
-  getAll(): LogEntry[] {
-    return [...this.entries];
-  }
-
-  /**
-   * Filter log entries by level and/or category
-   */
-  filter(levels?: LogLevel[], categories?: LogCategory[]): LogEntry[] {
-    return this.entries.filter((entry) => {
+  filterLogs(levels?: LogLevel[], categories?: LogCategory[]): LogEntry[] {
+    return this.logsRing.filter((entry) => {
       const levelMatch = !levels || levels.length === 0 || levels.includes(entry.level);
-      const categoryMatch = !categories || categories.length === 0 || categories.includes(entry.category);
+      const categoryMatch =
+        !categories || categories.length === 0 || categories.includes(entry.category);
       return levelMatch && categoryMatch;
     });
   }
 
-  /**
-   * Clear all log entries
-   */
-  clear(): void {
-    this.entries = [];
-    this.notify();
-  }
-
-  /**
-   * Subscribe to log updates
-   */
-  subscribe(callback: (entries: LogEntry[]) => void): () => void {
-    this.subscribers.add(callback);
-    // Return unsubscribe function
-    return () => {
-      this.subscribers.delete(callback);
-    };
-  }
-
-  /**
-   * Export logs as JSON string
-   */
   exportJSON(): string {
-    const exportData = this.entries.map((entry) => ({
+    const exportData = this.logsRing.map((entry) => ({
       timestamp: entry.timestamp.toISOString(),
       level: entry.level,
       category: entry.category,
@@ -158,201 +269,59 @@ export class Logger {
     return JSON.stringify(exportData, null, 2);
   }
 
-  /**
-   * Notify all subscribers
-   */
-  private notify(): void {
-    this.subscribers.forEach((callback) => callback([...this.entries]));
-  }
-}
+  // ========================================================================
+  // MANAGEMENT
+  // ========================================================================
 
-// ============================================================================
-// Statusbar
-// ============================================================================
-
-// Free-form slot string; callers should reuse consistent names.
-export type StatusSlot = string;
-
-export interface StatusMessage {
-  slot: StatusSlot;
-  level: LogLevel;
-  message: string;
-  messageArgs?: unknown[];
-  timestamp: Date;
-  timeout?: number; // ms; undefined = persistent
-  isTransient: boolean;
-}
-
-function formatStatusArgs(args: unknown[]): string {
-  if (!args || args.length === 0) return '';
-  return args
-    .map((arg) => {
-      if (arg instanceof Error) return `${arg.name}: ${arg.message}`;
-      if (typeof arg === 'object' && arg !== null) {
-        try {
-          return JSON.stringify(arg);
-        } catch {
-          return String(arg);
-        }
-      }
-      return String(arg);
-    })
-    .join(' ');
-}
-
-/**
- * Status Bar utility for persistent and transient UI feedback.
- *
- * Designed as reusable abstraction for options page and future mobile panels.
- * Manages slot-based persistent messages and transient action notifications
- * with priority overlay logic (transient > highest level persistent).
- */
-export class StatusBar {
-  private persistent: Map<StatusSlot, StatusMessage> = new Map();
-  // Stack of transient messages; last pushed has focus. On expiry, revert to previous.
-  private transients: StatusMessage[] = [];
-  private transientTimers: Map<StatusMessage, ReturnType<typeof setTimeout>> = new Map();
-  private subscribers: Set<(msg: StatusMessage | null) => void> = new Set();
-  private logger: Logger | null = null;
-
-  /**
-   * Post persistent message in a slot (replaces older in same slot)
-   */
-  post(level: LogLevel, slot: StatusSlot, ...msg: unknown[]): void {
-    const message = formatStatusArgs(msg);
-    const statusMsg: StatusMessage = {
-      slot,
-      level,
-      message,
-      messageArgs: msg,
-      timestamp: new Date(),
-      isTransient: false
-    };
-
-    this.persistent.set(slot, statusMsg);
-    this.logMessage(statusMsg);
-    this.notify();
-  }
-
-  /**
-   * Flash a transient message (default timeout 3000ms). Uses stacking behavior.
-   */
-  flash(level: LogLevel, slot: StatusSlot, timeout: number = 3000, ...msg: unknown[]): void {
-    const formatted = formatStatusArgs(msg);
-    const statusMsg: StatusMessage = {
-      slot,
-      level,
-      message: formatted,
-      messageArgs: msg,
-      timestamp: new Date(),
-      timeout,
-      isTransient: true
-    };
-
-    this.transients.push(statusMsg);
-    this.logMessage(statusMsg);
-    this.notify();
-
-    if (timeout > 0) {
-      const timer = setTimeout(() => {
-        // Remove this transient
-        const idx = this.transients.indexOf(statusMsg);
-        if (idx !== -1) this.transients.splice(idx, 1);
-        const t = this.transientTimers.get(statusMsg);
-        if (t) {
-          clearTimeout(t);
-          this.transientTimers.delete(statusMsg);
-        }
-        // Notify to reveal previous transient or persistent
-        this.notify();
-      }, timeout);
-      this.transientTimers.set(statusMsg, timer);
-    }
-  }
-
-  /**
-   * Clear slot or all slots, optionally by level
-   */
-  clear(slot?: StatusSlot, level?: LogLevel): void {
+  clearSlot(slot?: string, level?: LogLevel): void {
     if (!slot) {
-      // Clear all slots (optionally filtered by level)
       if (level) {
-        for (const [key, msg] of this.persistent.entries()) {
+        for (const [key, msg] of this.slots.entries()) {
           if (msg.level === level) {
-            this.persistent.delete(key);
+            this.slots.delete(key);
           }
         }
       } else {
-        this.persistent.clear();
+        this.slots.clear();
       }
     } else {
-      // Clear specific slot (optionally filtered by level)
-      const msg = this.persistent.get(slot);
+      const msg = this.slots.get(slot);
       if (msg && (!level || msg.level === level)) {
-        this.persistent.delete(slot);
+        this.slots.delete(slot);
       }
     }
-
-    this.notify();
+    this.notifyStatus();
   }
 
-  /**
-   * Get current visible message (priority: latest transient > highest level persistent)
-   */
-  getCurrent(): StatusMessage | null {
-    // Latest transient wins
-    if (this.transients.length > 0) {
-      return this.transients[this.transients.length - 1];
-    }
-
-    // Find highest level persistent
-    const levels: LogLevel[] = [LogLevel.Error, LogLevel.Warn, LogLevel.Info];
-    for (const level of levels) {
-      const messagesAtLevel = Array.from(this.persistent.values()).filter((msg) => msg.level === level);
-      if (messagesAtLevel.length > 0) {
-        // Return oldest in this level
-        return messagesAtLevel.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())[0];
-      }
-    }
-
-    return null;
+  clearLogs(): void {
+    this.logsRing = [];
+    this.notifyLogs();
   }
 
-  /**
-   * Subscribe to status bar changes
-   */
-  subscribe(callback: (msg: StatusMessage | null) => void): () => void {
-    this.subscribers.add(callback);
-    // Return unsubscribe function
+  // ========================================================================
+  // SUBSCRIPTIONS
+  // ========================================================================
+
+  subscribeLogs(callback: (entries: LogEntry[]) => void): () => void {
+    this.logSubscribers.add(callback);
     return () => {
-      this.subscribers.delete(callback);
+      this.logSubscribers.delete(callback);
     };
   }
 
-  /**
-   * Set logger instance for audit trail
-   */
-  setLogger(logger: Logger): void {
-    this.logger = logger;
+  subscribeStatus(callback: (msg: SlotMessage | null) => void): () => void {
+    this.statusSubscribers.add(callback);
+    return () => {
+      this.statusSubscribers.delete(callback);
+    };
   }
 
-  /**
-   * Log message to logger if available
-   */
-  private logMessage(msg: StatusMessage): void {
-    if (!this.logger) return;
-
-    const category = msg.slot; // Use slot string directly as category
-    const logLevel = msg.level; // error/warn/info affects visibility and logging
-    const args = msg.messageArgs && msg.messageArgs.length > 0 ? msg.messageArgs : [msg.message];
-    this.logger.log(logLevel, category, ...args);
+  private notifyLogs(): void {
+    this.logSubscribers.forEach((cb) => cb([...this.logsRing]));
   }
 
-  /**
-   * Notify all subscribers
-   */
-  private notify(): void {
-    const current = this.getCurrent();
-    this.subscribers.forEach((callback) => callback(current));
+  private notifyStatus(): void {
+    const current = this.transientMsg();
+    this.statusSubscribers.forEach((cb) => cb(current));
   }
 }

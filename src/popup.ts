@@ -24,7 +24,7 @@ let endpointsCached = false;
 
 // Logging utilities (initialized in initialize() after DOM ready)
 let logger: ReturnType<typeof initLogging>['logger'];
-let statusBar: ReturnType<typeof initLogging>['statusBar'];
+
 let appendLog: ReturnType<typeof initLogging>['appendLog'];
 
 /**
@@ -56,7 +56,6 @@ async function initialize() {
     logViewer: document.getElementById('log-viewer') as HTMLDivElement
   });
   logger = logging.logger;
-  statusBar = logging.statusBar;
   appendLog = logging.appendLog;
 
   // Wire log filtering (always visible)
@@ -87,8 +86,8 @@ async function loadEndpoints() {
     apiEndpoints = parseEndpoints(apiEndpointsStr);
     logger.debug('endpoint', `Loaded ${apiEndpoints.length} API endpoints`);
   } catch (error: any) {
-    // Parse error is expected if config is corrupted - show to user via statusBar (which logs internally)
-    statusBar.post(LogLevel.Error, 'endpoint', 'Invalid API endpoints configured. Check options.', error);
+    // Parse error is expected if config is corrupted - show to user via logger
+    logger.error( 'endpoint', 'Invalid API endpoints configured. Check options.', error);
     apiEndpoints = [];
   }
   endpointsCached = true;
@@ -106,7 +105,7 @@ async function loadStreams() {
     await browser.runtime.sendMessage({ type: 'PING' });
   } catch (pingError) {
     // Known issue: background worker crashed or not loaded.
-    statusBar.post(LogLevel.Error, 'messaging', '⚠️ Extension background service not responding. Try reloading the extension.', pingError);
+    logger.error( 'messaging', '⚠️ Extension background service not responding. Try reloading the extension.', pingError);
     const loadingEl = document.getElementById('loading');
     if (loadingEl) loadingEl.style.display = 'none';
     return;
@@ -120,7 +119,7 @@ async function loadStreams() {
     });
   } catch (error) {
     // Message passing error - log and display
-    statusBar.post(LogLevel.Error, 'messaging', 'Failed to fetch streams from background', error);
+    logger.error( 'messaging', 'Failed to fetch streams from background', error);
     const loadingEl = document.getElementById('loading');
     if (loadingEl) loadingEl.style.display = 'none';
     return;
@@ -292,7 +291,7 @@ function handlePreview(stream: StreamInfo, endpointName?: string) {
     pageTitle: stream.pageTitle
   } as Record<string, unknown>;
 
-  statusBar.flash(LogLevel.Info, 'popup', 2000, 'Generating preview:');
+  logger.infoFlash(2000, 'popup', 'Generating preview:');
   previewCall(endpoint, context, logger);
 }
 
@@ -305,12 +304,12 @@ async function handleCallEndpoint(mode: 'fetch' | 'tab', stream: StreamInfo, end
   try {
     endpoints = parseEndpoints(config.apiEndpoints || '[]');
   } catch (parseError: any) {
-    statusBar.post(LogLevel.Error, 'endpoint', 'Invalid endpoint configuration. Check options.', parseError);
+    logger.error( 'endpoint', 'Invalid endpoint configuration. Check options.', parseError);
     return;
   }
 
   if (endpoints.length === 0) {
-    statusBar.post(LogLevel.Warn, 'endpoint', 'Please configure API endpoints in options first');
+    logger.warn( 'endpoint', 'Please configure API endpoints in options first');
     setTimeout(async () => {
       const optionsUrl = browser.runtime.getURL('dist/options.html');
       await openOrSwitchToTab(optionsUrl);
@@ -319,7 +318,7 @@ async function handleCallEndpoint(mode: 'fetch' | 'tab', stream: StreamInfo, end
   }
 
   const action = mode === 'fetch' ? 'Calling API' : 'Opening in tab';
-  statusBar.flash(LogLevel.Info, 'apicall', 3000, `${action}: ${endpointName || 'default'} → ${stream.url}`);
+  logger.infoFlash(3000, 'apicall', `${action}: ${endpointName || 'default'} → ${stream.url}`);
 
   // Direct call (popup runs in extension context)
   const response = await callEndpoint({
@@ -333,11 +332,11 @@ async function handleCallEndpoint(mode: 'fetch' | 'tab', stream: StreamInfo, end
 
   if (response?.success) {
     const successMsg = mode === 'fetch' ? `✅ API call successful: ${response.message}` : `✅ Opened in new tab: ${response.details || stream.url}`;
-    statusBar.flash(LogLevel.Info, 'apicall', 3000, successMsg);
+    logger.infoFlash(3000, 'apicall', successMsg);
   } else {
     const errorMsg = response?.error ?? 'Unknown error';
     const failMsg = mode === 'fetch' ? `❌ API call failed: ${errorMsg}` : `❌ Failed to open URL: ${errorMsg}`;
-    statusBar.post(LogLevel.Error, 'apicall', failMsg, response);
+    logger.error( 'apicall', failMsg, response);
   }
 }
 
@@ -347,11 +346,11 @@ async function handleCallEndpoint(mode: 'fetch' | 'tab', stream: StreamInfo, end
 async function handleCopyUrl(url: string) {
   try {
     await navigator.clipboard.writeText(url);
-    // statusBar.flash handles logging internally
-    statusBar.flash(LogLevel.Info, 'clipboard', 3000, `📋 URL copied: ${url}`);
+    // logger.infoFlash automatically logs to ring buffer
+    logger.infoFlash(3000, 'clipboard', `📋 URL copied: ${url}`);
   } catch (error) {
     // Clipboard write may fail due to permissions.
-    statusBar.post(LogLevel.Warn, 'clipboard', '⚠️ Failed to copy URL', error);
+    logger.warn( 'clipboard', '⚠️ Failed to copy URL', error);
   }
 }
 
@@ -370,7 +369,7 @@ async function handleRefresh() {
     await loadStreams();
   } catch (error) {
     // Unexpected error in refresh - log and display
-    statusBar.post(LogLevel.Error, 'popup', 'Failed to refresh streams', error);
+    logger.error( 'popup', 'Failed to refresh streams', error);
     const loading = document.getElementById('loading');
     if (loading) loading.style.display = 'none';
   }
@@ -388,7 +387,7 @@ async function handleOptions() {
 /**
  * Show notification
  */
-// Inline notification UI removed; delegate to StatusBar/Logger for feedback
+// Inline notification UI removed; delegate to Logger for feedback
 
 // Initialize when popup opens
 document.addEventListener('DOMContentLoaded', async () => {
@@ -396,7 +395,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await initialize();
   } catch (error) {
     // Top-level exception handler - log and display to user
-    statusBar.post(LogLevel.Error, 'popup', 'Failed to initialize popup', error);
+    logger.error( 'popup', 'Failed to initialize popup', error);
     const loadingEl = document.getElementById('loading');
     if (loadingEl) loadingEl.style.display = 'none';
   }

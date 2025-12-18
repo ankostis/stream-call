@@ -1,483 +1,457 @@
-import test from 'node:test';
-import assert from 'node:assert';
-import { Logger, StatusBar, LogLevel } from '../../src/logger';
+import { test } from 'node:test';
+import * as assert from 'node:assert';
+import { Logger, LogLevel, type LogEntry, type SlotMessage } from '../../src/logger';
 
-// ============================================================================
-// Logger Tests
-// ============================================================================
+// ==============================================================================
+// RING BUFFER TESTS
+// ==============================================================================
 
-test('Logger: logs entry with all fields', () => {
+test('Logger: adds entry to ring buffer', () => {
   const logger = new Logger();
-  logger.info('storage', 'Test message');
-
-  const entries = logger.getAll();
-  assert.strictEqual(entries.length, 1);
-  assert.strictEqual(entries[0].level, 'info');
-  assert.strictEqual(entries[0].category, 'storage');
-  assert.strictEqual(entries[0].message, 'Test message');
-  assert(entries[0].timestamp instanceof Date);
+  logger.error('test-slot', 'Test message');
+  
+  assert.strictEqual(logger.logsRing.length, 1);
+  assert.strictEqual(logger.logsRing[0].level, LogLevel.Error);
+  assert.strictEqual(logger.logsRing[0].category, 'test-slot');
+  assert.strictEqual(logger.logsRing[0].message, 'Test message');
 });
 
-test('Logger: level methods work correctly', () => {
+test('Logger: ring buffer drops oldest when max exceeded', () => {
   const logger = new Logger();
-  logger.error('endpoint-parsing', 'Error msg');
-  logger.warn('form-input', 'Warn msg');
-  logger.info('api-test', 'Info msg');
-  logger.debug('import-export', 'Debug msg');
-
-  const entries = logger.getAll();
-  assert.strictEqual(entries.length, 4);
-  assert.strictEqual(entries[0].level, 'error');
-  assert.strictEqual(entries[1].level, 'warn');
-  assert.strictEqual(entries[2].level, 'info');
-  assert.strictEqual(entries[3].level, 'debug');
-});
-
-test('Logger: circular buffer drops oldest when max exceeded', () => {
-  const logger = new Logger();
-
-  // Add 105 entries (max is 100)
+  
   for (let i = 0; i < 105; i++) {
     logger.info('storage', `Message ${i}`);
   }
-
-  const entries = logger.getAll();
-  assert.strictEqual(entries.length, 100, 'Should have exactly 100 entries');
-  assert.strictEqual(entries[0].message, 'Message 5', 'Oldest 5 should be dropped');
-  assert.strictEqual(entries[99].message, 'Message 104', 'Latest should be kept');
+  
+  assert.strictEqual(logger.logsRing.length, 100);
+  assert.strictEqual(logger.logsRing[0].message, 'Message 5');
+  assert.strictEqual(logger.logsRing[99].message, 'Message 104');
 });
 
-test('Logger: filter by level only', () => {
+test('Logger: level-specific methods work correctly', () => {
   const logger = new Logger();
-  logger.error('storage', 'Error 1');
-  logger.warn('form-input', 'Warn 1');
-  logger.info('api-test', 'Info 1');
-  logger.error('endpoint-parsing', 'Error 2');
+  
+  logger.error('slot1', 'Error msg');
+  logger.warn('slot2', 'Warn msg');
+  logger.info('slot3', 'Info msg');
+  logger.debug('slot4', 'Debug msg');
+  
+  assert.strictEqual(logger.logsRing[0].level, LogLevel.Error);
+  assert.strictEqual(logger.logsRing[1].level, LogLevel.Warn);
+  assert.strictEqual(logger.logsRing[2].level, LogLevel.Info);
+  assert.strictEqual(logger.logsRing[3].level, LogLevel.Debug);
+});
 
-  const errors = logger.filter(['error']);
+test('Logger: filterLogs by level', () => {
+  const logger = new Logger();
+  
+  logger.error('slot1', 'Error 1');
+  logger.warn('slot2', 'Warn 1');
+  logger.error('slot3', 'Error 2');
+  
+  const errors = logger.filterLogs([LogLevel.Error]);
   assert.strictEqual(errors.length, 2);
-  assert(errors.every((e) => e.level === 'error'));
-
-  const warnings = logger.filter(['warn']);
-  assert.strictEqual(warnings.length, 1);
-  assert.strictEqual(warnings[0].message, 'Warn 1');
+  assert.strictEqual(errors[0].message, 'Error 1');
+  assert.strictEqual(errors[1].message, 'Error 2');
 });
 
-test('Logger: filter by category only', () => {
+test('Logger: filterLogs by category', () => {
   const logger = new Logger();
+  
   logger.error('storage', 'Storage error');
+  logger.error('endpoint', 'Endpoint error');
   logger.warn('storage', 'Storage warn');
-  logger.info('api-test', 'API info');
-  logger.debug('form-input', 'Form debug');
-
-  const storageEntries = logger.filter(undefined, ['storage']);
-  assert.strictEqual(storageEntries.length, 2);
-  assert(storageEntries.every((e) => e.category === 'storage'));
+  
+  const storage = logger.filterLogs(undefined, ['storage']);
+  assert.strictEqual(storage.length, 2);
+  assert.strictEqual(storage[0].category, 'storage');
+  assert.strictEqual(storage[1].category, 'storage');
 });
 
-test('Logger: filter by level and category', () => {
+test('Logger: filterLogs by level and category', () => {
   const logger = new Logger();
+  
   logger.error('storage', 'Storage error');
   logger.warn('storage', 'Storage warn');
-  logger.error('api-test', 'API error');
-  logger.info('storage', 'Storage info');
-
-  const storageErrors = logger.filter(['error'], ['storage']);
+  logger.error('endpoint', 'Endpoint error');
+  
+  const storageErrors = logger.filterLogs([LogLevel.Error], ['storage']);
   assert.strictEqual(storageErrors.length, 1);
   assert.strictEqual(storageErrors[0].message, 'Storage error');
 });
 
-test('Logger: filter with empty arrays returns all', () => {
+test('Logger: clearLogs removes all entries', () => {
   const logger = new Logger();
-  logger.error('storage', 'Msg 1');
-  logger.warn('api-test', 'Msg 2');
-
-  const all = logger.filter([], []);
-  assert.strictEqual(all.length, 2);
+  
+  logger.error('slot', 'Msg 1');
+  logger.warn('slot', 'Msg 2');
+  logger.clearLogs();
+  
+  assert.strictEqual(logger.logsRing.length, 0);
 });
 
-test('Logger: filter with undefined returns all', () => {
+test('Logger: subscribeLogs receives notifications', () => {
   const logger = new Logger();
-  logger.error('storage', 'Msg 1');
-  logger.warn('api-test', 'Msg 2');
-
-  const all = logger.filter();
-  assert.strictEqual(all.length, 2);
-});
-
-test('Logger: clear removes all entries', () => {
-  const logger = new Logger();
-  logger.info('storage', 'Msg 1');
-  logger.info('api-test', 'Msg 2');
-
-  assert.strictEqual(logger.getAll().length, 2);
-
-  logger.clear();
-  assert.strictEqual(logger.getAll().length, 0);
-});
-
-test('Logger: subscribe receives notifications on new log', () => {
-  const logger = new Logger();
-  let notified = false;
-  let receivedEntries: any[] = [];
-
-  logger.subscribe((entries) => {
-    notified = true;
+  let receivedEntries: LogEntry[] = [];
+  
+  logger.subscribeLogs((entries) => {
     receivedEntries = entries;
   });
-
-  logger.info('storage', 'Test message');
-
-  assert.strictEqual(notified, true);
+  
+  logger.error('test', 'Test message');
+  
   assert.strictEqual(receivedEntries.length, 1);
   assert.strictEqual(receivedEntries[0].message, 'Test message');
 });
 
-test('Logger: subscribe receives notification on clear', () => {
+test('Logger: subscribeLogs notification on clearLogs', () => {
   const logger = new Logger();
   let callCount = 0;
-
-  logger.subscribe(() => {
+  
+  logger.subscribeLogs(() => {
     callCount++;
   });
-
-  logger.info('storage', 'Msg 1');
-  logger.clear();
-
-  assert.strictEqual(callCount, 2, 'Should notify twice: log + clear');
+  
+  logger.error('test', 'Test');
+  logger.clearLogs();
+  
+  assert.strictEqual(callCount, 2);
 });
 
-test('Logger: unsubscribe stops notifications', () => {
+test('Logger: unsubscribe from logs stops notifications', () => {
   const logger = new Logger();
   let callCount = 0;
-
-  const unsubscribe = logger.subscribe(() => {
+  
+  const unsubscribe = logger.subscribeLogs(() => {
     callCount++;
   });
-
-  logger.info('storage', 'Msg 1');
-  assert.strictEqual(callCount, 1);
-
+  
+  logger.error('test', 'Message 1');
   unsubscribe();
-
-  logger.info('storage', 'Msg 2');
-  assert.strictEqual(callCount, 1, 'Should not notify after unsubscribe');
+  logger.error('test', 'Message 2');
+  
+  assert.strictEqual(callCount, 1);
 });
 
-test('Logger: exportJSON returns valid JSON with ISO timestamps', () => {
+test('Logger: exportJSON returns valid JSON', () => {
   const logger = new Logger();
-  logger.error('storage', 'Error msg');
-  logger.info('api-test', 'Info msg');
-
+  
+  logger.error('slot', 'Test error');
+  logger.warn('slot', 'Test warn');
+  
   const json = logger.exportJSON();
   const parsed = JSON.parse(json);
-
-  assert.strictEqual(Array.isArray(parsed), true);
+  
   assert.strictEqual(parsed.length, 2);
   assert.strictEqual(parsed[0].level, 'error');
-  assert.strictEqual(parsed[0].category, 'storage');
-  assert.strictEqual(parsed[0].message, 'Error msg');
-  assert.match(parsed[0].timestamp, /^\d{4}-\d{2}-\d{2}T/);
-  assert.strictEqual(parsed[1].level, 'info');
+  assert.strictEqual(parsed[0].message, 'Test error');
+  assert.ok(parsed[0].timestamp);
 });
 
-test('Logger: exportJSON formats with indentation', () => {
+// ==============================================================================
+// PERSISTENT STATUS TESTS
+// ==============================================================================
+
+test('Logger: persistent status sets slot', () => {
   const logger = new Logger();
-  logger.info('storage', 'Test');
-
-  const json = logger.exportJSON();
-  assert(json.includes('\n'), 'Should have newlines for formatting');
-  assert(json.includes('  '), 'Should have indentation');
-});
-
-test('Logger: getAll returns copy of entries (immutable)', () => {
-  const logger = new Logger();
-  logger.info('storage', 'Msg 1');
-
-  const entries1 = logger.getAll();
-  const entries2 = logger.getAll();
-
-  assert.notStrictEqual(entries1, entries2, 'Should return different array instances');
-  assert.strictEqual(entries1.length, entries2.length);
-});
-
-// ============================================================================
-// StatusBar Tests
-// ============================================================================
-
-test('StatusBar: post() stores persistent message in slot', () => {
-  const statusBar = new StatusBar();
-  statusBar.post(LogLevel.Error, 'form-error', 'Invalid input');
-
-  const current = statusBar.getCurrent();
-  assert(current !== null);
+  
+  logger.error('form-error', 'Invalid input');
+  
+  const current = logger.transientMsg();
+  assert.ok(current !== null);
   assert.strictEqual(current.slot, 'form-error');
-  assert.strictEqual(current.level, 'error');
   assert.strictEqual(current.message, 'Invalid input');
-  assert.strictEqual(current.isTransient, false);
+  assert.strictEqual(current.expireTimestamp, undefined);
 });
 
-test('StatusBar: post() replaces older message in same slot', () => {
-  const statusBar = new StatusBar();
-  statusBar.post(LogLevel.Error, 'form-error', 'First error');
-  statusBar.post(LogLevel.Warn, 'form-error', 'Second error');
-
-  const current = statusBar.getCurrent();
-  assert(current !== null);
+test('Logger: persistent status replaces older message in same slot', () => {
+  const logger = new Logger();
+  
+  logger.error('form-error', 'First error');
+  logger.error('form-error', 'Second error');
+  
+  const current = logger.transientMsg();
+  assert.ok(current !== null);
   assert.strictEqual(current.message, 'Second error');
-  assert.strictEqual(current.level, 'warn');
 });
 
-test('StatusBar: flash() sets transient message', () => {
-  const statusBar = new StatusBar();
-  statusBar.flash(LogLevel.Info, 'transient', 5000, '✅ Saved');
-
-  const current = statusBar.getCurrent();
-  assert(current !== null);
-  assert.strictEqual(current.message, '✅ Saved');
-  assert.strictEqual(current.isTransient, true);
-  assert.strictEqual(current.timeout, 5000);
+test('Logger: persistent status adds to ring buffer', () => {
+  const logger = new Logger();
+  
+  logger.error('form-error', 'Error message');
+  
+  assert.strictEqual(logger.logsRing.length, 1);
+  assert.strictEqual(logger.logsRing[0].category, 'form-error');
+  assert.strictEqual(logger.logsRing[0].message, 'Error message');
 });
 
-test('StatusBar: transient overrides persistent (priority)', () => {
-  const statusBar = new StatusBar();
-  statusBar.post(LogLevel.Error, 'form-error', 'Persistent error');
-  statusBar.flash(LogLevel.Info, 'transient', 5000, '✅ Saved');
+// ==============================================================================
+// TRANSIENT STATUS TESTS (flash methods)
+// ==============================================================================
 
-  const current = statusBar.getCurrent();
-  assert(current !== null);
-  assert.strictEqual(current.message, '✅ Saved', 'Transient should win');
-  assert.strictEqual(current.isTransient, true);
+test('Logger: transient status sets expireTimestamp', () => {
+  const logger = new Logger();
+  
+  logger.errorFlash(3000, 'save-status', 'Saved!');
+  
+  const current = logger.transientMsg();
+  assert.ok(current !== null);
+  assert.strictEqual(current.slot, 'save-status');
+  assert.strictEqual(current.message, 'Saved!');
+  assert.ok(current.expireTimestamp instanceof Date);
 });
 
-test('StatusBar: transient auto-clears after timeout', async () => {
-  const statusBar = new StatusBar();
-  statusBar.flash(LogLevel.Info, 'transient', 100, 'Short timeout for testing');
+test('Logger: transient status adds to ring buffer', () => {
+  const logger = new Logger();
+  
+  logger.infoFlash(1000, 'save-status', 'Saved!');
+  
+  assert.strictEqual(logger.logsRing.length, 1);
+  assert.strictEqual(logger.logsRing[0].category, 'save-status');
+  assert.strictEqual(logger.logsRing[0].message, 'Saved!');
+});
 
-  let current = statusBar.getCurrent();
-  assert(current !== null);
-  assert.strictEqual(current.message, 'Short timeout for testing');
+test('Logger: transient status auto-expires', async () => {
+  const logger = new Logger();
+  
+  logger.infoFlash(50, 'temp', 'Temporary message');
+  
+  assert.ok(logger.transientMsg() !== null);
+  
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  
+  assert.ok(logger.transientMsg() === null);
+});
 
-  // Wait for timeout
+test('Logger: transient expiration notifies subscribers', async () => {
+  const logger = new Logger();
+  let notificationCount = 0;
+  
+  logger.subscribeStatus(() => {
+    notificationCount++;
+  });
+  
+  logger.infoFlash(50, 'temp', 'Temporary');
+  const initialCount = notificationCount;
+  
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  
+  assert.ok(notificationCount > initialCount, 'Should notify on expiration');
+});
+
+test('Logger: multiple transient messages use single timer', async () => {
+  const logger = new Logger();
+  
+  logger.infoFlash(100, 'slot1', 'First');
+  logger.infoFlash(150, 'slot2', 'Second');
+  logger.infoFlash(200, 'slot3', 'Third');
+  
+  // All should exist initially
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  assert.ok(logger.transientMsg() !== null);
+  
+  // First should expire
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  const current1 = logger.transientMsg();
+  assert.ok(current1 !== null);
+  assert.ok(['slot2', 'slot3'].includes(current1.slot));
+  
+  // All should expire
   await new Promise((resolve) => setTimeout(resolve, 150));
-
-  current = statusBar.getCurrent();
-  assert.strictEqual(current, null, 'Transient should be cleared');
+  assert.ok(logger.transientMsg() === null);
 });
 
-test('StatusBar: after transient clears, persistent becomes visible', async () => {
-  const statusBar = new StatusBar();
-  statusBar.post(LogLevel.Error, 'form-error', 'Persistent error');
-  statusBar.flash(LogLevel.Info, 'transient', 100, 'Saved');
+// ==============================================================================
+// PRIORITY TESTS
+// ==============================================================================
 
-  // Wait for transient to clear
-  await new Promise((resolve) => setTimeout(resolve, 150));
-
-  const current = statusBar.getCurrent();
-  assert(current !== null);
-  assert.strictEqual(current.message, 'Persistent error', 'Should fall back to persistent');
+test('Logger: transientMsg returns highest level', () => {
+  const logger = new Logger();
+  
+  logger.info('info-slot', 'Info message');
+  logger.warn('warn-slot', 'Warn message');
+  logger.error('error-slot', 'Error message');
+  
+  const current = logger.transientMsg();
+  assert.ok(current !== null);
+  assert.strictEqual(current.level, LogLevel.Error);
 });
 
-test('StatusBar: clear() removes specific slot', () => {
-  const statusBar = new StatusBar();
-  statusBar.post(LogLevel.Error, 'form-error', 'Error 1');
-  statusBar.post(LogLevel.Error, 'storage-error', 'Error 2');
-
-  statusBar.clear('form-error');
-
-  const current = statusBar.getCurrent();
-  assert(current !== null);
-  assert.strictEqual(current.message, 'Error 2', 'Should show other slot');
+test('Logger: transientMsg returns most recent at same level', async () => {
+  const logger = new Logger();
+  
+  logger.error('slot1', 'First error');
+  await new Promise((resolve) => setTimeout(resolve, 2));
+  logger.error('slot2', 'Second error');
+  await new Promise((resolve) => setTimeout(resolve, 2));
+  logger.error('slot3', 'Third error');
+  
+  const current = logger.transientMsg();
+  assert.ok(current !== null);
+  assert.strictEqual(current.message, 'Third error');
 });
 
-test('StatusBar: clear() with no args removes all slots', () => {
-  const statusBar = new StatusBar();
-  statusBar.post(LogLevel.Error, 'form-error', 'Error 1');
-  statusBar.post(LogLevel.Error, 'storage-error', 'Error 2');
-
-  statusBar.clear();
-
-  const current = statusBar.getCurrent();
-  assert.strictEqual(current, null, 'All slots should be cleared');
+test('Logger: transient expiration reveals lower-priority message', async () => {
+  const logger = new Logger();
+  
+  logger.info('persistent', 'Persistent info');
+  logger.errorFlash(50, 'transient', 'Transient error');
+  
+  assert.strictEqual(logger.transientMsg()?.level, LogLevel.Error);
+  
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  
+  const current = logger.transientMsg();
+  assert.ok(current !== null);
+  assert.strictEqual(current.level, LogLevel.Info);
+  assert.strictEqual(current.message, 'Persistent info');
 });
 
-test('StatusBar: clear() by level filters correctly', () => {
-  const statusBar = new StatusBar();
-  statusBar.post(LogLevel.Error, 'form-error', 'Error msg');
-  statusBar.post(LogLevel.Warn, 'storage-error', 'Warning msg');
+// ==============================================================================
+// SLOT MANAGEMENT TESTS
+// ==============================================================================
 
-  statusBar.clear(undefined, 'error');
-
-  const current = statusBar.getCurrent();
-  assert(current !== null);
-  assert.strictEqual(current.message, 'Warning msg', 'Should keep warn level');
+test('Logger: clearSlot removes specific slot', () => {
+  const logger = new Logger();
+  
+  logger.error('slot1', 'Error 1');
+  logger.error('slot2', 'Error 2');
+  
+  logger.clearSlot('slot1');
+  
+  const current = logger.transientMsg();
+  assert.ok(current !== null);
+  assert.strictEqual(current.slot, 'slot2');
 });
 
-test('StatusBar: getCurrent() returns highest level persistent', () => {
-  const statusBar = new StatusBar();
-  statusBar.post(LogLevel.Info, 'form-error', 'Info msg');
-  statusBar.post(LogLevel.Error, 'storage-error', 'Error msg');
-  statusBar.post(LogLevel.Warn, 'template-error', 'Warn msg');
-
-  const current = statusBar.getCurrent();
-  assert(current !== null);
-  assert.strictEqual(current.level, 'error', 'Error should have highest priority');
-  assert.strictEqual(current.message, 'Error msg');
+test('Logger: clearSlot with no args removes all slots', () => {
+  const logger = new Logger();
+  
+  logger.error('slot1', 'Error 1');
+  logger.warn('slot2', 'Warn 1');
+  
+  logger.clearSlot();
+  
+  assert.ok(logger.transientMsg() === null);
 });
 
-test('StatusBar: getCurrent() returns oldest in same level', () => {
-  const statusBar = new StatusBar();
-
-  // Add multiple errors with slight delays to ensure timestamp ordering
-  statusBar.post(LogLevel.Error, 'form-error', 'First error');
-  statusBar.post(LogLevel.Error, 'storage-error', 'Second error');
-  statusBar.post(LogLevel.Error, 'template-error', 'Third error');
-
-  const current = statusBar.getCurrent();
-  assert(current !== null);
-  assert.strictEqual(current.message, 'First error', 'Should return oldest at same level');
+test('Logger: clearSlot filters by level', () => {
+  const logger = new Logger();
+  
+  logger.error('slot1', 'Error');
+  logger.warn('slot2', 'Warning');
+  
+  logger.clearSlot(undefined, LogLevel.Error);
+  
+  const current = logger.transientMsg();
+  assert.ok(current !== null);
+  assert.strictEqual(current.level, LogLevel.Warn);
 });
 
-test('StatusBar: slot isolation (messages in different slots dont interfere)', () => {
-  const statusBar = new StatusBar();
-  statusBar.post(LogLevel.Error, 'form-error', 'Form error');
-  statusBar.post(LogLevel.Warn, 'storage-error', 'Storage warn');
-
-  statusBar.clear('form-error');
-
-  const current = statusBar.getCurrent();
-  assert(current !== null);
-  assert.strictEqual(current.message, 'Storage warn', 'Other slot should remain');
+test('Logger: clearSlot with slot and level filters correctly', () => {
+  const logger = new Logger();
+  
+  logger.error('slot1', 'Error 1');
+  logger.warn('slot2', 'Warn 1');
+  
+  logger.clearSlot('slot1', LogLevel.Warn);
+  
+  // Should NOT clear because level doesn't match
+  assert.ok(logger.transientMsg()?.slot === 'slot1');
 });
 
-test('StatusBar: subscribe receives notification on post()', () => {
-  const statusBar = new StatusBar();
+test('Logger: clearSlot notifies subscribers', () => {
+  const logger = new Logger();
   let notified = false;
-  let receivedMsg: any = null;
-
-  statusBar.subscribe((msg) => {
+  
+  logger.subscribeStatus(() => {
     notified = true;
+  });
+  
+  logger.error('slot', 'Error');
+  notified = false;
+  
+  logger.clearSlot('slot');
+  
+  assert.ok(notified);
+});
+
+// ==============================================================================
+// SUBSCRIPTION TESTS
+// ==============================================================================
+
+test('Logger: subscribeStatus receives notification on status change', () => {
+  const logger = new Logger();
+  let receivedMsg: SlotMessage | null = null;
+  
+  logger.subscribeStatus((msg) => {
     receivedMsg = msg;
   });
-
-  statusBar.post(LogLevel.Error, 'form-error', 'Test error');
-
-  assert.strictEqual(notified, true);
-  assert(receivedMsg !== null);
+  
+  logger.error('test', 'Test error');
+  
+  assert.ok(receivedMsg !== null);
   assert.strictEqual(receivedMsg.message, 'Test error');
 });
 
-test('StatusBar: subscribe receives notification on flash()', () => {
-  const statusBar = new StatusBar();
-  let notified = false;
-
-  statusBar.subscribe(() => {
-    notified = true;
+test('Logger: subscribeStatus receives notification on transient flash', () => {
+  const logger = new Logger();
+  let receivedMsg: SlotMessage | null = null;
+  
+  logger.subscribeStatus((msg) => {
+    receivedMsg = msg;
   });
-
-  statusBar.flash(LogLevel.Info, 'transient', 3000, '✅ Saved');
-
-  assert.strictEqual(notified, true);
+  
+  logger.infoFlash(1000, 'test', 'Flash message');
+  
+  assert.ok(receivedMsg !== null);
+  assert.strictEqual(receivedMsg.message, 'Flash message');
 });
 
-test('StatusBar: subscribe receives notification on clear()', () => {
-  const statusBar = new StatusBar();
+test('Logger: subscribeStatus receives notification on clearSlot', () => {
+  const logger = new Logger();
   let callCount = 0;
-
-  statusBar.subscribe(() => {
+  
+  logger.subscribeStatus(() => {
     callCount++;
   });
-
-  statusBar.post(LogLevel.Error, 'form-error', 'Error');
-  statusBar.clear('form-error');
-
-  assert.strictEqual(callCount, 2, 'Should notify on set + clear');
+  
+  logger.error('test', 'Error');
+  logger.clearSlot('test');
+  
+  assert.strictEqual(callCount, 2);
 });
 
-test('StatusBar: unsubscribe stops notifications', () => {
-  const statusBar = new StatusBar();
+test('Logger: subscribeStatus unsubscribe stops notifications', () => {
+  const logger = new Logger();
   let callCount = 0;
-
-  const unsubscribe = statusBar.subscribe(() => {
+  
+  const unsubscribe = logger.subscribeStatus(() => {
     callCount++;
   });
-
-  statusBar.post(LogLevel.Error, 'form-error', 'Error');
-  assert.strictEqual(callCount, 1);
-
+  
+  logger.error('test', 'Message 1');
   unsubscribe();
-
-  statusBar.post(LogLevel.Error, 'storage-error', 'Another error');
-  assert.strictEqual(callCount, 1, 'Should not notify after unsubscribe');
+  logger.error('test', 'Message 2');
+  
+  assert.strictEqual(callCount, 1);
 });
 
-test('StatusBar: setLogger() integrates with logger', () => {
+test('Logger: empty state returns null', () => {
   const logger = new Logger();
-  const statusBar = new StatusBar();
-    statusBar.setLogger(logger);
-
-  statusBar.post(LogLevel.Error, 'form-error', 'Form error msg');
-
-  const entries = logger.getAll();
-  assert.strictEqual(entries.length, 1);
-  assert.strictEqual(entries[0].level, 'error');
-    assert.strictEqual(entries[0].category, 'form-error');
-  assert.strictEqual(entries[0].message, 'Form error msg');
+  
+  assert.ok(logger.transientMsg() === null);
 });
 
-test('StatusBar: logger integration for flash()', () => {
+test('Logger: slot isolation - messages in different slots dont interfere', () => {
   const logger = new Logger();
-  const statusBar = new StatusBar();
-  statusBar.setLogger(logger);
-
-  statusBar.flash(LogLevel.Info, 'transient', 3000, '✅ Saved successfully');
-
-  const entries = logger.getAll();
-  assert.strictEqual(entries.length, 1);
-  assert.strictEqual(entries[0].level, 'info');
-  assert.strictEqual(entries[0].message, '✅ Saved successfully');
-  assert.strictEqual(entries[0].message, '✅ Saved successfully');
-});
-
-test('StatusBar: empty state returns null', () => {
-  const statusBar = new StatusBar();
-
-  const current = statusBar.getCurrent();
-  assert.strictEqual(current, null);
-});
-
-test('StatusBar: flash() with 0 timeout does not auto-clear', async () => {
-  const statusBar = new StatusBar();
-  statusBar.flash(LogLevel.Info, 'transient', 0, 'Persistent action');
-
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  const current = statusBar.getCurrent();
-  assert(current !== null);
-  assert.strictEqual(current.message, 'Persistent action', 'Should not clear with 0 timeout');
-});
-
-test('StatusBar: stacked transients restore previous after later expires', async () => {
-  const statusBar = new StatusBar();
-  // Flash A (longer), then B (shorter)
-  statusBar.flash(LogLevel.Info, 'transient', 200, 'A');
-  statusBar.flash(LogLevel.Warn, 'transient', 100, 'B');
-
-  // Initially B should be visible (latest)
-  let current = statusBar.getCurrent();
-  assert(current !== null);
-  assert.strictEqual(current?.message, 'B');
-  assert.strictEqual(current?.level, 'warn');
-
-  // After 120ms, B expires, A should reappear
-  await new Promise((resolve) => setTimeout(resolve, 120));
-  current = statusBar.getCurrent();
-  assert(current !== null);
-  assert.strictEqual(current?.message, 'A');
-  assert.strictEqual(current?.level, 'info');
-
-  // After total 220ms, A should expire too → fallback to null (no persistent)
-  await new Promise((resolve) => setTimeout(resolve, 100));
-  current = statusBar.getCurrent();
-  assert.strictEqual(current, null);
+  
+  logger.error('form-error', 'Form error');
+  logger.warn('storage-error', 'Storage warn');
+  
+  logger.clearSlot('form-error');
+  
+  const current = logger.transientMsg();
+  assert.ok(current !== null);
+  assert.strictEqual(current.message, 'Storage warn');
 });

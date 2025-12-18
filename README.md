@@ -139,7 +139,7 @@ stream-call/
 │   ├── detect.ts             # Stream detection patterns
 │   ├── template.ts           # Template placeholder interpolation
 │   ├── config.ts             # Config parsing & validation
-│   ├── logger.ts             # Logger & StatusBar classes
+│   ├── logger.ts             # Unified Logger class (ring buffer + status slots)
 │   ├── logging-ui.ts         # Reusable logging UI helpers
 │   ├── debounce.ts           # Debounce utility
 │   └── COMMIT_MSG.md         # Commit message template
@@ -294,9 +294,10 @@ The extension uses a message-driven architecture via `browser.runtime.sendMessag
 
 ### Logging Categories
 
-Both Logger (audit trail) and StatusBar (UI feedback) use unified categories:
+Logger provides audit trail (ring buffer) + UI status (slot-based):
 
-**65 total logging calls** (25 Logger, 40 StatusBar)
+**API**: `logger.error(slot, msg)`, `logger.infoFlash(timeout, slot, msg)`
+**~65 total logging calls** across all components
 **1 legacy console call** (WIP hover-panel.ts stub)
 
 | Category | Occurrences | Purpose |
