@@ -4,7 +4,7 @@
 export {};
 
 import { LogLevel } from './logger';
-import { applyLogFiltering } from './logging-ui';
+import { applyLogFiltering } from './logger-ui';
 import { initLogging } from './components-ui';
 import { ApiEndpoint, suggestEndpointName, validateEndpoints, DEFAULT_CONFIG, getBuiltInEndpoints, callEndpoint, previewCall } from './endpoint';
 

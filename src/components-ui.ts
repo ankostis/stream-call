@@ -4,7 +4,7 @@
 export {};
 
 import { Logger, LogLevel, SlotMessage } from './logger';
-import { createStatusRenderer, createLogAppender, applyLogFiltering } from './logging-ui';
+import { createStatusRenderer, createLogAppender, applyLogFiltering } from './logger-ui';
 
 /**
  * Button configuration

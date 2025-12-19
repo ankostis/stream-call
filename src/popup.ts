@@ -5,7 +5,7 @@ export {};
 
 import { parseEndpoints, type ApiEndpoint, previewCall, callEndpoint } from './endpoint';
 import { LogLevel } from './logger';
-import { applyLogFiltering } from './logging-ui';
+import { applyLogFiltering } from './logger-ui';
 import { initLogging, createButton, type ButtonConfig } from './components-ui';
 
 type StreamInfo = {

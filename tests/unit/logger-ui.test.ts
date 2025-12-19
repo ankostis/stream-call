@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert';
 import { JSDOM } from 'jsdom';
-import { applyLogFilter, createLogAppender } from '../../src/logging-ui';
+import { applyLogFilter, createLogAppender } from '../../src/logger-ui';
 
 // Mock DOM for tests
 function createMockViewer(): HTMLDivElement {
