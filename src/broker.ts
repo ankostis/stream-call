@@ -8,6 +8,7 @@ export {};
 
 import { callEndpoint, DEFAULT_CONFIG } from './endpoint';
 import { Logger, LogLevel } from './logger';
+import { type StreamInfo, type RuntimeMessage } from './types';
 
 const logger = new Logger();
 
@@ -25,21 +26,6 @@ browser.runtime.onInstalled.addListener(async (details) => {
     }
   }
 });
-
-type StreamInfo = {
-  url: string;
-  type: string;
-  pageUrl?: string;
-  pageTitle?: string;
-  timestamp: number;
-};
-
-type RuntimeMessage =
-  | { type: 'STREAM_DETECTED'; url: string; streamType: string }
-  | { type: 'GET_STREAMS'; tabId: number }
-  | { type: 'CALL_API'; streamUrl: string; pageUrl?: string; pageTitle?: string; endpointName?: string }
-  | { type: 'OPEN_IN_TAB'; streamUrl: string; pageUrl?: string; pageTitle?: string; endpointName?: string }
-  | { type: 'PING' };
 
 const tabStreams = new Map<number, StreamInfo[]>();
 const tabHeaders = new Map<number, Record<string, string>>();

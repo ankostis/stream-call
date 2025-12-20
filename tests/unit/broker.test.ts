@@ -3,6 +3,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { type StreamInfo, type RuntimeMessage } from '../../src/types';
 
 // Mock browser APIs
 const mockBrowser = {
@@ -34,20 +35,6 @@ const mockBrowser = {
 };
 
 (global as any).browser = mockBrowser;
-
-// Type definitions for testing
-type StreamInfo = {
-  url: string;
-  type: string;
-  pageUrl?: string;
-  pageTitle?: string;
-  timestamp: number;
-};
-
-type RuntimeMessage =
-  | { type: 'STREAM_DETECTED'; url: string; streamType: string }
-  | { type: 'GET_STREAMS'; tabId: number }
-  | { type: 'PING' };
 
 // Simulate the broker script's message handler
 // This is a simplified version for testing
@@ -244,32 +231,40 @@ test('STREAM_DETECTED: captures page context', async () => {
  * This prevents the issue where message handlers exist but types are missing
  */
 test('RuntimeMessage type includes all handled message types', async () => {
-  // Read the broker.ts source to extract handled types and declared types
+  // Read the types.ts source to extract declared types
+  // and broker.ts source to extract handled types
   const fs = await import('fs/promises');
   const path = await import('path');
 
   const brokerPath = path.join(process.cwd(), 'src', 'broker.ts');
-  const content = await fs.readFile(brokerPath, 'utf-8');
+  const typesPath = path.join(process.cwd(), 'src', 'types.ts');
+  const brokerContent = await fs.readFile(brokerPath, 'utf-8');
+  const typesContent = await fs.readFile(typesPath, 'utf-8');
 
-  // Extract handled message types from if statements
+  // Extract handled message types from if statements in broker.ts
   const handledTypesRegex = /if \(message\.type === '([^']+)'\)/g;
   const handledTypes = new Set<string>();
   let match;
-  while ((match = handledTypesRegex.exec(content)) !== null) {
+  while ((match = handledTypesRegex.exec(brokerContent)) !== null) {
     handledTypes.add(match[1]);
   }
 
-  // Extract declared types from RuntimeMessage union
+  // Extract declared types from RuntimeMessage union in types.ts
   // Match the entire type definition including all union members
-  const runtimeMessageMatch = content.match(/type RuntimeMessage\s*=\s*((?:[\s\S](?!\ntype\s|\nconst\s|\nfunction\s))+)/);
-  assert(runtimeMessageMatch, 'RuntimeMessage type definition not found');
+  // Pattern: export type RuntimeMessage = ... until final semicolon
+  const runtimeMessageMatch = typesContent.match(/export type RuntimeMessage\s*=\s*([\s\S]+?)\n(?=\n|$)/);
+  assert(runtimeMessageMatch, 'RuntimeMessage type definition not found in types.ts');
 
   const declaredTypes = new Set<string>();
   const unionContent = runtimeMessageMatch[1];
-  const declaredTypesRegex = /\{\s*type:\s*'([^']+)'/g;
+  // Match type declarations with possible whitespace/newlines
+  const declaredTypesRegex = /type:\s*'([^']+)'/g;
   while ((match = declaredTypesRegex.exec(unionContent)) !== null) {
     declaredTypes.add(match[1]);
   }
+
+  console.log(`✓ Handled types: ${Array.from(handledTypes).sort().join(', ')}`);
+  console.log(`✓ Declared types: ${Array.from(declaredTypes).sort().join(', ')}`);
 
   // Verify all handled types are declared
   const missingTypes: string[] = [];
@@ -293,13 +288,14 @@ test('No duplicate message type declarations in RuntimeMessage', async () => {
   const fs = await import('fs/promises');
   const path = await import('path');
 
-  const brokerPath = path.join(process.cwd(), 'src', 'broker.ts');
-  const content = await fs.readFile(brokerPath, 'utf-8');
+  const typesPath = path.join(process.cwd(), 'src', 'types.ts');
+  const content = await fs.readFile(typesPath, 'utf-8');
 
-  // Extract all declared types
-  const declaredTypesRegex = /\{\s*type:\s*'([^']+)'/g;
-  const runtimeMessageMatch = content.match(/type RuntimeMessage\s*=\s*([\s\S]*?);/);
-  assert(runtimeMessageMatch, 'RuntimeMessage type definition not found');
+  // Extract all declared types from types.ts
+  // Match type declarations with possible whitespace/newlines
+  const declaredTypesRegex = /type:\s*'([^']+)'/g;
+  const runtimeMessageMatch = content.match(/export type RuntimeMessage\s*=\s*([\s\S]*?);/);
+  assert(runtimeMessageMatch, 'RuntimeMessage type definition not found in types.ts');
 
   const types: string[] = [];
   const unionContent = runtimeMessageMatch[1];

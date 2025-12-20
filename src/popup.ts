@@ -7,14 +7,7 @@ import { parseEndpoints, type ApiEndpoint, previewCall, callEndpoint } from './e
 import { LogLevel } from './logger';
 import { applyLogFiltering } from './logger-ui';
 import { initLogging, createButton, type ButtonConfig } from './components-ui';
-
-type StreamInfo = {
-  url: string;
-  type: string;
-  pageUrl?: string;
-  pageTitle?: string;
-  timestamp?: number;
-};
+import { type StreamInfo } from './types';
 
 let currentTabId: number | null = null;
 let apiEndpoints: ApiEndpoint[] = [];

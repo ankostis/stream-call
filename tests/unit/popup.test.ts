@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert';
+import { type StreamInfo } from '../../src/types';
 
 /**
  * Unit tests for testable logic in popup.ts
@@ -7,15 +8,6 @@ import assert from 'node:assert';
  * Note: DOM-heavy functions (stream display, browser messaging) are validated
  * through integration tests. These tests focus on pure data transformation logic.
  */
-
-// Mock StreamInfo type for testing
-type StreamInfo = {
-  url: string;
-  type: string;
-  pageUrl?: string;
-  pageTitle?: string;
-  timestamp?: number;
-};
 
 test('Stream URL truncation: long URLs should be displayable', () => {
   const longUrl =
