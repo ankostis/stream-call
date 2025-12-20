@@ -200,7 +200,7 @@ import { Logger, LogLevel } from './logger';
 
     const iframe = document.createElement('iframe');
     iframe.id = 'stream-call-hover-frame';
-    iframe.src = browser.runtime.getURL('dist/hover-panel.html');
+    iframe.src = browser.runtime.getURL('dist/hover-ui.html');
     iframe.style.cssText = `
       position: fixed;
       top: 0;
@@ -218,49 +218,44 @@ import { Logger, LogLevel } from './logger';
     document.body.appendChild(iframe);
     logger.debug('page', 'Hover panel iframe injected');
 
+    // Toggle function shared by button and iframe close
+    const togglePanel = (forceClose = false) => {
+      const isVisible = iframe.style.transform === 'translateX(0px)';
+      const shouldHide = forceClose || isVisible;
+      iframe.style.transform = shouldHide ? 'translateX(100%)' : 'translateX(0px)';
+      toggleBtn.style.transform = shouldHide ? 'translateX(0)' : 'translateX(-410px)';
+    };
+
     // Listen for close message from iframe
     window.addEventListener('message', (event) => {
-      if (event.data.type === 'CLOSE_HOVER_PANEL') {
-        iframe.style.transform = 'translateX(100%)';
+      if (event.data?.type === 'CLOSE_HOVER_PANEL') {
+        togglePanel(true);
       }
     });
 
-    // Add toggle button
+    // Add toggle button - positioned at panel edge, moves with panel
     const toggleBtn = document.createElement('button');
     toggleBtn.id = 'stream-call-toggle-btn';
     toggleBtn.innerHTML = '🎵';
-    toggleBtn.title = 'Toggle Stream call panel (WIP)';
+    toggleBtn.title = 'Toggle Stream call panel';
     toggleBtn.style.cssText = `
       position: fixed;
-      bottom: 20px;
-      right: 20px;
-      width: 56px;
-      height: 56px;
+      top: 10px;
+      right: 10px;
+      width: 48px;
+      height: 48px;
       border-radius: 50%;
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
       border: none;
-      font-size: 24px;
+      font-size: 20px;
       cursor: pointer;
       box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-      z-index: 999998;
-      transition: all 0.2s;
+      z-index: 1000000;
+      transition: transform 0.3s ease-in-out, box-shadow 0.2s;
     `;
 
-    toggleBtn.addEventListener('click', () => {
-      const isVisible = iframe.style.transform === 'translateX(0px)';
-      iframe.style.transform = isVisible ? 'translateX(100%)' : 'translateX(0px)';
-    });
-
-    toggleBtn.addEventListener('mouseenter', () => {
-      toggleBtn.style.transform = 'scale(1.1)';
-      toggleBtn.style.boxShadow = '0 6px 16px rgba(102, 126, 234, 0.5)';
-    });
-
-    toggleBtn.addEventListener('mouseleave', () => {
-      toggleBtn.style.transform = 'scale(1)';
-      toggleBtn.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.4)';
-    });
+    toggleBtn.addEventListener('click', () => togglePanel());
 
     document.body.appendChild(toggleBtn);
     logger.debug('page', 'Toggle button added');

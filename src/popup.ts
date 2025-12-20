@@ -3,10 +3,10 @@
  */
 export {};
 
-import { parseEndpoints, type ApiEndpoint, previewCall, callEndpoint } from './endpoint';
+import { parseEndpoints, type ApiEndpoint, previewCall, callEndpoint, formatResponseBody } from './endpoint';
 import { LogLevel } from './logger';
 import { applyLogFiltering } from './logger-ui';
-import { initLogging, createButton, type ButtonConfig } from './components-ui';
+import { initLogging, createButton, displayStreams, populateStreamPanel, type StreamActionHandlers, type ButtonConfig } from './components-ui';
 import { type StreamInfo } from './types';
 
 let currentTabId: number | null = null;
@@ -140,131 +140,33 @@ async function loadStreams() {
     const badge = document.getElementById('stream-count');
     if (badge) badge.textContent = streams.length.toString();
 
-    displayStreams(streams);
+    displayStreamsPopup(streams);
   }
   // Note: Other errors bubble to caller (initialize) with full context
 }
 
 /**
- * Display streams in the UI (master-detail pattern)
+ * Display detected streams using shared UI components
  */
-function displayStreams(streams: StreamInfo[]) {
-  const listContainer = document.getElementById('streams-list-container');
-  const list = document.getElementById('streams-list');
-  const panel = document.getElementById('stream-panel');
-
-  if (!list || !listContainer || !panel) return;
-
-  list.innerHTML = '';
-
-  streams.forEach((stream, index) => {
-    const item = createStreamListItem(stream, index, streams);
-    list.appendChild(item);
+function displayStreamsPopup(streams: StreamInfo[]) {
+  displayStreams(streams, (stream, index) => {
+    populatePanel(stream, index, streams);
   });
-
-  listContainer.style.display = 'block';
-
-  // Auto-select first stream
-  if (streams.length > 0) {
-    populatePanel(streams[0], 0, streams);
-  }
 }
 
 /**
- * Create compact stream list item (master)
- */
-function createStreamListItem(stream: StreamInfo, index: number, allStreams: StreamInfo[]): HTMLElement {
-  const item = document.createElement('div');
-  item.className = 'stream-list-item';
-  if (index === 0) item.classList.add('selected');
-  item.setAttribute('data-index', index.toString());
-
-  const type = document.createElement('span');
-  type.className = 'stream-type';
-  type.textContent = stream.type;
-
-  const url = document.createElement('div');
-  url.className = 'stream-url';
-  url.textContent = stream.url;
-  url.title = stream.url;
-
-  item.appendChild(type);
-  item.appendChild(url);
-
-  // Click to populate detail panel
-  item.addEventListener('click', () => {
-    // Update selected state
-    document.querySelectorAll('.stream-list-item').forEach(el => el.classList.remove('selected'));
-    item.classList.add('selected');
-    populatePanel(stream, index, allStreams);
-  });
-
-  return item;
-}
-
-/**
- * Populate the detail panel with selected stream (detail)
+ * Populate the detail panel with selected stream (uses shared component)
  */
 function populatePanel(stream: StreamInfo, index: number, allStreams: StreamInfo[]) {
-  const panel = document.getElementById('stream-panel');
-  const panelActions = document.getElementById('panel-actions');
-
-  if (!panel || !panelActions) return;
-
-  // Rebuild actions
-  panelActions.innerHTML = '';
-
-  // Filter to show only active endpoints
   const activeEndpoints = apiEndpoints.filter(ep => ep.active !== false);
-  let endpointName: string | undefined = activeEndpoints[0]?.name;
 
-  if (activeEndpoints.length > 0) {
-    const select = document.createElement('select');
-    select.className = 'endpoint-select';
-    activeEndpoints.forEach((endpoint) => {
-      const option = document.createElement('option');
-      option.value = endpoint.name;
-      option.textContent = endpoint.name;
-      select.appendChild(option);
-    });
-    select.addEventListener('change', (e) => {
-      const target = e.target as HTMLSelectElement;
-      endpointName = target.value;
-    });
-    panelActions.appendChild(select);
-  }
+  const handlers: StreamActionHandlers = {
+    onPreview: (stream, endpointName) => handlePreview(stream, endpointName),
+    onCopy: (url) => handleCopyUrl(url),
+    onCall: (mode, stream, endpointName) => handleCallEndpoint(mode, stream, endpointName)
+  };
 
-  const previewBtn = createButton({
-    className: 'btn-test',
-    text: '👁 Preview',
-    onClick: () => handlePreview(stream, endpointName)
-  });
-
-  const copyBtn = createButton({
-    className: 'btn-secondary',
-    text: '📋 Copy',
-    onClick: () => handleCopyUrl(stream.url)
-  });
-
-  const callBtn = createButton({
-    className: 'btn-action',
-    text: '📤 Call',
-    onClick: () => handleCallEndpoint('fetch', stream, endpointName)
-  });
-
-  const openTabBtn = createButton({
-    className: 'btn-action',
-    text: '🌐 Open tab',
-    onClick: () => handleCallEndpoint('tab', stream, endpointName)
-  });
-
-  // Append buttons directly - CSS flexbox with wrap handles 2-row layout
-  panelActions.appendChild(previewBtn);
-  panelActions.appendChild(copyBtn);
-  panelActions.appendChild(callBtn);
-  panelActions.appendChild(openTabBtn);
-
-  panel.style.display = 'block';
+  populateStreamPanel(stream, activeEndpoints, handlers);
 }
 
 /**
@@ -326,6 +228,12 @@ async function handleCallEndpoint(mode: 'fetch' | 'tab', stream: StreamInfo, end
   if (response?.success) {
     const successMsg = mode === 'fetch' ? `✅ API call successful: ${response.message}` : `✅ Opened in new tab: ${response.details || stream.url}`;
     logger.infoFlash(3000, 'apicall', successMsg);
+
+    // Log response body if available (formatted JSON for readability)
+    if (response.response) {
+      const formatted = formatResponseBody(response.response);
+      logger.debug('apicall', `Response: ${formatted}`);
+    }
   } else {
     const errorMsg = response?.error ?? 'Unknown error';
     const failMsg = mode === 'fetch' ? `❌ API call failed: ${errorMsg}` : `❌ Failed to open URL: ${errorMsg}`;

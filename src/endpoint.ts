@@ -576,4 +576,17 @@ export async function callEndpoint({
   }
 }
 
+/**
+ * Format response body with truncation
+ * @param response - The response body to format
+ * @param maxLength - Maximum length before truncation (default 500)
+ * @returns Formatted and possibly truncated string
+ */
+export function formatResponseBody(response: any, maxLength: number = 500): string {
+  const body = String(response);
+  return body.length > maxLength
+    ? body.substring(0, maxLength) + '...'
+    : body;
+}
+
 export {};

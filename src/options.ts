@@ -6,7 +6,7 @@ export {};
 import { LogLevel } from './logger';
 import { applyLogFiltering } from './logger-ui';
 import { initLogging } from './components-ui';
-import { ApiEndpoint, suggestEndpointName, validateEndpoints, DEFAULT_CONFIG, getBuiltInEndpoints, callEndpoint, previewCall } from './endpoint';
+import { ApiEndpoint, suggestEndpointName, validateEndpoints, DEFAULT_CONFIG, getBuiltInEndpoints, callEndpoint, previewCall, formatResponseBody } from './endpoint';
 
 type Config = typeof DEFAULT_CONFIG;
 
@@ -453,7 +453,14 @@ async function handleCallEndpoint(mode: 'fetch' | 'tab') {
   if (response.success) {
     const successMsg = mode === 'fetch' ? `✅ Success: ${response.message}` : `✅ Opened in new tab: ${response.details || testUrl}`;
     logger.infoFlash(3000, 'apicall', successMsg);
-    logger.info('apicall', `${action} successful: ${candidate.name}`, { response: mode === 'fetch' ? response.response : response.details });
+
+    // Log response body if available (formatted JSON for readability)
+    if (mode === 'fetch' && response.response) {
+      const formatted = formatResponseBody(response.response);
+      logger.info('apicall', `${action} successful: ${candidate.name} Response: ${formatted}`);
+    } else if (mode === 'tab' && response.details) {
+      logger.info('apicall', `${action} successful: ${candidate.name}`);
+    }
   } else {
     logger.error( 'apicall', `❌ Failed: ${response.error}`);
     logger.error('apicall', `${action} failed: ${candidate.name}`, { error: response.error });

@@ -50,7 +50,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["dist/page.js", "dist/hover-panel.html", "dist/hover-panel.js"],
+      "resources": ["dist/page.js", "dist/hover-ui.html", "dist/hover-ui.js"],
       "matches": ["<all_urls>"]
     }
   ],

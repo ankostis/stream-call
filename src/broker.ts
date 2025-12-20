@@ -88,7 +88,12 @@ browser.runtime.onMessage.addListener((message: RuntimeMessage, sender) => {
     }
 
     if (message.type === 'GET_STREAMS') {
-      const tabId = message.tabId;
+      // Use provided tabId, or fall back to sender.tab.id (for hover-ui iframe)
+      const tabId = message.tabId ?? sender.tab?.id;
+      if (tabId === undefined) {
+        logger.warn('messaging', 'GET_STREAMS: No tab ID available');
+        return { streams: [] };
+      }
       const streams = tabStreams.get(tabId) || [];
       logger.debug('messaging', `GET_STREAMS for tab ${tabId}: ${streams.length} streams`);
       return { streams };
@@ -134,6 +139,33 @@ browser.runtime.onMessage.addListener((message: RuntimeMessage, sender) => {
       totalDetected,
       tabCount: tabStreams.size
     };
+  }
+
+  if (message.type === 'GET_ENDPOINTS') {
+    // Return endpoints from storage for hover-panel (can't access storage directly)
+    const stored = await browser.storage.sync.get('apiEndpoints');
+    const { parseEndpoints } = await import('./endpoint');
+    try {
+      const endpoints = parseEndpoints(stored.apiEndpoints || '[]');
+      logger.debug('messaging', `GET_ENDPOINTS: ${endpoints.length} endpoints`);
+      return { endpoints };
+    } catch (error: any) {
+      logger.error('messaging', 'GET_ENDPOINTS: Failed to parse endpoints', error);
+      return { endpoints: [], error: error.message };
+    }
+  }
+
+  if (message.type === 'OPEN_OPTIONS') {
+    // Open options page, reusing existing tab if found
+    const optionsUrl = browser.runtime.getURL('dist/options.html');
+    const tabs = await browser.tabs.query({ url: optionsUrl });
+    if (tabs.length > 0 && tabs[0].id) {
+      await browser.tabs.update(tabs[0].id, { active: true });
+    } else {
+      await browser.tabs.create({ url: optionsUrl, active: true });
+    }
+    logger.debug('messaging', 'OPEN_OPTIONS: Switched to options tab');
+    return { success: true };
   }
 
   return Promise.resolve({ success: false, error: 'Unhandled message type' });

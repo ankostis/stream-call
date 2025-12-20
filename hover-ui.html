@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<!--
+  Hover Panel UI: In-page overlay for mobile UX.
+  Loaded in iframe by page.ts. Mirrors popup.html structure.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stream call Hover Panel</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      width: 100%;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-size: 0.875rem;
+      color: #333;
+      background: #f5f5f5;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 1rem;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .header h1 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+
+    .header p {
+      font-size: 0.75rem;
+      opacity: 0.9;
+    }
+
+    .content {
+      padding: 1rem;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 2rem;
+      color: #666;
+    }
+
+    .status {
+      background: white;
+      border-radius: 0.5rem;
+      padding: 0.75rem;
+      margin-bottom: 0.75rem;
+      border: 1px solid #e0e0e0;
+    }
+
+    .status.detected {
+      border-color: #4CAF50;
+      background: #f1f8f4;
+    }
+
+    .status-title {
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .badge {
+      display: inline-block;
+      background: #4CAF50;
+      color: white;
+      padding: 0.125rem 8px;
+      border-radius: 0.75rem;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+      flex-shrink: 0;
+    }
+
+    .button-group button {
+      flex: 1;
+    }
+
+    button {
+      padding: 0.5rem 12px;
+      border: none;
+      border-radius: 0.25rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-secondary {
+      background: #e0e0e0;
+      color: #333;
+    }
+
+    .btn-secondary:hover {
+      background: #d0d0d0;
+    }
+
+    .btn-secondary:active {
+      background: #c0c0c0;
+      transform: scale(0.98);
+    }
+
+    .streams-list-container {
+      max-height: 150px;
+      overflow-y: auto;
+      background: white;
+      border: 1px solid #e0e0e0;
+      border-radius: 0.375rem;
+      margin-bottom: 0.75rem;
+      flex-shrink: 0;
+    }
+
+    .streams-list {
+      width: 100%;
+    }
+
+    .stream-list-item {
+      padding: 0.5rem 12px;
+      border-bottom: 1px solid #f0f0f0;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .stream-list-item:last-child {
+      border-bottom: none;
+    }
+
+    .stream-list-item:hover {
+      background: #f8f9fa;
+    }
+
+    .stream-list-item:active {
+      background: #e9ecef;
+    }
+
+    .stream-list-item.selected {
+      background: #e7ecff;
+      border-left: 3px solid #667eea;
+    }
+
+    .stream-list-item .stream-type {
+      font-size: 9px;
+      padding: 0.125rem 4px;
+      margin: 0;
+    }
+
+    .stream-list-item .stream-url {
+      font-size: 11px;
+      color: #666;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex: 1;
+      margin: 0;
+    }
+
+    .stream-panel {
+      background: white;
+      border: 1px solid #e0e0e0;
+      border-radius: 0.375rem;
+      padding: 0.5rem 12px;
+      margin-bottom: 0.75rem;
+      flex-shrink: 0;
+    }
+
+    .stream-type {
+      display: inline-block;
+      background: #667eea;
+      color: white;
+      padding: 0.125rem 0.5rem;
+      border-radius: 0.25rem;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .stream-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.375rem;
+    }
+
+    .stream-actions select {
+      grid-column: 1 / -1;
+      padding: 0.375rem;
+      border: 1px solid #ddd;
+      border-radius: 0.25rem;
+      font-size: 0.6875rem;
+      background: #fff;
+    }
+
+    .stream-actions button {
+      padding: 0.5rem 0.5rem;
+      font-size: 0.75rem;
+    }
+
+    .btn-primary {
+      background: #667eea;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #5568d3;
+    }
+
+    .btn-primary:active {
+      background: #4557c2;
+      transform: scale(0.98);
+    }
+
+    .btn-action {
+      background: #4CAF50;
+      color: white;
+    }
+
+    .btn-action:hover {
+      background: #45a049;
+    }
+
+    .btn-action:active {
+      background: #3d8b40;
+      transform: scale(0.98);
+    }
+
+    .endpoint-select {
+      padding: 0.375rem;
+      border: 1px solid #ddd;
+      border-radius: 0.25rem;
+      font-size: 11px;
+      min-width: 120px;
+      cursor: pointer;
+      background: #fff;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 2rem 1rem;
+      color: #666;
+    }
+
+    .empty-state-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+
+    /* Log filter panel */
+    .log-filter-panel {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+      font-size: 11px;
+      flex-shrink: 0;
+    }
+
+    /* Log viewer styling - always visible */
+    .log-viewer {
+      background: #0b1021;
+      color: #e5e7eb;
+      border-radius: 0.25rem;
+      padding: 0.5rem;
+      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+      font-size: 11px;
+      line-height: 1.4;
+      border: 1px solid #1e293b;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      overflow-y: auto;
+      min-height: 80px;
+    }
+
+    .log-viewer > div {
+      margin-bottom: 0.125rem;
+      flex-shrink: 0;
+    }
+
+    .log-empty {
+      color: #6b7280;
+      font-style: italic;
+    }
+
+    /* Status bar styling - natural flex child at bottom (same as popup.html) */
+    .status-bar-card {
+      background: white;
+      padding: 0.5rem 12px;
+      border-top: 0.125rem solid #667eea;
+      border-left: none;
+      border-radius: 0;
+      font-size: 11px;
+      box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
+      margin: 0;
+      flex-shrink: 0;
+    }
+
+    .status-content {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .status-icon {
+      font-size: 0.75rem;
+      flex-shrink: 0;
+    }
+
+    .status-text {
+      color: #333;
+      font-weight: 500;
+      word-break: break-word;
+      font-size: 11px;
+      line-height: 1.3;
+    }
+
+    /* Responsive */
+    @media (max-width: 450px) {
+      body {
+        font-size: 0.8125rem;
+      }
+
+      .header h1 {
+        font-size: 1.125rem;
+      }
+
+      .header p {
+        font-size: 11px;
+      }
+
+      .content {
+        padding: 0.75rem;
+      }
+
+      .stream-actions {
+        flex-direction: column;
+        gap: 0.375rem;
+      }
+
+      .endpoint-select,
+      button {
+        width: 100%;
+      }
+
+      .log-viewer {
+        font-size: 0.625rem;
+      }
+
+      .status-bar-card {
+        font-size: 0.625rem;
+        padding: 0.375rem 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🎵 <em>Stream call</em></h1>
+    <p>Send page streams to API calls</p>
+  </div>
+
+  <div class="content">
+    <div id="loading" class="loading">
+      <p>Loading...</p>
+    </div>
+
+    <div id="status" class="status" style="display: none;">
+      <div class="status-title">
+        <span>Streams on this page:</span>
+        <span class="badge" id="stream-count">0</span>
+      </div>
+    </div>
+
+    <div class="button-group">
+      <button id="refresh-btn" class="btn-secondary">🔄 Refresh</button>
+      <button id="options-btn" class="btn-secondary">⚙️ Options</button>
+    </div>
+
+    <div id="streams-list-container" class="streams-list-container" style="display: none;">
+      <div id="streams-list" class="streams-list"></div>
+    </div>
+
+    <div id="stream-panel" class="stream-panel" style="display: none;">
+      <div id="panel-actions" class="stream-actions"></div>
+    </div>
+
+    <div id="empty-state" class="empty-state" style="display: none;">
+      <div class="empty-state-icon">🔍</div>
+      <p><strong>No streams detected</strong></p>
+      <p style="font-size: 0.75rem; margin-top: 0.5rem;">
+        Browse to a page with streaming media to detect streams
+      </p>
+    </div>
+
+    <div id="log-filter-panel" class="log-filter-panel">
+      <label><input type="checkbox" class="log-level-filter" value="error" checked> Error</label>
+      <label><input type="checkbox" class="log-level-filter" value="warn" checked> Warn</label>
+      <label><input type="checkbox" class="log-level-filter" value="info" checked> Info</label>
+      <label><input type="checkbox" class="log-level-filter" value="debug" checked> Debug</label>
+    </div>
+    <div id="log-viewer" class="log-viewer"></div>
+  </div>
+
+  <div id="status-bar" class="status-bar-card" style="display:none;">
+    <div class="status-content">
+      <span id="status-icon" class="status-icon" aria-hidden="true">ℹ️</span>
+      <span id="status-message" class="status-text"></span>
+    </div>
+  </div>
+
+  <script src="hover-ui.js" type="module"></script>
+</body>
+</html>
