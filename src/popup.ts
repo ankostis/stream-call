@@ -44,7 +44,6 @@ async function initialize() {
   // Initialize logging infrastructure
   const logging = initLogging({
     statusBar: document.getElementById('status-bar') as HTMLDivElement,
-    statusIcon: document.getElementById('status-icon') as HTMLSpanElement,
     statusMsg: document.getElementById('status-message') as HTMLSpanElement,
     logViewer: document.getElementById('log-viewer') as HTMLDivElement
   });
@@ -98,7 +97,7 @@ async function loadStreams() {
     await browser.runtime.sendMessage({ type: 'PING' });
   } catch (pingError) {
     // Known issue: background worker crashed or not loaded.
-    logger.error( 'messaging', '⚠️ Extension background service not responding. Try reloading the extension.', pingError);
+    logger.error( 'messaging', 'Extension background service not responding. Try reloading the extension.', pingError);
     const loadingEl = document.getElementById('loading');
     if (loadingEl) loadingEl.style.display = 'none';
     return;
@@ -186,7 +185,6 @@ function handlePreview(stream: StreamInfo, endpointName?: string) {
     pageTitle: stream.pageTitle
   } as Record<string, unknown>;
 
-  logger.infoFlash(2000, 'popup', 'Generating preview:');
   previewCall(endpoint, context, logger);
 }
 
@@ -212,8 +210,9 @@ async function handleCallEndpoint(mode: 'fetch' | 'tab', stream: StreamInfo, end
     return;
   }
 
-  const action = mode === 'fetch' ? 'Calling API' : 'Opening in tab';
-  logger.infoFlash(3000, 'apicall', `${action}: ${endpointName || 'default'} → ${stream.url}`);
+  const action = mode === 'fetch' ? 'API call' : 'Open in tab';
+  const endpoint = endpointName || 'default';
+  logger.info('apicall', `${action} starting: ${endpoint} → ${stream.type}`);
 
   // Direct call (popup runs in extension context)
   const response = await callEndpoint({
@@ -226,18 +225,19 @@ async function handleCallEndpoint(mode: 'fetch' | 'tab', stream: StreamInfo, end
   });
 
   if (response?.success) {
-    const successMsg = mode === 'fetch' ? `✅ API call successful: ${response.message}` : `✅ Opened in new tab: ${response.details || stream.url}`;
-    logger.infoFlash(3000, 'apicall', successMsg);
+    const successMsg = mode === 'fetch'
+      ? `✅ ${endpoint}: ${response.status || 'OK'}`
+      : `✅ Opened in tab: ${response.details || stream.url}`;
+    logger.info('apicall', successMsg);
 
-    // Log response body if available (formatted JSON for readability)
+    // Log response body separately in debug (keep it out of status bar)
     if (response.response) {
       const formatted = formatResponseBody(response.response);
-      logger.debug('apicall', `Response: ${formatted}`);
+      logger.info('apicall', `Response body: ${formatted}`);
     }
   } else {
     const errorMsg = response?.error ?? 'Unknown error';
-    const failMsg = mode === 'fetch' ? `❌ API call failed: ${errorMsg}` : `❌ Failed to open URL: ${errorMsg}`;
-    logger.error( 'apicall', failMsg, response);
+    logger.error('apicall', `${action} failed: ${endpoint} - ${errorMsg}`, response);
   }
 }
 
@@ -247,11 +247,11 @@ async function handleCallEndpoint(mode: 'fetch' | 'tab', stream: StreamInfo, end
 async function handleCopyUrl(url: string) {
   try {
     await navigator.clipboard.writeText(url);
-    // logger.infoFlash automatically logs to ring buffer
-    logger.infoFlash(3000, 'clipboard', `📋 URL copied: ${url}`);
+    logger.infoFlash(2000, 'clipboard', '📋 URL copied');
+    logger.debug('clipboard', `Copied: ${url}`);
   } catch (error) {
     // Clipboard write may fail due to permissions.
-    logger.warn( 'clipboard', '⚠️ Failed to copy URL', error);
+    logger.warn('clipboard', 'Failed to copy URL', error);
   }
 }
 

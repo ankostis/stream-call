@@ -6,7 +6,6 @@ import type { LogLevel } from './logger';
 
 export function createStatusRenderer(elements: {
   bar: HTMLDivElement;
-  icon: HTMLSpanElement;
   message: HTMLSpanElement;
 }) {
   return function renderStatus(msg: { level: LogLevel; message: string } | null) {
@@ -16,7 +15,6 @@ export function createStatusRenderer(elements: {
       return;
     }
     elements.message.innerHTML = msg.message;
-    elements.icon.textContent = msg.level === 'error' ? '❌' : msg.level === 'warn' ? '⚠️' : 'ℹ️';
     // Vary background color by level
     if (msg.level === 'error') {
       bar.style.backgroundColor = '#fee';

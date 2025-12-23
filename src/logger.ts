@@ -98,15 +98,15 @@ export class Logger {
   // ========================================================================
 
   error(slot: string, ...msg: unknown[]): void {
-    this.setSlot(LogLevel.Error, slot, undefined, ...msg);
+    this.setSlotWithEmoji(LogLevel.Error, slot, undefined, '❌', ...msg);
   }
 
   warn(slot: string, ...msg: unknown[]): void {
-    this.setSlot(LogLevel.Warn, slot, undefined, ...msg);
+    this.setSlotWithEmoji(LogLevel.Warn, slot, undefined, '⚠️', ...msg);
   }
 
   info(slot: string, ...msg: unknown[]): void {
-    this.setSlot(LogLevel.Info, slot, undefined, ...msg);
+    this.setSlotWithEmoji(LogLevel.Info, slot, undefined, 'ℹ️', ...msg);
   }
 
   debug(slot: string, ...msg: unknown[]): void {
@@ -119,22 +119,45 @@ export class Logger {
 
   errorFlash(timeout: number, slot: string, ...msg: unknown[]): void {
     const expireTimestamp = new Date(Date.now() + timeout);
-    this.setSlot(LogLevel.Error, slot, expireTimestamp, ...msg);
+    this.setSlotWithEmoji(LogLevel.Error, slot, expireTimestamp, '❌', ...msg);
   }
 
   warnFlash(timeout: number, slot: string, ...msg: unknown[]): void {
     const expireTimestamp = new Date(Date.now() + timeout);
-    this.setSlot(LogLevel.Warn, slot, expireTimestamp, ...msg);
+    this.setSlotWithEmoji(LogLevel.Warn, slot, expireTimestamp, '⚠️', ...msg);
   }
 
   infoFlash(timeout: number, slot: string, ...msg: unknown[]): void {
     const expireTimestamp = new Date(Date.now() + timeout);
-    this.setSlot(LogLevel.Info, slot, expireTimestamp, ...msg);
+    this.setSlotWithEmoji(LogLevel.Info, slot, expireTimestamp, 'ℹ️', ...msg);
   }
 
   // ========================================================================
   // INTERNAL: SET SLOT + LOG TO RING
   // ========================================================================
+
+  /**
+   * Set slot with automatic emoji prefix (unless message already starts with emoji)
+   */
+  private setSlotWithEmoji(
+    level: LogLevel,
+    slot: string,
+    expireTimestamp: Date | undefined,
+    defaultEmoji: string,
+    ...msg: unknown[]
+  ): void {
+    // Check if first message already starts with emoji (common emoji range)
+    const firstMsg = msg[0];
+    const startsWithEmoji = typeof firstMsg === 'string' && /^[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u2705\u274c\u26a0\u2139]/u.test(firstMsg);
+
+    if (startsWithEmoji) {
+      // Message already has emoji, don't add default
+      this.setSlot(level, slot, expireTimestamp, ...msg);
+    } else {
+      // Prepend default level emoji
+      this.setSlot(level, slot, expireTimestamp, defaultEmoji, ...msg);
+    }
+  }
 
   private setSlot(
     level: LogLevel,
@@ -223,8 +246,8 @@ export class Logger {
 
   /**
    * Get current visible message (transient or persistent).
-   * Priority: level first (error > warn > info > debug), then most recent.
-   * Filters out expired transient messages.
+   * Priority: level first (error > warn > info), then most recent.
+   * Filters out expired transient messages and debug level (debug only in log viewer).
    */
   transientMsg(): SlotMessage | null {
     if (this.slots.size === 0) return null;
@@ -236,9 +259,9 @@ export class Logger {
       (m) => !m.expireTimestamp || m.expireTimestamp.getTime() > now
     );
 
-    // Scan by level, the sort to by post-timestamp (BUG: sort by expirations!!).
+    // Scan by level (exclude Debug from status bar), then sort by post-timestamp.
     //
-    const levels = [LogLevel.Error, LogLevel.Warn, LogLevel.Info, LogLevel.Debug];
+    const levels = [LogLevel.Error, LogLevel.Warn, LogLevel.Info];
     for (const level of levels) {
       const messagesAtLevel = allMessages.filter((m) => m.level === level);
       if (messagesAtLevel.length > 0) {

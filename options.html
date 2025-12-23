@@ -731,17 +731,15 @@
     .status-content {
       display: flex;
       align-items: center;
-      gap: 0.75rem;
-    }
-
-    .status-icon {
-      font-size: 1.125rem;
-      flex-shrink: 0;
     }
 
     .status-text {
       color: #333;
       font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex: 1;
     }
 
     /* Log viewer styling */
@@ -963,7 +961,6 @@
     <!-- Status Bar -->
     <div id="status-bar" class="status-bar-card" style="display:none;">
       <div class="status-content">
-        <span id="status-icon" class="status-icon" aria-hidden="true">ℹ️</span>
         <span id="status-message" class="status-text"></span>
       </div>
     </div>

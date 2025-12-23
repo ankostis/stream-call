@@ -1,114 +1,34 @@
 # Log Category Analysis
 
-**Status**: ✅ Unified and validated (as of 2025-12-16)
+**Status**: ✅ Validated (2025-12-23)
 
-## Summary
+## Categories
 
-- **10 categories** used consistently by both Logger (audit trail) and StatusBar (UI feedback)
-- **65 total logging calls** across all components (25 Logger, 40 StatusBar)
-- **1 legacy console call** in hover-panel.ts (WIP stub) - to be migrated
-- **Categories are domain-specific** (what), **levels are severity-specific** (how important)
-- All logger calls verified for correct API usage
-- No duplicate statusBar+logger pairs (cleaned up 4 in popup.ts)
+| Category  | Count | Description |
+|-----------|-------|-------------|
+| apicall   | 22    | API call operations (HTTP requests/responses) |
+| endpoint  | 17    | Endpoint CRUD (save/delete/toggle/preview) |
+| storage   | 13    | Storage operations (load/save/export/import) |
+| broker    | 8     | Background worker operations |
+| messaging | 8     | Cross-component message passing |
+| page      | 7     | Page script (stream detection) |
+| hover     | 5     | Hover panel operations |
+| popup     | 4     | Popup operations (init/refresh) |
+| clipboard | 4     | Clipboard copy operations |
 
-## Category Usage
+## Guidelines
 
-| Category  | Count | Status | Description |
-|-----------|-------|--------|-------------|
-| endpoint  |   19 | ✅ | Endpoint operations (config/validation/save/delete/tab-open/api-call) |
-| apicall   |   10 | ✅ | API call operations (HTTP requests/responses/testing) |
-| storage   |    9 | ✅ | Storage operations (load/save/reset/export/import/initialization) |
-| popup     |    7 | ✅ | Popup component operations (initialization/refresh/UI actions) |
-| page      |    6 | ✅ | Page script operations (stream detection/player detection/UI injection) |
-| broker|    6 | ✅ | Broker worker operations (stream management/tab lifecycle/initialization) |
-| messaging |    5 | ✅ | Cross-component message passing (GET_STREAMS/CALL_API/PING) |
-| stat      |    3 | ✅ | General status/progress messages |
-| interpolation| 2 | ✅ | Template placeholder interpolation |
-| clipboard |    2 | ✅ | Clipboard copy operations |
+- **Categories** = domain (what), **Levels** = severity (how important)
+- **Emoji prefixing**: Logger auto-adds ❌ (error), ⚠️ (warn), ℹ️ (info) unless message already has emoji
+- **Status bar**: Concise (<80 chars), excludes Debug level, no response bodies
+- **Transient (infoFlash)**: Clipboard copy, navigation, form cleanup messages
+- **Persistent (info)**: Final action results (saves, API calls, errors)
+- **Response bodies**: Full JSON in debug logs, not status bar
+- **Icons in messages**: Emojis come from message text (logger methods), not UI rendering
 
-## Breakdown by Component
+## Timeout Usage (Legitimate)
 
-| Component | Logger Calls | StatusBar Calls | Total |
-|-----------|:------------:|:---------------:|:-----:|
-| options.ts |      0      |       27        |   27  |
-| popup.ts   |      5      |       13        |   18  |
-| broker.ts |   10     |        0        |   10  |
-| endpoint.ts |     4      |        0        |    4  |
-| page.ts    |      6      |        0        |    6  |
-| **Total**  |   **25**    |     **40**      | **65**|
+1. `popup.ts:208` - Delayed nav to options (2s) - UX for guided setup
+2. `endpoint.ts:462` - Form cleanup (100ms) - Technical requirement
+3. `page.ts:182` - Stream detection interval (2s) - Core feature
 
-**Note**: Each execution context (broker, page, popup, options) has its own isolated Logger instance with separate circular buffers.
-
-## Consolidation History
-
-**Phase 1**: Removed redundant `-error`/`-warning` suffixes (28+ occurrences)
-- ❌ Before: `endpoint-error`, `storage-error`, `api-error`
-- ✅ After: `endpoint`, `storage`, `apicall` (level specified separately via `LogLevel`)
-
-**Phase 2**: Consolidated component-specific categories
-- `config`, `form` → `endpoint`
-- `api`, `api-status`, `api-call` → `apicall`
-- `init`, `refresh`, `ui-action` → `popup`
-- `stream-detection`, `player-detection`, `ui-injection`, `initialization` → `page`
-- `storage-info` → `storage`
-- `last-action` → distributed to domain categories
-
-**Phase 3**: Added Logger to broker.ts
-- New `broker` category for worker operations
-- Expanded `messaging` for cross-context communication
-
-**Phase 4**: Fixed Logger API bugs in page.ts
-- ❌ Before: `logger.info(LogLevel.Info, 'page', 'msg')` - wrong signature
-- ✅ After: `logger.info('page', 'msg')` - convenience methods already know their level
-
-**Phase 5**: Removed duplicate logging in popup.ts (4 pairs)
-- StatusBar with `setLogger()` already logs internally, so consecutive statusBar+logger calls are redundant
-- Consolidated by merging variable details (URL, endpoint, response) into statusBar messages
-- **Removed**: 4 redundant logger calls (debug×2, info×2) → down from 25 to 21 total logger calls
-
-**Rationale**:
-- Categories describe **domain** (what you're logging about)
-- Levels describe **severity** (how important it is)
-- No hyphens for consistency
-- Same categories for Logger and StatusBar
-
-## API Patterns
-
-### Logger (Audit Trail)
-```typescript
-// Convenience methods (level implicit)
-logger.debug('category', 'message', ...args)
-logger.info('category', 'message', ...args)
-logger.warn('category', 'message', ...args)
-logger.error('category', 'message', ...args)
-
-// Generic method (level explicit)
-logger.log(LogLevel.Info, 'category', 'message', ...args)
-```
-
-### StatusBar (UI Feedback)
-```typescript
-// Persistent message (stays until replaced/cleared)
-statusBar.post(LogLevel.Error, 'category', 'message', optionalError)
-
-// Transient message (auto-clears after timeout)
-statusBar.flash(LogLevel.Info, 'category', 3000, 'message')
-```
-
-## Legacy Console Calls (To Migrate)
-
-**hover-panel.ts (1 call)**:
-- WIP stub: 1 log
-
-This predates Logger/StatusBar infrastructure (introduced Dec 10-15, 2025). Should be migrated to proper logging.
-
-**Migration History**:
-- ✅ endpoint.ts (13 calls → Logger): `openEndpointInTab()` (1), `callEndpointAPI()` (3) - migrated Dec 16, 2025
-
-## Validation
-
-✅ All logger calls verified for correct API usage
-✅ No instances of `logger.method(LogLevel.XXX, 'category', ...)` pattern found
-✅ All 95 unit tests pass
-✅ Integration tests pass
-⚠️ 1 legacy console call remains (not using Logger/StatusBar)

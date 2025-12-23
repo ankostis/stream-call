@@ -551,7 +551,8 @@ export async function callEndpoint({
 
     return {
       success: true,
-      message: 'Stream URL sent successfully',
+      message: `${response.status} ${response.statusText}`,
+      status: response.status,
       response: result
     };
   } catch (error: any) {
@@ -577,16 +578,15 @@ export async function callEndpoint({
 }
 
 /**
- * Format response body with truncation
- * @param response - The response body to format
- * @param maxLength - Maximum length before truncation (default 500)
- * @returns Formatted and possibly truncated string
+ * Format response body as indented JSON
  */
-export function formatResponseBody(response: any, maxLength: number = 500): string {
-  const body = String(response);
-  return body.length > maxLength
-    ? body.substring(0, maxLength) + '...'
-    : body;
+export function formatResponseBody(response: any): string {
+  try {
+    const parsed = typeof response === 'string' ? JSON.parse(response) : response;
+    return JSON.stringify(parsed, null, 2);
+  } catch {
+    return String(response);
+  }
 }
 
 export {};

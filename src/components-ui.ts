@@ -36,7 +36,6 @@ export function createButton(config: ButtonConfig): HTMLButtonElement {
  */
 export function initLogging(elements: {
   statusBar: HTMLElement;
-  statusIcon: HTMLElement;
   statusMsg: HTMLElement;
   logViewer: HTMLElement;
 }): {
@@ -47,16 +46,15 @@ export function initLogging(elements: {
 
   const renderStatus = createStatusRenderer({
     bar: elements.statusBar,
-    icon: elements.statusIcon,
     message: elements.statusMsg
   });
 
-  // Subscribe to status changes (includes slot prefix in monospace)
+  // Subscribe to status changes
   logger.subscribeStatus((current) => {
     if (current) {
       renderStatus({
         level: current.level,
-        message: `<code>[${current.slot}]</code> ${current.message}`
+        message: current.message
       });
     } else {
       renderStatus(null);

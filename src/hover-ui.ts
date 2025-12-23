@@ -24,7 +24,6 @@ async function initialize() {
   // Initialize logging infrastructure
   const logging = initLogging({
     statusBar: document.getElementById('status-bar') as HTMLDivElement,
-    statusIcon: document.getElementById('status-icon') as HTMLSpanElement,
     statusMsg: document.getElementById('status-message') as HTMLSpanElement,
     logViewer: document.getElementById('log-viewer') as HTMLDivElement
   });
@@ -182,7 +181,7 @@ function handlePreview(stream: StreamInfo, endpointName?: string) {
     pageTitle: stream.pageTitle
   } as Record<string, unknown>;
 
-  logger.infoFlash(2000, 'hover', 'Generating preview:');
+  logger.infoFlash(2100, 'hover', 'Generating preview:');
   previewCall(endpoint, context, logger);
 }
 
@@ -196,8 +195,9 @@ async function handleCallEndpoint(mode: 'fetch' | 'tab', stream: StreamInfo, end
     return;
   }
 
-  const action = mode === 'fetch' ? 'Calling API' : 'Opening in tab';
-  logger.infoFlash(3000, 'apicall', `${action}: ${endpointName || 'default'} → ${stream.url}`);
+  const action = mode === 'fetch' ? 'API call' : 'Open in tab';
+  const endpoint = endpointName || 'default';
+  logger.info('apicall', `${action} starting: ${endpoint} → ${stream.type}`);
 
   // Delegate to broker via message
   try {
@@ -211,21 +211,21 @@ async function handleCallEndpoint(mode: 'fetch' | 'tab', stream: StreamInfo, end
 
     if (response?.success) {
       const successMsg = mode === 'fetch'
-        ? `✅ API call successful: ${response.message}`
-        : `✅ Opened in new tab`;
-      logger.infoFlash(3000, 'apicall', successMsg);
+        ? `✅ ${endpoint}: ${response.status || 'OK'}`
+        : `✅ Opened in tab`;
+      logger.info('apicall', successMsg);
 
-      // Log response body if available (formatted JSON for readability)
+      // Log response body separately in debug (keep it out of status bar)
       if (response.response) {
         const formatted = formatResponseBody(response.response);
-        logger.debug('apicall', `Response: ${formatted}`);
+        logger.info('apicall', `Response body: ${formatted}`);
       }
     } else {
       const errorMsg = response?.error ?? 'Unknown error';
-      logger.error('apicall', `❌ Failed: ${errorMsg}`, response);
+      logger.error('apicall', `${action} failed: ${endpoint} - ${errorMsg}`, response);
     }
   } catch (error: any) {
-    logger.error('apicall', `❌ Message failed: ${error.message}`, error);
+    logger.error('apicall', `Message failed: ${error.message}`, error);
   }
 }
 
@@ -235,9 +235,10 @@ async function handleCallEndpoint(mode: 'fetch' | 'tab', stream: StreamInfo, end
 async function handleCopyUrl(url: string) {
   try {
     await navigator.clipboard.writeText(url);
-    logger.infoFlash(3000, 'clipboard', `📋 URL copied: ${url}`);
+    logger.infoFlash(2000, 'clipboard', '📋 URL copied');
+    logger.debug('clipboard', `Copied: ${url}`);
   } catch (error) {
-    logger.warn('clipboard', '⚠️ Failed to copy URL', error);
+    logger.warn('clipboard', 'Failed to copy URL', error);
   }
 }
 

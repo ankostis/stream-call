@@ -26,7 +26,7 @@ test('Logger: adds entry to ring buffer', () => {
   assert.strictEqual(logger.logsRing.length, 1);
   assert.strictEqual(logger.logsRing[0].level, LogLevel.Error);
   assert.strictEqual(logger.logsRing[0].category, 'test-slot');
-  assert.strictEqual(logger.logsRing[0].message, 'Test message');
+  assert.strictEqual(logger.logsRing[0].message, '❌ Test message');
 });
 
 test('Logger: ring buffer drops oldest when max exceeded', () => {
@@ -37,8 +37,8 @@ test('Logger: ring buffer drops oldest when max exceeded', () => {
   }
 
   assert.strictEqual(logger.logsRing.length, 100);
-  assert.strictEqual(logger.logsRing[0].message, 'Message 5');
-  assert.strictEqual(logger.logsRing[99].message, 'Message 104');
+  assert.strictEqual(logger.logsRing[0].message, 'ℹ️ Message 5');
+  assert.strictEqual(logger.logsRing[99].message, 'ℹ️ Message 104');
 });
 
 test('Logger: level-specific methods work correctly', () => {
@@ -64,8 +64,8 @@ test('Logger: filterLogs by level', () => {
 
   const errors = logger.filterLogs([LogLevel.Error]);
   assert.strictEqual(errors.length, 2);
-  assert.strictEqual(errors[0].message, 'Error 1');
-  assert.strictEqual(errors[1].message, 'Error 2');
+  assert.strictEqual(errors[0].message, '❌ Error 1');
+  assert.strictEqual(errors[1].message, '❌ Error 2');
 });
 
 test('Logger: filterLogs by category', () => {
@@ -90,7 +90,7 @@ test('Logger: filterLogs by level and category', () => {
 
   const storageErrors = logger.filterLogs([LogLevel.Error], ['storage']);
   assert.strictEqual(storageErrors.length, 1);
-  assert.strictEqual(storageErrors[0].message, 'Storage error');
+  assert.strictEqual(storageErrors[0].message, '❌ Storage error');
 });
 
 test('Logger: clearLogs removes all entries', () => {
@@ -114,7 +114,7 @@ test('Logger: subscribeLogs receives notifications', () => {
   logger.error('test', 'Test message');
 
   assert.strictEqual(receivedEntries.length, 1);
-  assert.strictEqual(receivedEntries[0].message, 'Test message');
+  assert.strictEqual(receivedEntries[0].message, '❌ Test message');
 });
 
 test('Logger: subscribeLogs notification on clearLogs', () => {
@@ -157,7 +157,7 @@ test('Logger: exportJSON returns valid JSON', () => {
 
   assert.strictEqual(parsed.length, 2);
   assert.strictEqual(parsed[0].level, 'error');
-  assert.strictEqual(parsed[0].message, 'Test error');
+  assert.strictEqual(parsed[0].message, '❌ Test error');
   assert.ok(parsed[0].timestamp);
 });
 
@@ -173,7 +173,7 @@ test('Logger: persistent status sets slot', () => {
   const current = logger.transientMsg();
   assert.ok(current !== null);
   assert.strictEqual(current.slot, 'form-error');
-  assert.strictEqual(current.message, 'Invalid input');
+  assert.strictEqual(current.message, '❌ Invalid input');
   assert.strictEqual(current.expireTimestamp, undefined);
 });
 
@@ -185,7 +185,7 @@ test('Logger: persistent status replaces older message in same slot', () => {
 
   const current = logger.transientMsg();
   assert.ok(current !== null);
-  assert.strictEqual(current.message, 'Second error');
+  assert.strictEqual(current.message, '❌ Second error');
 });
 
 test('Logger: persistent status adds to ring buffer', () => {
@@ -195,7 +195,7 @@ test('Logger: persistent status adds to ring buffer', () => {
 
   assert.strictEqual(logger.logsRing.length, 1);
   assert.strictEqual(logger.logsRing[0].category, 'form-error');
-  assert.strictEqual(logger.logsRing[0].message, 'Error message');
+  assert.strictEqual(logger.logsRing[0].message, '❌ Error message');
 });
 
 // ==============================================================================
@@ -210,7 +210,7 @@ test('Logger: transient status sets expireTimestamp', () => {
   const current = logger.transientMsg();
   assert.ok(current !== null);
   assert.strictEqual(current.slot, 'save-status');
-  assert.strictEqual(current.message, 'Saved!');
+  assert.strictEqual(current.message, '❌ Saved!');
   assert.ok(current.expireTimestamp instanceof Date);
   destroyLogger(logger);
 });
@@ -222,7 +222,7 @@ test('Logger: transient status adds to ring buffer', () => {
 
   assert.strictEqual(logger.logsRing.length, 1);
   assert.strictEqual(logger.logsRing[0].category, 'save-status');
-  assert.strictEqual(logger.logsRing[0].message, 'Saved!');
+  assert.strictEqual(logger.logsRing[0].message, 'ℹ️ Saved!');
   destroyLogger(logger);
 });
 
@@ -306,7 +306,7 @@ test('Logger: transientMsg returns most recent at same level', async () => {
 
   const current = logger.transientMsg();
   assert.ok(current !== null);
-  assert.strictEqual(current.message, 'Third error');
+  assert.strictEqual(current.message, '❌ Third error');
   destroyLogger(logger);
 });
 
@@ -323,7 +323,7 @@ test('Logger: transient expiration reveals lower-priority message', async () => 
   const current = logger.transientMsg();
   assert.ok(current !== null);
   assert.strictEqual(current.level, LogLevel.Info);
-  assert.strictEqual(current.message, 'Persistent info');
+  assert.strictEqual(current.message, 'ℹ️ Persistent info');
   destroyLogger(logger);
 });
 
@@ -411,7 +411,7 @@ test('Logger: subscribeStatus receives notification on status change', () => {
   logger.error('test', 'Test error');
 
   assert.ok(receivedMsg !== null);
-  assert.strictEqual(receivedMsg.message, 'Test error');
+  assert.strictEqual(receivedMsg.message, '❌ Test error');
 });
 
 test('Logger: subscribeStatus receives notification on transient flash', () => {
@@ -425,7 +425,7 @@ test('Logger: subscribeStatus receives notification on transient flash', () => {
   logger.infoFlash(1000, 'test', 'Flash message');
 
   assert.ok(receivedMsg !== null);
-  assert.strictEqual(receivedMsg.message, 'Flash message');
+  assert.strictEqual(receivedMsg.message, 'ℹ️ Flash message');
   destroyLogger(logger);
 });
 
@@ -474,5 +474,5 @@ test('Logger: slot isolation - messages in different slots dont interfere', () =
 
   const current = logger.transientMsg();
   assert.ok(current !== null);
-  assert.strictEqual(current.message, 'Storage warn');
+  assert.strictEqual(current.message, '⚠️ Storage warn');
 });
