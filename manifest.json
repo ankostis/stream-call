@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Stream call",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "A (mobile) Firefox extension to extract streaming media URLs (podcasts, radio stations, live streams) and send to HTTP API endpoint(s)",
   "author": "Kostis Anagnostopoulos",
   "homepage_url": "https://github.com/ankostis/stream-call",

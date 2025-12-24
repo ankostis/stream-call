@@ -1,5 +1,22 @@
 ## Changes
 
+## v0.4.0 - (2025-12-23) GUI beauty, Hover pane
+
+- FEAT: Hover pane now works (opt-in from preferences).
+- FEAT(apicall) POST/PUT/etc can open new Tab (not just GET).
+- Fix(ui) fixes for mobile
+- feat(ui) consistent API-calling buttons in popup vs options; added preview in popup.
+- Feat(endp) add "Description" field.
+- Feat: UI work on shared components (eg actiontbuttons)
+- Refact(ui) extract DOM-builders for common UIs across `popup.ts` - `options.ts`
+- Refact(endp) Unified API/UI calling, 6% bundle size improvements.
+- Refct(broker) dropped needless messaging from same exec context.
+- Refact(log) Merge Logger/StatusBar as LIFO stack, much simpler & lighter.
+- Feat: rework log, status & emoji icons.
+- Refact: renames to denote structure:
+  - rename `background.ts` -> `broker.ts`
+  - denote Pane UIs with `-pane` suffix.
+
 ## v0.3.0 - (2025-12-16) GUI also works ok now
 
 - Feat(ui) Consistent API call action buttons (Call, Open, Preview) in popup & options UIs
