@@ -205,14 +205,14 @@ import { Logger, LogLevel } from './logger';
       position: fixed;
       top: 0;
       right: 0;
-      width: 400px;
+      width: 25rem;
       max-width: 90vw;
       height: 100vh;
       border: none;
       z-index: 999999;
       transform: translateX(100%);
       transition: transform 0.3s ease-in-out;
-      box-shadow: -4px 0 12px rgba(0,0,0,0.3);
+      box-shadow: -0.25rem 0 0.75rem rgba(0,0,0,0.3);
     `;
 
     document.body.appendChild(iframe);
@@ -223,7 +223,7 @@ import { Logger, LogLevel } from './logger';
       const isVisible = iframe.style.transform === 'translateX(0px)';
       const shouldHide = forceClose || isVisible;
       iframe.style.transform = shouldHide ? 'translateX(100%)' : 'translateX(0px)';
-      toggleBtn.style.transform = shouldHide ? 'translateX(0)' : 'translateX(-410px)';
+      // Button stays fixed, no transform needed
     };
 
     // Listen for close message from iframe
@@ -233,26 +233,26 @@ import { Logger, LogLevel } from './logger';
       }
     });
 
-    // Add toggle button - positioned at panel edge, moves with panel
+    // Add toggle button - fixed position, always visible above iframe
     const toggleBtn = document.createElement('button');
     toggleBtn.id = 'stream-call-toggle-btn';
     toggleBtn.innerHTML = '🎵';
     toggleBtn.title = 'Toggle Stream call panel';
     toggleBtn.style.cssText = `
       position: fixed;
-      top: 10px;
-      right: 10px;
-      width: 48px;
-      height: 48px;
+      top: 0.625rem;
+      right: calc(100vw - 98vw);
+      width: 3rem;
+      height: 3rem;
       border-radius: 50%;
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
       border: none;
-      font-size: 20px;
+      font-size: 1.25rem;
       cursor: pointer;
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-      z-index: 1000000;
-      transition: transform 0.3s ease-in-out, box-shadow 0.2s;
+      box-shadow: 0 0.25rem 0.75rem rgba(102, 126, 234, 0.4);
+      z-index: 1000001;
+      transition: box-shadow 0.2s;
     `;
 
     toggleBtn.addEventListener('click', () => togglePanel());
