@@ -165,15 +165,26 @@ export function populateStreamPanel(
   if (activeEndpoints.length > 0) {
     const select = document.createElement('select');
     select.className = 'endpoint-select';
+
+    // Update select tooltip on change (option titles don't work in most browsers)
+    const updateTooltip = () => {
+      const selectedEndpoint = activeEndpoints.find(ep => ep.name === select.value);
+      select.title = selectedEndpoint?.description || '';
+    };
+
     activeEndpoints.forEach((endpoint) => {
       const option = document.createElement('option');
       option.value = endpoint.name;
       option.textContent = endpoint.name;
       select.appendChild(option);
     });
+
+    updateTooltip(); // Set initial tooltip
+
     select.addEventListener('change', (e) => {
       const target = e.target as HTMLSelectElement;
       endpointName = target.value;
+      updateTooltip();
     });
     panelActions.appendChild(select);
   }

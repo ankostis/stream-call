@@ -8,6 +8,7 @@ import type { Logger } from './logger';
 export type ApiEndpoint = {
   name: string;
   endpointTemplate: string;
+  description?: string;
   method?: string;
   headers?: Record<string, string>;
   bodyTemplate?: string;
@@ -26,19 +27,21 @@ export const DEFAULT_CONFIG = {
   apiEndpoints: JSON.stringify(
     [
       {
-        name: 'httpbingo GET',
-        endpointTemplate: 'https://httpbingo.org/anything?url={{streamUrl}}&page={{pageUrl}}&title={{pageTitle|url}}&time={{timestamp}}',
-        active: true
-      },
-      {
-        name: 'httpbingo POST',
+        name: 'httpbingo',
+        description: 'Simple GET request to just test the call ',
         endpointTemplate: 'https://httpbingo.org/anything',
-        method: 'POST',
-        bodyTemplate: '{"streamUrl":"{{streamUrl}}","pageUrl":"{{pageUrl}}","pageTitle":"{{pageTitle}}","timestamp":{{timestamp}}}',
+        method: 'GET',
         active: true
       },
       {
-        name: 'httpbingo POST with headers (inactive example)',
+        name: 'WiiM play',
+        description: 'WiiM streamers support a GET API call that can play arbitrary streams, see PDF: https://www.wiimhome.com/pdf/HTTP%20API%20for%20WiiM%20Mini.pdf',
+        endpointTemplate: 'https://your.wiim.hostOrIP/httpapi.asp?command=setPlayerCmd:play:{{streamUrl}}',
+        active: false
+      },
+      {
+        name: 'httpbingo POST + headers',
+        description: 'Example showing custom headers and authentication patterns',
         endpointTemplate: 'https://httpbingo.org/anything',
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Custom-Header': 'stream-call' },
@@ -88,6 +91,7 @@ export function parseEndpoints(raw: string): ApiEndpoint[] {
     .map((p) => ({
       name: p.name || suggestEndpointName(p.endpointTemplate),
       endpointTemplate: p.endpointTemplate,
+      description: p.description,
       method: p.method,
       headers: p.headers,
       bodyTemplate: p.bodyTemplate,
@@ -187,6 +191,7 @@ export function validateEndpoints(raw: string): {
         return {
           name,
           endpointTemplate: p.endpointTemplate,
+          description: p.description,
           method: p.method,
           headers: p.headers,
           bodyTemplate: p.bodyTemplate,

@@ -26,6 +26,7 @@ const els = {
   saveBtn: () => document.getElementById('save-endpoint-btn') as HTMLButtonElement,
   saveNewBtn: () => document.getElementById('save-new-btn') as HTMLButtonElement,
   name: () => document.getElementById('endpoint-name') as HTMLInputElement,
+  description: () => document.getElementById('endpoint-description') as HTMLInputElement,
   method: () => document.getElementById('endpoint-method') as HTMLSelectElement,
   endpoint: () => document.getElementById('endpoint-endpoint') as HTMLInputElement,
   body: () => document.getElementById('endpoint-body') as HTMLTextAreaElement,
@@ -155,6 +156,13 @@ function renderList() {
     header.appendChild(activeCheckbox);
     header.appendChild(name);
 
+    // Add description as tooltip to entire item
+    if (endpoint.description) {
+      item.title = endpoint.description;
+    }
+
+    contentWrapper.appendChild(header);
+
     // Summary row: method + url + headers count + flags
     const summary = document.createElement('div');
     summary.className = 'endpoint-summary';
@@ -241,6 +249,7 @@ function closeEditor() {
 
 function fillForm(endpoint: ApiEndpoint) {
   els.name().value = endpoint.name || '';
+  els.description().value = endpoint.description || '';
   els.method().value = (endpoint.method || 'POST').toUpperCase();
   els.endpoint().value = endpoint.endpointTemplate || '';
   els.body().value = endpoint.bodyTemplate || '';
@@ -252,6 +261,7 @@ function fillForm(endpoint: ApiEndpoint) {
 function newEndpointDefaults(): ApiEndpoint {
   return {
     name: '',
+    description: '',
     endpointTemplate: '',
     method: 'POST',
     headers: {},
@@ -263,6 +273,7 @@ function newEndpointDefaults(): ApiEndpoint {
 
 function buildEndpointFromForm(): ApiEndpoint | null {
   const nameRaw = els.name().value.trim();
+  const description = els.description().value.trim();
   const endpoint = els.endpoint().value.trim();
   const method = els.method().value.trim().toUpperCase() || 'POST';
   const bodyTemplate = els.body().value.trim();
@@ -292,6 +303,7 @@ function buildEndpointFromForm(): ApiEndpoint | null {
   const apiEndpoint: ApiEndpoint = {
     name: nameRaw || suggestEndpointName(endpoint),
     endpointTemplate: endpoint,
+    description: description || undefined,
     method,
     headers: Object.keys(headers).length ? headers : undefined,
     bodyTemplate: bodyTemplate || undefined,

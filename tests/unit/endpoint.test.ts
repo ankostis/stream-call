@@ -56,6 +56,33 @@ test('parseEndpoints: filters out duplicate names', () => {
   assert.strictEqual(endpoints[0].name, 'api');
 });
 
+test('parseEndpoints: preserves description field', () => {
+  const raw = JSON.stringify([
+    {
+      name: 'test-api',
+      description: 'Test endpoint for webhooks',
+      endpointTemplate: 'https://api.example.com/webhook'
+    }
+  ]);
+
+  const endpoints = parseEndpoints(raw);
+  assert.strictEqual(endpoints.length, 1);
+  assert.strictEqual(endpoints[0].description, 'Test endpoint for webhooks');
+});
+
+test('parseEndpoints: handles missing description field', () => {
+  const raw = JSON.stringify([
+    {
+      name: 'test-api',
+      endpointTemplate: 'https://api.example.com/webhook'
+    }
+  ]);
+
+  const endpoints = parseEndpoints(raw);
+  assert.strictEqual(endpoints.length, 1);
+  assert.strictEqual(endpoints[0].description, undefined);
+});
+
 test('parseEndpoints: filters out invalid endpoints', () => {
   const raw = JSON.stringify([
     {
