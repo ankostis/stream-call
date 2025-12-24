@@ -1,5 +1,9 @@
 ## Changes
 
+## v0.4.1 - (2025-12-24) lost close hover button fix
+
+- Fix(ui) Show/hide hover-pane button no longer moves outside screen panel, it remains fixed in its original position instead.
+
 ## v0.4.0 - (2025-12-23) GUI beauty, Hover pane
 
 - FEAT: Hover pane now works (opt-in from preferences).
