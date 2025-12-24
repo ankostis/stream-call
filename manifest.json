@@ -29,7 +29,7 @@
     }
   ],
   "action": {
-    "default_popup": "dist/popup.html",
+    "default_popup": "dist/popup-pane.html",
     "default_icon": {
       "16": "icons/icon-16.png",
       "32": "icons/icon-32.png",
@@ -39,7 +39,7 @@
     "default_title": "Stream call"
   },
   "options_ui": {
-    "page": "dist/options.html",
+    "page": "dist/options-pane.html",
     "open_in_tab": true
   },
   "icons": {
@@ -50,7 +50,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["dist/page.js", "dist/hover-ui.html", "dist/hover-ui.js"],
+      "resources": ["dist/page.js", "dist/hover-pane.html", "dist/hover-pane.js"],
       "matches": ["<all_urls>"]
     }
   ],

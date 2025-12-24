@@ -157,7 +157,7 @@ browser.runtime.onMessage.addListener((message: RuntimeMessage, sender) => {
 
   if (message.type === 'OPEN_OPTIONS') {
     // Open options page, reusing existing tab if found
-    const optionsUrl = browser.runtime.getURL('dist/options.html');
+    const optionsUrl = browser.runtime.getURL('dist/options-pane.html');
     const tabs = await browser.tabs.query({ url: optionsUrl });
     if (tabs.length > 0 && tabs[0].id) {
       await browser.tabs.update(tabs[0].id, { active: true });

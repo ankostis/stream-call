@@ -204,7 +204,7 @@ async function handleCallEndpoint(mode: 'fetch' | 'tab', stream: StreamInfo, end
   if (endpoints.length === 0) {
     logger.warn( 'endpoint', 'Please configure API endpoints in options first');
     setTimeout(async () => {
-      const optionsUrl = browser.runtime.getURL('dist/options.html');
+      const optionsUrl = browser.runtime.getURL('dist/options-pane.html');
       await openOrSwitchToTab(optionsUrl);
     }, 2000);
     return;
@@ -281,7 +281,7 @@ async function handleRefresh() {
  */
 async function handleOptions() {
   logger.debug('popup', 'Options button clicked');
-  const optionsUrl = browser.runtime.getURL('dist/options.html');
+  const optionsUrl = browser.runtime.getURL('dist/options-pane.html');
   await openOrSwitchToTab(optionsUrl);
 }
 

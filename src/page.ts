@@ -200,7 +200,7 @@ import { Logger, LogLevel } from './logger';
 
     const iframe = document.createElement('iframe');
     iframe.id = 'stream-call-hover-frame';
-    iframe.src = browser.runtime.getURL('dist/hover-ui.html');
+    iframe.src = browser.runtime.getURL('dist/hover-pane.html');
     iframe.style.cssText = `
       position: fixed;
       top: 0;
